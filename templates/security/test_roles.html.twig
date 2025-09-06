@@ -1,0 +1,241 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Test des Rôles - ANAC BENIN{% endblock %}
+
+{% block body %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="card-title">
+                        <i class="fa fa-user-shield"></i>
+                        Test du Système de Rôles
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5>Informations de l'utilisateur connecté</h5>
+                            <table class="table table-bordered">
+                                <tr>
+                                    <td><strong>Nom</strong></td>
+                                    <td>{{ app.user.nom }} {{ app.user.prenom }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Email</strong></td>
+                                    <td>{{ app.user.email }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Service</strong></td>
+                                    <td>{{ app.user.service ? app.user.service.libelle : 'Non assigné' }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Rôle le plus élevé</strong></td>
+                                    <td>
+                                        <span class="badge bg-primary">{{ get_highest_role() }}</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Tous les rôles</strong></td>
+                                    <td>
+                                        {% for role in app.user.roles %}
+                                            {% if role == 'ROLE_ADMIN' %}
+                                                <span class="badge bg-danger">{{ role|replace({'ROLE_': ''}) }}</span>
+                                            {% elseif role == 'ROLE_DIRECTEUR' %}
+                                                <span class="badge bg-warning">{{ role|replace({'ROLE_': ''}) }}</span>
+                                            {% elseif role == 'ROLE_EDITEUR' %}
+                                                <span class="badge bg-success">{{ role|replace({'ROLE_': ''}) }}</span>
+                                            {% elseif role == 'ROLE_USER' %}
+                                                <span class="badge bg-primary">{{ role|replace({'ROLE_': ''}) }}</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">{{ role }}</span>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <h5>Test des Permissions</h5>
+                            <div class="list-group">
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span>Peut créer des formations</span>
+                                    {% if can_create_formation() %}
+                                        <span class="badge bg-success">✅ OUI</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">❌ NON</span>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span>Peut modifier des formations</span>
+                                    {% if can_edit_formation() %}
+                                        <span class="badge bg-success">✅ OUI</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">❌ NON</span>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span>Peut valider des formations</span>
+                                    {% if can_validate_formation() %}
+                                        <span class="badge bg-success">✅ OUI</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">❌ NON</span>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span>Peut supprimer des formations</span>
+                                    {% if can_delete_formation() %}
+                                        <span class="badge bg-success">✅ OUI</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">❌ NON</span>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span>Peut gérer les utilisateurs</span>
+                                    {% if can_manage_users() %}
+                                        <span class="badge bg-success">✅ OUI</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">❌ NON</span>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span>Peut gérer les paramètres</span>
+                                    {% if can_manage_settings() %}
+                                        <span class="badge bg-success">✅ OUI</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">❌ NON</span>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span>Peut voir les statistiques</span>
+                                    {% if can_view_statistics() %}
+                                        <span class="badge bg-success">✅ OUI</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">❌ NON</span>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span>Peut voir les rapports</span>
+                                    {% if can_view_reports() %}
+                                        <span class="badge bg-success">✅ OUI</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">❌ NON</span>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span>Peut voir les filtres avancés</span>
+                                    {% if can_view_advanced_filters() %}
+                                        <span class="badge bg-success">✅ OUI</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">❌ NON</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <h5>Test des Rôles Spécifiques</h5>
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <div class="card text-center">
+                                        <div class="card-body">
+                                            <h6 class="card-title">ROLE_USER</h6>
+                                            {% if has_role('ROLE_USER') %}
+                                                <span class="badge bg-success">✅ Actif</span>
+                                            {% else %}
+                                                <span class="badge bg-danger">❌ Inactif</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-3">
+                                    <div class="card text-center">
+                                        <div class="card-body">
+                                            <h6 class="card-title">ROLE_EDITEUR</h6>
+                                            {% if is_editeur() %}
+                                                <span class="badge bg-success">✅ Actif</span>
+                                            {% else %}
+                                                <span class="badge bg-danger">❌ Inactif</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-3">
+                                    <div class="card text-center">
+                                        <div class="card-body">
+                                            <h6 class="card-title">ROLE_DIRECTEUR</h6>
+                                            {% if is_directeur() %}
+                                                <span class="badge bg-success">✅ Actif</span>
+                                            {% else %}
+                                                <span class="badge bg-danger">❌ Inactif</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-3">
+                                    <div class="card text-center">
+                                        <div class="card-body">
+                                            <h6 class="card-title">ROLE_ADMIN</h6>
+                                            {% if is_admin() %}
+                                                <span class="badge bg-success">✅ Actif</span>
+                                            {% else %}
+                                                <span class="badge bg-danger">❌ Inactif</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <h5>Actions Disponibles</h5>
+                            <div class="d-flex flex-wrap gap-2">
+                                {% if can_create_formation() %}
+                                    <a href="{{ path('app_formation_create') }}" class="btn btn-success">
+                                        <i class="fa fa-plus"></i> Créer une formation
+                                    </a>
+                                {% endif %}
+                                
+                                {% if can_manage_users() %}
+                                    <a href="{{ path('app_user_index') }}" class="btn btn-primary">
+                                        <i class="fa fa-users"></i> Gérer les utilisateurs
+                                    </a>
+                                {% endif %}
+                                
+                                {% if can_view_reports() %}
+                                    <a href="{{ path('app_reporting') }}" class="btn btn-info">
+                                        <i class="fa fa-chart-bar"></i> Voir les rapports
+                                    </a>
+                                {% endif %}
+                                
+                                {% if can_manage_settings() %}
+                                    <a href="{{ path('app_direction_index') }}" class="btn btn-warning">
+                                        <i class="fa fa-cogs"></i> Gérer les directions
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

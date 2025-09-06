@@ -1,0 +1,56 @@
+{% extends 'base_auth.html.twig' %}
+
+{% block title %}ANAC BENIN | Connexion{% endblock %}
+
+{% block auth_content %}
+	<!-- Logo centré -->
+	<div class="text-center mb-4">
+		<img src="{{ asset('assets/images/logo_sf.png') }}" alt="ANAC BENIN" height="50" style="object-fit: contain;">
+	</div>
+	
+	<form method="post" name="login_form">
+		<h1 class="text-center">Connexion</h1>
+		<div class="text-muted text-center mb-4">
+			Pour votre sécurité, veuillez vérifier votre identité.
+		</div>
+		
+		{% if error %}
+			<div class="alert alert-danger">{{ error.messageKey|trans(error.messageData, 'security') }}</div>
+		{% endif %}
+
+		{% if app.user %}
+			<div class="alert alert-info">
+				Vous êtes connecté en tant que {{ app.user.userIdentifier }}, <a href="{{ path('app_logout') }}">Déconnexion</a>
+			</div>
+		{% endif %}
+		
+		<div class="mb-3">
+			<label class="form-label">Adresse Email</label>
+			<input type="email" class="form-control form-control-lg fs-15px" name="_username" id="username" value="{{ last_username }}" placeholder="monemail@gmail.com" autocomplete="email" required autofocus>
+		</div>
+		<div class="mb-3">
+			<div class="d-flex">
+				<label class="form-label">Mot de passe</label>
+				<a href="{{ path('app_forgot_password_request') }}" class="ms-auto text-muted">Mot de passe oublié ?</a>
+			</div>
+			<div class="position-relative">
+				<input type="password" class="form-control form-control-lg fs-15px" name="_password" id="password" placeholder="Entrez votre mot de passe" autocomplete="current-password" required>
+				<button type="button" class="btn btn-link position-absolute end-0 top-0 h-100" onclick="togglePassword('password')" style="z-index: 10; border: none; background: none;">
+					<i class="fa fa-eye" id="password-toggle-icon"></i>
+				</button>
+			</div>
+		</div>
+		
+		<!-- CSRF Token - IMPORTANT: Ne pas supprimer -->
+		<input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}">
+		
+		<div class="mb-3">
+			<div class="form-check">
+				<input class="form-check-input" type="checkbox" name="_remember_me" id="remember_me">
+				<label class="form-check-label fw-500" for="remember_me">Se souvenir de moi</label>
+			</div>
+		</div>
+		<button type="submit" class="btn btn-theme btn-lg d-block w-100 fw-500 mb-3">Se connecter</button>
+	
+	</form>
+{% endblock %}

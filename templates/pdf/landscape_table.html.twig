@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>{{ title }}</title>
+    {% include 'pdf/partials/landscape_styles.html.twig' %}
+</head>
+<body>
+    {% include 'pdf/partials/header.html.twig' %}
+    
+    <!-- Titre du document -->
+    <div class="document-title">{{ title }}</div>
+    
+    <!-- Informations de génération -->
+    <div class="info">
+        <strong>Généré le :</strong> {{ generatedAt|date('d/m/Y à H:i') }}
+        <br>
+        <strong>Total d'enregistrements :</strong> {{ data|length }}
+    </div>
+    
+    <!-- Filtres appliqués -->
+    {% if filters is not empty %}
+    <div class="filters-section">
+        <strong>Filtres appliqués :</strong>
+        <ul class="filters-list">
+            {% for filter in filters %}
+                <li>{{ filter }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+    
+    <!-- Tableau des données -->
+    <table>
+        <thead>
+            <tr>
+                {% for header in headers %}
+                    <th class="{% if loop.index == 1 %}col-id{% elseif loop.index == 2 %}col-titre{% elseif loop.index == 3 %}col-description{% elseif 'Date' in header %}col-dates{% elseif 'Budget' in header or 'Montant' in header %}col-montant{% elseif 'Statut' in header %}col-statut{% elseif 'Notes' in header %}col-notes{% endif %}">{{ header }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in data %}
+                <tr>
+                    {% for cell in row %}
+                        <td class="{% if loop.index == 1 %}col-id{% elseif loop.index == 2 %}col-titre{% elseif loop.index == 3 %}col-description{% elseif loop.index >= 11 and loop.index <= 14 %}col-dates{% elseif loop.index == 10 or loop.index == 11 %}col-montant{% elseif loop.index == 15 %}col-statut{% elseif loop.index == 16 %}col-notes{% endif %} wrap-text">{{ cell }}</td>
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    {% include 'pdf/partials/footer.html.twig' %}
+</body>
+</html>

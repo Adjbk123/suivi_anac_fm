@@ -1,0 +1,736 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Détail de la Formation{% endblock %}
+
+{% block breadcrumb %}
+<ul class="breadcrumb">
+	<li class="breadcrumb-item"><a href="{{ path('app_formation_index') }}">FORMATIONS</a></li>
+	<li class="breadcrumb-item active">DÉTAIL</li>
+</ul>
+{% endblock %}
+
+{% block page_title %}
+<h1 class="page-header">
+	Détail de la Formation <small>{{ formation.titre }}</small>
+</h1>
+{% endblock %}
+
+{% block buttons %}
+<div class="d-flex gap-2">
+	<a href="{{ path('app_formation_index') }}" class="btn btn-secondary btn-sm">
+		<i class="fa fa-arrow-left"></i> Retour
+	</a>
+	{% if formation.statutActivite and formation.statutActivite.code != 'prevue_executee' %}
+	<a href="{{ path('app_formation_edit', {'id': formation.id}) }}" class="btn btn-warning btn-sm">
+		                <i class="fa fa-edit text-warning"></i> Modifier
+	</a>
+	{% endif %}
+	{% if formation.statutActivite and formation.statutActivite.code == 'prevue_non_executee' %}
+	<a href="{{ path('app_formation_realisation', {'id': formation.id}) }}" class="btn btn-success btn-sm">
+		<i class="fa fa-check-circle"></i> Marquer comme réalisée
+	</a>
+	{% endif %}
+</div>
+{% endblock %}
+
+{% block body %}
+<div class="row">
+	<div class="col-xl-12">
+		<!-- Informations générales -->
+		<div class="card mb-3">
+			<div class="card-header">
+				<h5 class="card-title mb-0">
+					<i class="fa fa-info-circle text-primary"></i> Informations générales
+				</h5>
+			</div>
+			<div class="card-body">
+				<div class="row">
+					<div class="col-md-6">
+						<table class="table table-borderless">
+							<tr>
+								<td width="150"><strong>Titre :</strong></td>
+								<td>{{ formation.titre }}</td>
+							</tr>
+							<tr>
+								<td><strong>Service :</strong></td>
+								<td>{{ formation.service ? formation.service.libelle : '-' }}</td>
+							</tr>
+							<tr>
+								<td><strong>Fonds :</strong></td>
+								<td>{{ formation.fonds ? formation.fonds.libelle : '-' }}</td>
+							</tr>
+							<tr>
+								<td><strong>Lieu prévu :</strong></td>
+								<td>{{ formation.lieuPrevu }}</td>
+							</tr>
+						</table>
+					</div>
+					<div class="col-md-6">
+						<table class="table table-borderless">
+							<tr>
+								<td width="150"><strong>Date début :</strong></td>
+								<td>{{ formation.datePrevueDebut ? formation.datePrevueDebut|date('d/m/Y') : '-' }}</td>
+							</tr>
+							<tr>
+								<td><strong>Date fin :</strong></td>
+								<td>{{ formation.datePrevueFin ? formation.datePrevueFin|date('d/m/Y') : '-' }}</td>
+							</tr>
+							<tr>
+								<td><strong>Durée :</strong></td>
+								<td>{{ formation.dureePrevue }} jours</td>
+							</tr>
+							<tr>
+								<td><strong>Budget prévu :</strong></td>
+								<td>{{ formation.budgetPrevu|number_format(0, ',', ' ') }} FCFA</td>
+							</tr>
+							<tr>
+								<td><strong>Statut :</strong></td>
+								<td>
+									{% if formation.statutActivite %}
+										<span class="badge bg-{{ formation.statutActivite.couleur }}">
+											{{ formation.statutActivite.libelle }}
+										</span>
+									{% else %}
+										<span class="badge bg-secondary">Non défini</span>
+									{% endif %}
+								</td>
+							</tr>
+						</table>
+					</div>
+				</div>
+				
+				{% if formation.description %}
+				<div class="mt-3">
+					<strong>Description :</strong>
+					<p class="mb-0">{{ formation.description }}</p>
+				</div>
+				{% endif %}
+			</div>
+		</div>
+
+		<!-- Participants -->
+		<div class="card mb-3">
+			<div class="card-header d-flex justify-content-between align-items-center">
+				<h5 class="card-title mb-0">
+					<i class="fa fa-users text-primary"></i> Participants ({{ formation.userFormations|length }})
+				</h5>
+				{% if formation.statutActivite and formation.statutActivite.code != 'prevue_executee' %}
+				<button type="button" class="btn btn-primary btn-sm" onclick="openAddParticipantModal()">
+					<i class="fa fa-plus"></i> Ajouter un participant
+				</button>
+				{% endif %}
+			</div>
+			<div class="card-body">
+				{% if formation.userFormations|length > 0 %}
+				<div class="table-responsive">
+					<table class="table table-hover">
+						<thead class="table-secondary">
+							<tr>
+								<th>Matricule</th>
+								<th>Nom</th>
+								<th>Prénom</th>
+								<th>Email</th>
+								<th>Statut</th>
+							</tr>
+						</thead>
+						<tbody>
+							{% for userFormation in formation.userFormations %}
+							<tr>
+								<td>{{ userFormation.user.matricule ?: '-' }}</td>
+								<td>{{ userFormation.user.nom }}</td>
+								<td>{{ userFormation.user.prenom }}</td>
+								<td>{{ userFormation.user.email }}</td>
+								<td>
+									{% if userFormation.statutParticipation %}
+										<span class="badge bg-{{ userFormation.statutParticipation.couleur }}">
+											{{ userFormation.statutParticipation.libelle }}
+										</span>
+									{% else %}
+										<span class="badge bg-secondary">Non défini</span>
+									{% endif %}
+								</td>
+							</tr>
+							{% endfor %}
+						</tbody>
+					</table>
+				</div>
+				{% else %}
+				<div class="text-center text-muted">
+					<i class="fa fa-users fa-2x mb-2"></i>
+					<p>Aucun participant inscrit</p>
+				</div>
+				{% endif %}
+			</div>
+		</div>
+
+		<!-- Dépenses prévues -->
+		<div class="card mb-3">
+			<div class="card-header d-flex justify-content-between align-items-center">
+				<h5 class="card-title mb-0">
+					<i class="fa fa-money-bill text-primary"></i> Dépenses prévues
+				</h5>
+				{% if formation.statutActivite and formation.statutActivite.code != 'prevue_executee' %}
+				<button type="button" class="btn btn-primary btn-sm" onclick="openAddDepenseModal()">
+					<i class="fa fa-plus"></i> Ajouter une dépense
+				</button>
+				{% endif %}
+			</div>
+			<div class="card-body">
+				{% if formation.depenseFormations|length > 0 %}
+				<div class="table-responsive">
+					<table class="table table-hover">
+						<thead class="table-secondary">
+							<tr>
+								<th>Catégorie</th>
+								<th>Montant prévu</th>
+								<th>Montant réel</th>
+								<th>Écart</th>
+							</tr>
+						</thead>
+						<tbody>
+							{% for depense in formation.depenseFormations %}
+							<tr>
+								<td>{{ depense.categorie.libelle }}</td>
+								<td>{{ depense.montantPrevu|number_format(0, ',', ' ') }} FCFA</td>
+								<td>{{ depense.montantReel ? depense.montantReel|number_format(0, ',', ' ') ~ ' FCFA' : '-' }}</td>
+								<td>
+									{% if depense.montantReel %}
+										{% set ecart = depense.montantReel - depense.montantPrevu %}
+										{% set ecartClass = ecart > 0 ? 'text-danger' : (ecart < 0 ? 'text-success' : 'text-muted') %}
+										<span class="{{ ecartClass }}">
+											{{ ecart|number_format(0, ',', ' ') }} FCFA
+										</span>
+									{% else %}
+										-
+									{% endif %}
+								</td>
+							</tr>
+							{% endfor %}
+						</tbody>
+						<tfoot class="table-info">
+							<tr>
+								<td><strong>Total</strong></td>
+								<td>
+									<strong>
+										{% set totalPrevu = 0 %}
+										{% for depense in formation.depenseFormations %}
+											{% set totalPrevu = totalPrevu + depense.montantPrevu %}
+										{% endfor %}
+										{{ totalPrevu|number_format(0, ',', ' ') }} FCFA
+									</strong>
+								</td>
+								<td>
+									<strong>
+										{% set totalReel = 0 %}
+										{% for depense in formation.depenseFormations %}
+											{% if depense.montantReel %}
+												{% set totalReel = totalReel + depense.montantReel %}
+											{% endif %}
+										{% endfor %}
+										{{ totalReel > 0 ? totalReel|number_format(0, ',', ' ') ~ ' FCFA' : '-' }}
+									</strong>
+								</td>
+								<td>
+									{% if totalReel > 0 %}
+										{% set ecartTotal = totalReel - totalPrevu %}
+										{% set ecartClass = ecartTotal > 0 ? 'text-danger' : (ecartTotal < 0 ? 'text-success' : 'text-muted') %}
+										<strong class="{{ ecartClass }}">
+											{{ ecartTotal|number_format(0, ',', ' ') }} FCFA
+										</strong>
+									{% else %}
+										-
+									{% endif %}
+								</td>
+							</tr>
+						</tfoot>
+					</table>
+				</div>
+				{% else %}
+				<div class="text-center text-muted">
+					<i class="fa fa-money-bill fa-2x mb-2"></i>
+					<p>Aucune dépense prévue</p>
+				</div>
+				{% endif %}
+			</div>
+		</div>
+
+		<!-- Documents -->
+		<div class="card mb-3">
+			<div class="card-header d-flex justify-content-between align-items-center">
+				<h5 class="card-title mb-0">
+					<i class="fa fa-file-alt text-primary"></i> Documents ({{ formation.documentFormations|length }})
+				</h5>
+				<button type="button" class="btn btn-primary btn-sm" onclick="openAddDocumentModal()">
+					<i class="fa fa-plus"></i> Ajouter un document
+				</button>
+			</div>
+			<div class="card-body">
+				{% if formation.documentFormations|length > 0 %}
+				<div class="table-responsive">
+					<table class="table table-hover">
+						<thead class="table-secondary">
+							<tr>
+								<th>Nom</th>
+								<th>Type</th>
+								<th>Taille</th>
+								<th>Date d'upload</th>
+								                        <th><i class="fa fa-cogs"></i></th>
+							</tr>
+						</thead>
+						<tbody>
+							{% for document in formation.documentFormations %}
+							<tr>
+								<td>{{ document.nom }}</td>
+								<td>{{ document.type }}</td>
+								<td>{{ (document.taille / 1024)|round(1) }} KB</td>
+								<td>{{ document.dateUpload|date('d/m/Y H:i') }}</td>
+								<td>
+									<div class="btn-group" role="group">
+										{% if document.type starts with 'image/' %}
+											<button type="button" class="btn btn-sm btn-outline-info" onclick="previewDocument('{{ asset('uploads/documents/' ~ document.nomFichier) }}', '{{ document.nom }}', 'image')">
+												<i class="fa fa-eye"></i> Voir
+											</button>
+										{% elseif document.type == 'application/pdf' %}
+											<button type="button" class="btn btn-sm btn-outline-info" onclick="previewDocument('{{ asset('uploads/documents/' ~ document.nomFichier) }}', '{{ document.nom }}', 'pdf')">
+												<i class="fa fa-eye"></i> Voir
+											</button>
+										{% elseif document.type starts with 'text/' %}
+											<button type="button" class="btn btn-sm btn-outline-info" onclick="previewDocument('{{ asset('uploads/documents/' ~ document.nomFichier) }}', '{{ document.nom }}', 'text')">
+												<i class="fa fa-eye"></i> Voir
+											</button>
+										{% endif %}
+										<a href="{{ asset('uploads/documents/' ~ document.nomFichier) }}" target="_blank" class="btn btn-sm btn-outline-primary">
+											<i class="fa fa-download"></i> Télécharger
+										</a>
+									</div>
+								</td>
+							</tr>
+							{% endfor %}
+						</tbody>
+					</table>
+				</div>
+				{% else %}
+				<div class="text-center text-muted">
+					<i class="fa fa-file-alt fa-2x mb-2"></i>
+					<p>Aucun document ajouté</p>
+				</div>
+				{% endif %}
+			</div>
+		</div>
+
+		<!-- Notes -->
+		{% if formation.notes %}
+		<div class="card">
+			<div class="card-header">
+				<h5 class="card-title mb-0">
+					<i class="fa fa-sticky-note text-primary"></i> Notes
+				</h5>
+			</div>
+			<div class="card-body">
+				<p class="mb-0">{{ formation.notes }}</p>
+			</div>
+		</div>
+		{% endif %}
+	</div>
+</div>
+
+<!-- Modal de prévisualisation des documents -->
+<div class="modal fade" id="documentPreviewModal" tabindex="-1" aria-labelledby="documentPreviewModalLabel" aria-hidden="true">
+	<div class="modal-dialog modal-xl">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="documentPreviewModalLabel">Prévisualisation du document</h5>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body">
+				<div id="documentPreviewContent">
+					<!-- Le contenu sera chargé dynamiquement -->
+				</div>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+				<a href="#" id="downloadLink" class="btn btn-primary" target="_blank">
+					<i class="fa fa-download"></i> Télécharger
+				</a>
+			</div>
+		</div>
+	</div>
+</div>
+
+<!-- Modal d'ajout de document -->
+<div class="modal fade" id="addDocumentModal" tabindex="-1" aria-labelledby="addDocumentModalLabel" aria-hidden="true">
+	<div class="modal-dialog modal-lg">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="addDocumentModalLabel">Ajouter un document</h5>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body">
+				<form id="addDocumentForm">
+					<div class="mb-3">
+						<label for="documentName" class="form-label">Nom du document *</label>
+						<input type="text" class="form-control" id="documentName" name="documentName" required>
+					</div>
+					<div class="mb-3">
+						<label for="documentFile" class="form-label">Fichier *</label>
+						<input type="file" class="form-control" id="documentFile" name="documentFile" required>
+						<div class="form-text">Formats acceptés : PDF, images, documents texte</div>
+					</div>
+				</form>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+				<button type="button" class="btn btn-primary" onclick="submitDocument()">
+					<i class="fa fa-upload"></i> Ajouter
+				</button>
+			</div>
+		</div>
+	</div>
+</div>
+
+<!-- Modal d'ajout de dépense -->
+<div class="modal fade" id="addDepenseModal" tabindex="-1" aria-labelledby="addDepenseModalLabel" aria-hidden="true">
+	<div class="modal-dialog modal-lg">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="addDepenseModalLabel">Ajouter une dépense</h5>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body">
+				<form id="addDepenseForm">
+					<div class="mb-3">
+						<label for="depenseCategorie" class="form-label">Catégorie de dépense *</label>
+						<select class="form-control" id="depenseCategorie" name="depenseCategorie" required>
+							<option value="">Sélectionner une catégorie</option>
+						</select>
+					</div>
+					<div class="mb-3">
+						<label for="depenseMontant" class="form-label">Montant prévu (FCFA) *</label>
+						<input type="number" class="form-control" id="depenseMontant" name="depenseMontant" min="0" step="1" required>
+					</div>
+				</form>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+				<button type="button" class="btn btn-primary" onclick="submitDepense()">
+					<i class="fa fa-plus"></i> Ajouter
+				</button>
+			</div>
+		</div>
+	</div>
+</div>
+
+<!-- Modal d'ajout de participant -->
+<div class="modal fade" id="addParticipantModal" tabindex="-1" aria-labelledby="addParticipantModalLabel" aria-hidden="true">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="addParticipantModalLabel">Ajouter un participant</h5>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body">
+				<form id="addParticipantForm">
+					<div class="mb-3">
+						<label for="participantUser" class="form-label">Utilisateur *</label>
+						<select class="form-control" id="participantUser" name="participantUser" required>
+							<option value="">Sélectionner un utilisateur</option>
+						</select>
+						<small class="form-text text-muted">Seuls les utilisateurs du service {{ formation.service.libelle }} sont affichés</small>
+					</div>
+				</form>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+				<button type="button" class="btn btn-primary" onclick="submitParticipant()">
+					<i class="fa fa-plus"></i> Ajouter
+				</button>
+			</div>
+		</div>
+	</div>
+</div>
+
+<script>
+function previewDocument(url, nom, type) {
+	const modal = new bootstrap.Modal(document.getElementById('documentPreviewModal'));
+	const content = document.getElementById('documentPreviewContent');
+	const downloadLink = document.getElementById('downloadLink');
+	
+	// Mettre à jour le titre et le lien de téléchargement
+	document.getElementById('documentPreviewModalLabel').textContent = `Prévisualisation : ${nom}`;
+	downloadLink.href = url;
+	
+	// Vider le contenu précédent
+	content.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">Chargement...</span></div></div>';
+	
+	// Afficher le modal
+	modal.show();
+	
+	// Charger le contenu selon le type
+	if (type === 'image') {
+		content.innerHTML = `
+			<div class="text-center">
+				<img src="${url}" class="img-fluid" alt="${nom}" style="max-height: 70vh;">
+			</div>
+		`;
+	} else if (type === 'pdf') {
+		content.innerHTML = `
+			<iframe src="${url}" width="100%" height="70vh" frameborder="0"></iframe>
+		`;
+	} else if (type === 'text') {
+		fetch(url)
+			.then(response => response.text())
+			.then(text => {
+				content.innerHTML = `
+					<pre class="bg-light p-3" style="max-height: 70vh; overflow-y: auto; font-size: 14px;">${text}</pre>
+				`;
+			})
+			.catch(error => {
+				content.innerHTML = `
+					<div class="alert alert-danger">
+						<i class="fa fa-exclamation-triangle"></i> Erreur lors du chargement du fichier texte.
+					</div>
+				`;
+			});
+	} else {
+		content.innerHTML = `
+			<div class="alert alert-info">
+				<i class="fa fa-info-circle"></i> Prévisualisation non disponible pour ce type de fichier.
+				<br><br>
+				<a href="${url}" target="_blank" class="btn btn-primary">
+					<i class="fa fa-external-link"></i> Ouvrir dans un nouvel onglet
+				</a>
+			</div>
+		`;
+	}
+}
+
+function openAddDocumentModal() {
+	const modal = new bootstrap.Modal(document.getElementById('addDocumentModal'));
+	document.getElementById('addDocumentForm').reset();
+	modal.show();
+}
+
+function submitDocument() {
+	const form = document.getElementById('addDocumentForm');
+	const formData = new FormData();
+	
+	const documentName = document.getElementById('documentName').value;
+	const documentFile = document.getElementById('documentFile').files[0];
+	
+	if (!documentName || !documentFile) {
+		alert('Veuillez remplir tous les champs obligatoires');
+		return;
+	}
+	
+	formData.append('nom', documentName);
+	formData.append('file', documentFile);
+	
+	// Désactiver le bouton pendant l'upload
+	const submitBtn = document.querySelector('#addDocumentModal .btn-primary');
+	const originalText = submitBtn.innerHTML;
+	submitBtn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Ajout en cours...';
+	submitBtn.disabled = true;
+	
+	fetch(`/formation/{{ formation.id }}/add-document`, {
+		method: 'POST',
+		body: formData
+	})
+	.then(response => response.json())
+	.then(data => {
+		if (data.success) {
+			// Fermer le modal
+			const modal = bootstrap.Modal.getInstance(document.getElementById('addDocumentModal'));
+			modal.hide();
+			
+			// Afficher le message de succès
+			showToast(data.message, 'success');
+			
+			// Recharger la page pour afficher le nouveau document
+			setTimeout(() => {
+				window.location.reload();
+			}, 1000);
+		} else {
+			showToast(data.message || 'Erreur lors de l\'ajout du document', 'error');
+		}
+	})
+	.catch(error => {
+		console.error('Erreur:', error);
+		showToast('Erreur lors de l\'ajout du document', 'error');
+	})
+	.finally(() => {
+		// Réactiver le bouton
+		submitBtn.innerHTML = originalText;
+		submitBtn.disabled = false;
+	});
+}
+
+function openAddDepenseModal() {
+	const modal = new bootstrap.Modal(document.getElementById('addDepenseModal'));
+	document.getElementById('addDepenseForm').reset();
+	loadCategoriesDepenses();
+	modal.show();
+}
+
+function loadCategoriesDepenses() {
+	const select = document.getElementById('depenseCategorie');
+	select.innerHTML = '<option value="">Sélectionner une catégorie</option>';
+	
+	fetch('/api/categories-depenses')
+		.then(response => response.json())
+		.then(data => {
+			data.forEach(categorie => {
+				const option = document.createElement('option');
+				option.value = categorie.id;
+				option.textContent = categorie.libelle;
+				select.appendChild(option);
+			});
+		})
+		.catch(error => {
+			console.error('Erreur:', error);
+			showToast('Erreur lors du chargement des catégories', 'error');
+		});
+}
+
+function submitDepense() {
+	const categorieId = document.getElementById('depenseCategorie').value;
+	const montant = document.getElementById('depenseMontant').value;
+	
+	if (!categorieId || !montant) {
+		alert('Veuillez remplir tous les champs obligatoires');
+		return;
+	}
+	
+	const data = {
+		categorieId: parseInt(categorieId),
+		montant: parseFloat(montant)
+	};
+	
+	// Désactiver le bouton pendant l'ajout
+	const submitBtn = document.querySelector('#addDepenseModal .btn-primary');
+	const originalText = submitBtn.innerHTML;
+	submitBtn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Ajout en cours...';
+	submitBtn.disabled = true;
+	
+	fetch(`/formation/{{ formation.id }}/add-depense`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json'
+		},
+		body: JSON.stringify(data)
+	})
+	.then(response => response.json())
+	.then(data => {
+		if (data.success) {
+			// Fermer le modal
+			const modal = bootstrap.Modal.getInstance(document.getElementById('addDepenseModal'));
+			modal.hide();
+			
+			// Afficher le message de succès
+			showToast(data.message, 'success');
+			
+			// Recharger la page pour afficher la nouvelle dépense
+			setTimeout(() => {
+				window.location.reload();
+			}, 1000);
+		} else {
+			showToast(data.message || 'Erreur lors de l\'ajout de la dépense', 'error');
+		}
+	})
+	.catch(error => {
+		console.error('Erreur:', error);
+		showToast('Erreur lors de l\'ajout de la dépense', 'error');
+	})
+	.finally(() => {
+		// Réactiver le bouton
+		submitBtn.innerHTML = originalText;
+		submitBtn.disabled = false;
+			});
+	}
+
+	// Modal pour ajouter un participant
+	function openAddParticipantModal() {
+		const modal = new bootstrap.Modal(document.getElementById('addParticipantModal'));
+		document.getElementById('addParticipantForm').reset();
+		loadAvailableUsers();
+		modal.show();
+	}
+
+	function loadAvailableUsers() {
+		const select = document.getElementById('participantUser');
+		select.innerHTML = '<option value="">Sélectionner un utilisateur</option>';
+		
+		fetch(`/api/users-by-service/{{ formation.service.id }}`)
+			.then(response => response.json())
+			.then(data => {
+				// Filtrer les utilisateurs déjà participants
+				const participantsIds = [{{ formation.userFormations|map(uf => uf.user.id)|join(', ') }}];
+				const availableUsers = data.filter(user => !participantsIds.includes(user.id));
+				
+				availableUsers.forEach(user => {
+					const option = document.createElement('option');
+					option.value = user.id;
+					option.textContent = `${user.nom} ${user.prenom} (${user.matricule || 'N/A'})`;
+					select.appendChild(option);
+				});
+			})
+			.catch(error => {
+				console.error('Erreur:', error);
+				showToast('Erreur lors du chargement des utilisateurs', 'error');
+			});
+	}
+
+	function submitParticipant() {
+		const userId = document.getElementById('participantUser').value;
+		
+		if (!userId) {
+			alert('Veuillez sélectionner un utilisateur');
+			return;
+		}
+		
+		const data = {
+			userId: parseInt(userId)
+		};
+		
+		// Désactiver le bouton pendant l'ajout
+		const submitBtn = document.querySelector('#addParticipantModal .btn-primary');
+		const originalText = submitBtn.innerHTML;
+		submitBtn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Ajout en cours...';
+		submitBtn.disabled = true;
+		
+		fetch(`/formation/{{ formation.id }}/add-participant`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify(data)
+		})
+		.then(response => response.json())
+		.then(data => {
+			if (data.success) {
+				// Fermer le modal
+				const modal = bootstrap.Modal.getInstance(document.getElementById('addParticipantModal'));
+				modal.hide();
+				
+				// Afficher le message de succès
+				showToast(data.message, 'success');
+				
+				// Recharger la page pour afficher le nouveau participant
+				setTimeout(() => {
+					window.location.reload();
+				}, 1000);
+			} else {
+				showToast(data.message || 'Erreur lors de l\'ajout du participant', 'error');
+			}
+		})
+		.catch(error => {
+			console.error('Erreur:', error);
+			showToast('Erreur lors de l\'ajout du participant', 'error');
+		})
+		.finally(() => {
+			// Réactiver le bouton
+			submitBtn.innerHTML = originalText;
+			submitBtn.disabled = false;
+		});
+	}
+</script>
+{% endblock %}

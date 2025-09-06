@@ -1,0 +1,200 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Résultats de recherche - {{ query }}{% endblock %}
+
+{% block breadcrumb %}
+<ul class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{{ path('app_dashboard') }}">DASHBOARD</a></li>
+    <li class="breadcrumb-item active">RECHERCHE</li>
+</ul>
+{% endblock %}
+
+{% block page_title %}
+<h1 class="page-header">
+    Résultats de recherche <small>pour "{{ query }}"</small>
+</h1>
+{% endblock %}
+
+{% block body %}
+<div class="row">
+    <div class="col-12">
+        <!-- Résumé des résultats -->
+        <div class="card mb-3">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="mb-1">{{ totalResults }} résultat(s) trouvé(s)</h5>
+                        <p class="text-muted mb-0">Recherche pour "{{ query }}"</p>
+                    </div>
+                    <div class="text-end">
+                        <a href="{{ path('app_dashboard') }}" class="btn btn-outline-secondary">
+                            <i class="fa fa-arrow-left"></i> Retour au dashboard
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Résultats des formations -->
+        {% if results.formations|length > 0 %}
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fa fa-graduation-cap text-primary"></i> Formations ({{ results.formations|length }})
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Titre</th>
+                                <th>Service</th>
+                                <th>Statut</th>
+                                <th>Date prévue</th>
+                                <th>Budget</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for formation in results.formations %}
+                            <tr>
+                                <td>
+                                    <strong>{{ formation.titre }}</strong>
+                                    {% if formation.description %}
+                                        <br><small class="text-muted">{{ formation.description|slice(0, 100) }}{% if formation.description|length > 100 %}...{% endif %}</small>
+                                    {% endif %}
+                                </td>
+                                <td>{{ formation.service_name ?: '-' }}</td>
+                                <td>
+                                    <span class="badge bg-info">{{ formation.status_name ?: 'Non défini' }}</span>
+                                </td>
+                                <td>{{ formation.datePrevueDebut ? formation.datePrevueDebut|date('d/m/Y') : '-' }}</td>
+                                <td>{{ formation.budgetPrevu ? formation.budgetPrevu|number_format(0, ',', ' ') ~ ' FCFA' : '-' }}</td>
+                                <td>
+                                    <a href="{{ path('app_formation_show', {'id': formation.id}) }}" class="btn btn-sm btn-outline-primary">
+                                        <i class="fa fa-eye"></i> Voir
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Résultats des missions -->
+        {% if results.missions|length > 0 %}
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fa fa-plane text-success"></i> Missions ({{ results.missions|length }})
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Titre</th>
+                                <th>Direction</th>
+                                <th>Statut</th>
+                                <th>Date prévue</th>
+                                <th>Budget</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for mission in results.missions %}
+                            <tr>
+                                <td>
+                                    <strong>{{ mission.titre }}</strong>
+                                    {% if mission.description %}
+                                        <br><small class="text-muted">{{ mission.description|slice(0, 100) }}{% if mission.description|length > 100 %}...{% endif %}</small>
+                                    {% endif %}
+                                </td>
+                                <td>{{ mission.direction_name ?: '-' }}</td>
+                                <td>
+                                    <span class="badge bg-success">{{ mission.status_name ?: 'Non défini' }}</span>
+                                </td>
+                                <td>{{ mission.datePrevueDebut ? mission.datePrevueDebut|date('d/m/Y') : '-' }}</td>
+                                <td>{{ mission.budgetPrevu ? mission.budgetPrevu|number_format(0, ',', ' ') ~ ' FCFA' : '-' }}</td>
+                                <td>
+                                    <a href="{{ path('app_mission_show', {'id': mission.id}) }}" class="btn btn-sm btn-outline-success">
+                                        <i class="fa fa-eye"></i> Voir
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Résultats des utilisateurs -->
+        {% if results.users|length > 0 %}
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fa fa-users text-info"></i> Utilisateurs ({{ results.users|length }})
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Nom complet</th>
+                                <th>Email</th>
+                                <th>Matricule</th>
+                                <th>Service</th>
+                                <th>Direction</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user in results.users %}
+                            <tr>
+                                <td>
+                                    <strong>{{ user.nom }} {{ user.prenom }}</strong>
+                                </td>
+                                <td>{{ user.email ?: '-' }}</td>
+                                <td>{{ user.matricule ?: '-' }}</td>
+                                <td>{{ user.service_name ?: '-' }}</td>
+                                <td>{{ user.direction_name ?: '-' }}</td>
+                                <td>
+                                    <a href="{{ path('app_user_show_page', {'id': user.id}) }}" class="btn btn-sm btn-outline-info">
+                                        <i class="fa fa-eye"></i> Voir
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Aucun résultat -->
+        {% if totalResults == 0 %}
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <i class="fa fa-search fa-3x text-muted mb-3"></i>
+                <h4>Aucun résultat trouvé</h4>
+                <p class="text-muted">Aucune formation, mission ou utilisateur ne correspond à votre recherche "{{ query }}"</p>
+                <div class="mt-3">
+                    <a href="{{ path('app_dashboard') }}" class="btn btn-primary">
+                        <i class="fa fa-arrow-left"></i> Retour au dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

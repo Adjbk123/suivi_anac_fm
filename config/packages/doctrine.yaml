@@ -8,6 +8,12 @@ doctrine:
 
         profiling_collect_backtrace: '%kernel.debug%'
         use_savepoints: true
+        
+        # Configuration des extensions Doctrine
+        types:
+            datetime: Doctrine\DBAL\Types\DateTimeType
+            date: Doctrine\DBAL\Types\DateType
+            time: Doctrine\DBAL\Types\TimeType
     orm:
         auto_generate_proxy_classes: true
         enable_lazy_ghost_objects: true

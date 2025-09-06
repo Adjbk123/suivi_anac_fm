@@ -1,0 +1,348 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}ANAC BENIN - Gestion des Postes{% endblock %}
+
+{% block breadcrumb %}
+<ul class="breadcrumb">
+	<li class="breadcrumb-item"><a href="#">GESTION</a></li>
+	<li class="breadcrumb-item active">POSTES</li>
+</ul>
+{% endblock %}
+
+{% block page_title %}
+<h1 class="page-header">
+	Postes <small>Gestion des postes</small>
+</h1>
+{% endblock %}
+
+{% block buttons %}
+<div class="d-flex gap-2">
+	<button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#posteModal" onclick="newPoste()">
+		<i class="fa fa-plus"></i> Nouveau Poste
+	</button>
+	<a href="{{ path('app_poste_export_pdf') }}" class="btn btn-success btn-sm">
+		<i class="fa fa-file-pdf"></i> Exporter PDF
+	</a>
+</div>
+{% endblock %}
+
+{% block body %}
+<div class="row">
+	<div class="col-xl-12">
+		<div class="card">
+			<div class="card-body">
+				<div class="table-responsive">
+					<table id="posteTable" class="table table-hover">
+						<thead class="table-secondary">
+							<tr>
+								<th>ID</th>
+								<th>Libellé</th>
+								<th>Description</th>
+								                        <th><i class="fa fa-cogs"></i></th>
+							</tr>
+						</thead>
+						<tbody>
+						</tbody>
+					</table>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
+<!-- Modal pour créer/modifier un poste -->
+<div class="modal fade" id="posteModal" tabindex="-1" aria-labelledby="posteModalLabel" aria-hidden="true">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="posteModalLabel">Nouveau Poste</h5>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<form id="posteForm">
+				<div class="modal-body">
+					<input type="hidden" id="posteId" name="id">
+					<div class="mb-3">
+						<label for="libelle" class="form-label">Libellé *</label>
+						<input type="text" class="form-control" id="libelle" name="libelle" required>
+					</div>
+					<div class="mb-3">
+						<label for="description" class="form-label">Description</label>
+						<textarea class="form-control" id="description" name="description" rows="3"></textarea>
+					</div>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+					<button type="submit" class="btn btn-primary" id="submitBtn">
+						<span class="btn-text">
+							<i class="fa fa-save"></i> Enregistrer
+						</span>
+						<span class="btn-spinner d-none">
+							<i class="fa fa-spinner fa-spin"></i> Enregistrement...
+						</span>
+					</button>
+				</div>
+			</form>
+		</div>
+	</div>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+<script>
+// Variable globale pour la table
+var table;
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Vérifier que jQuery et DataTables sont disponibles
+    if (typeof $ === 'undefined') {
+        console.error('jQuery n\'est pas chargé');
+        showToast('Erreur: jQuery n\'est pas disponible', 'error');
+        return;
+    }
+    
+    if (typeof $.fn.DataTable === 'undefined') {
+        console.error('DataTables n\'est pas chargé');
+        showToast('Erreur: DataTables n\'est pas disponible', 'error');
+        return;
+    }
+    
+    // Initialiser DataTable
+    table = $('#posteTable').DataTable({
+        language: {
+            "sProcessing":     "Traitement en cours...",
+            "sSearch":         "Rechercher&nbsp;:",
+            "sLengthMenu":     "Afficher _MENU_ éléments",
+            "sInfo":           "Affichage de l'élément _START_ à _END_ sur _TOTAL_ éléments",
+            "sInfoEmpty":      "Affichage de l'élément 0 à 0 sur 0 élément",
+            "sInfoFiltered":   "(filtré de _MAX_ éléments au total)",
+            "sInfoPostFix":    "",
+            "sLoadingRecords": "Chargement...",
+            "sZeroRecords":    "Aucun élément à afficher",
+            "sEmptyTable":     "Aucune donnée disponible dans le tableau",
+            "oPaginate": {
+                "sFirst":    '<i class="fa fa-angle-double-left" style="font-size: 12px;"></i>',
+                "sPrevious": '<i class="fa fa-angle-left" style="font-size: 12px;"></i>',
+                "sNext":     '<i class="fa fa-angle-right" style="font-size: 12px;"></i>',
+                "sLast":     '<i class="fa fa-angle-double-right" style="font-size: 12px;"></i>'
+            },
+            "oAria": {
+                "sSortAscending":  ": activer pour trier la colonne par ordre croissant",
+                "sSortDescending": ": activer pour trier la colonne par ordre décroissant"
+            }
+        },
+        responsive: false,
+        pageLength: 10,
+        lengthMenu: [[5, 10, 25, 50, -1], [5, 10, 25, 50, "Tous"]],
+        order: [[0, 'asc']],
+        columnDefs: [
+            {
+                targets: -1, // Dernière colonne (Actions)
+                orderable: false,
+                searchable: false
+            }
+        ],
+        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>' +
+             '<"row"<"col-sm-12"tr>>' +
+             '<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
+        buttons: [
+            {
+                extend: 'copy',
+                text: '<i class="fa fa-copy"></i> Copier',
+                className: 'btn btn-sm btn-outline-secondary'
+            },
+            {
+                extend: 'csv',
+                text: '<i class="fa fa-file-csv"></i> CSV',
+                className: 'btn btn-sm btn-outline-secondary'
+            },
+            {
+                extend: 'excel',
+                text: '<i class="fa fa-file-excel"></i> Excel',
+                className: 'btn btn-sm btn-outline-secondary'
+            },
+            {
+                extend: 'pdf',
+                text: '<i class="fa fa-file-pdf"></i> PDF',
+                className: 'btn btn-sm btn-outline-secondary'
+            },
+            {
+                extend: 'print',
+                text: '<i class="fa fa-print"></i> Imprimer',
+                className: 'btn btn-sm btn-outline-secondary'
+            }
+        ]
+    });
+    
+    // Charger les données
+    loadPostes();
+
+    // Gestion du formulaire
+    $('#posteForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        var formData = {
+            libelle: $('#libelle').val(),
+            description: $('#description').val()
+        };
+        
+        var submitBtn = $('#submitBtn');
+        var btnText = submitBtn.find('.btn-text');
+        var btnSpinner = submitBtn.find('.btn-spinner');
+        var posteId = $('#posteId').val();
+        
+        // Désactiver le bouton et afficher le spinner
+        submitBtn.prop('disabled', true);
+        btnText.addClass('d-none');
+        btnSpinner.removeClass('d-none');
+        
+        var url = posteId ? '{{ path('app_poste_edit', {'id': 'ID'}) }}'.replace('ID', posteId) : '{{ path('app_poste_new') }}';
+        
+        $.ajax({
+            url: url,
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(formData),
+            success: function(response) {
+                if (response.success) {
+                    showToast(response.message, 'success');
+                    $('#posteModal').modal('hide');
+                    loadPostes();
+                    resetForm();
+                } else {
+                    showToast(response.message, 'error');
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Erreur lors de l\'enregistrement:', status, error);
+                showToast('Erreur lors de l\'enregistrement', 'error');
+            },
+            complete: function() {
+                // Réactiver le bouton
+                submitBtn.prop('disabled', false);
+                btnText.removeClass('d-none');
+                btnSpinner.addClass('d-none');
+            }
+        });
+    });
+});
+
+function newPoste() {
+    $('#posteModalLabel').text('Nouveau Poste');
+    resetForm();
+}
+
+function editPoste(id) {
+    $('#posteModalLabel').text('Modifier le Poste');
+    
+    $.ajax({
+        url: '{{ path('app_poste_show', {'id': 'ID'}) }}'.replace('ID', id),
+        type: 'GET',
+        success: function(data) {
+            $('#posteId').val(data.id);
+            $('#libelle').val(data.libelle);
+            $('#description').val(data.description);
+            $('#posteModal').modal('show');
+        },
+        error: function(xhr, status, error) {
+            console.error('Erreur lors du chargement des données:', status, error);
+            showToast('Erreur lors du chargement des données', 'error');
+        }
+    });
+}
+
+function deletePoste(id) {
+    if (confirm('Êtes-vous sûr de vouloir supprimer ce poste ?')) {
+        $.ajax({
+            url: '{{ path('app_poste_delete', {'id': 'ID'}) }}'.replace('ID', id),
+            type: 'DELETE',
+            success: function(response) {
+                if (response.success) {
+                    showToast(response.message, 'success');
+                    loadPostes();
+                } else {
+                    showToast(response.message, 'error');
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Erreur lors de la suppression:', status, error);
+                showToast('Erreur lors de la suppression', 'error');
+            }
+        });
+    }
+}
+
+function resetForm() {
+    $('#posteForm')[0].reset();
+    $('#posteId').val('');
+}
+
+// Fonction pour charger les postes
+function loadPostes() {
+    // Afficher le skeleton loading
+    const tableContainer = document.querySelector('#posteTable').closest('.table-responsive');
+    if (tableContainer) {
+        tableContainer.style.position = 'relative';
+        const skeleton = document.createElement('div');
+        skeleton.id = 'skeleton-loading';
+        skeleton.innerHTML = `
+            <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: white; z-index: 1000; display: flex; align-items: center; justify-content: center;">
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Chargement...</span>
+                    </div>
+                    <div class="mt-2">Chargement des données...</div>
+                </div>
+            </div>
+        `;
+        tableContainer.appendChild(skeleton);
+    }
+    
+    fetch('{{ path('app_poste_list') }}')
+        .then(response => response.json())
+        .then(data => {
+            // Masquer le skeleton loading
+            const skeleton = document.getElementById('skeleton-loading');
+            if (skeleton) {
+                skeleton.remove();
+            }
+            
+            // Vider la table DataTable
+            table.clear();
+            
+            // Ajouter les données
+            data.forEach(poste => {
+                table.row.add([
+                    poste.id,
+                    poste.libelle,
+                    poste.description,
+                    `<div class="dropdown" style="position: relative;">
+                                        <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="dropdown" style="position: relative; z-index: 1;">
+                    <i class="fa fa-ellipsis-h"></i>
+                </button>
+                        <ul class="dropdown-menu dropdown-menu-end" style="position: absolute; z-index: 99999; right: 0; left: auto;">
+                            <li><a class="dropdown-item" href="#" onclick="editPoste(${poste.id})">
+                                <i class="fa fa-edit text-warning"></i> Modifier
+                            </a></li>
+                            <li><a class="dropdown-item" href="#" onclick="deletePoste(${poste.id})">
+                                <i class="fa fa-trash text-danger"></i> Supprimer
+                            </a></li>
+                        </ul>
+                    </div>`
+                ]);
+            });
+            
+            // Redessiner la table
+            table.draw();
+        })
+        .catch(error => {
+            // Masquer le skeleton loading en cas d'erreur
+            const skeleton = document.getElementById('skeleton-loading');
+            if (skeleton) {
+                skeleton.remove();
+            }
+            console.error('Erreur:', error);
+            showToast('Erreur lors du chargement des postes', 'error');
+        });
+}
+</script>
+{% endblock %}

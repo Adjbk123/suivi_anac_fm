@@ -1,0 +1,623 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}ANAC BENIN - Tableau de bord{% endblock %}
+
+{% block breadcrumb %}
+<ul class="breadcrumb">
+	<li class="breadcrumb-item"><a href="#">DASHBOARD</a></li>
+	<li class="breadcrumb-item active">ACCUEIL</li>
+</ul>
+{% endblock %}
+
+{% block page_title %}
+<h1 class="page-header">
+	Dashboard <small>Vue d'ensemble de votre application</small>
+</h1>
+{% endblock %}
+
+{% block stylesheets %}
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+.stats-card {
+    color: white !important;
+}
+
+.stats-card .card-body {
+    color: white !important;
+}
+
+.stats-card .card-body h4,
+.stats-card .card-body p,
+.stats-card .card-body i {
+    color: white !important;
+}
+
+.dashboard-card .card-body canvas {
+    max-height: 300px;
+}
+
+.expense-item {
+    border-left: 3px solid #007bff;
+    padding-left: 10px;
+    margin-bottom: 10px;
+}
+
+.execution-rate {
+    font-size: 1.2em;
+    font-weight: bold;
+}
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="row">
+    <!-- Statistiques générales -->
+    <div class="col-xl-12">
+        <div class="row">
+            <!-- Total Formations -->
+            <div class="col-xl-3 col-md-6">
+                <div class="card bg-primary text-white mb-3 stats-card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h4 class="mb-0 text-white">{{ stats.total_formations }}</h4>
+                                <p class="mb-0 text-white">Formations {{ currentYear }}</p>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fa fa-graduation-cap fa-2x text-white"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Total Missions -->
+            <div class="col-xl-3 col-md-6">
+                <div class="card bg-success text-white mb-3 stats-card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h4 class="mb-0 text-white">{{ stats.total_missions }}</h4>
+                                <p class="mb-0 text-white">Missions {{ currentYear }}</p>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fa fa-plane fa-2x text-white"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Total Utilisateurs -->
+            <div class="col-xl-3 col-md-6">
+                <div class="card bg-info text-white mb-3 stats-card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h4 class="mb-0 text-white">{{ stats.total_users }}</h4>
+                                <p class="mb-0 text-white">Utilisateurs</p>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fa fa-users fa-2x text-white"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Total Services -->
+            <div class="col-xl-3 col-md-6">
+                <div class="card bg-warning text-white mb-3 stats-card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h4 class="mb-0 text-white">{{ stats.total_services }}</h4>
+                                <p class="mb-0 text-white">Services</p>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fa fa-building fa-2x text-white"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Première ligne : Graphique mensuel et Budget -->
+    <div class="col-xl-8 mb-3">
+        <!-- Graphique mensuel des activités -->
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fa fa-chart-line text-primary"></i> Évolution mensuelle des activités ({{ currentYear }})
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="monthlyChart" height="100"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-4 mb-3">
+        <!-- Budget et dépenses -->
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fa fa-money-bill text-success"></i> Budget {{ currentYear }}
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <h6>Formations</h6>
+                    <div class="d-flex justify-content-between">
+                        <span>Budget prévu:</span>
+                        <strong>{{ stats.budget_total_formations|number_format(0, ',', ' ') }} FCFA</strong>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span>Dépenses réelles:</span>
+                        <strong>{{ stats.depenses_reelles_formations|number_format(0, ',', ' ') }} FCFA</strong>
+                    </div>
+                    <div class="progress mt-2" style="height: 5px;">
+                        {% set formationRatio = stats.budget_total_formations > 0 ? (stats.depenses_reelles_formations / stats.budget_total_formations * 100) : 0 %}
+                        <div class="progress-bar bg-{{ formationRatio > 100 ? 'danger' : 'success' }}" style="width: {{ min(formationRatio, 100) }}%"></div>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <h6>Missions</h6>
+                    <div class="d-flex justify-content-between">
+                        <span>Budget prévu:</span>
+                        <strong>{{ stats.budget_total_missions|number_format(0, ',', ' ') }} FCFA</strong>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span>Dépenses réelles:</span>
+                        <strong>{{ stats.depenses_reelles_missions|number_format(0, ',', ' ') }} FCFA</strong>
+                    </div>
+                    <div class="progress mt-2" style="height: 5px;">
+                        {% set missionRatio = stats.budget_total_missions > 0 ? (stats.depenses_reelles_missions / stats.budget_total_missions * 100) : 0 %}
+                        <div class="progress-bar bg-{{ missionRatio > 100 ? 'danger' : 'success' }}" style="width: {{ min(missionRatio, 100) }}%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Deuxième ligne : Graphiques de statuts -->
+    <div class="col-xl-12">
+        <!-- Répartition par statut -->
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fa fa-pie-chart text-primary"></i> Statuts des formations
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="formationStatusChart" height="200"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fa fa-pie-chart text-success"></i> Statuts des missions
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="missionStatusChart" height="200"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Troisième ligne : Taux d'exécution par direction -->
+    <div class="col-xl-12">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fa fa-tasks text-primary"></i> Taux d'exécution des formations par direction
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        {% if executionRateFormations %}
+                            {% for direction in executionRateFormations %}
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <div>
+                                    <strong>{{ direction.direction_name }}</strong>
+                                    <br>
+                                    <small class="text-muted">
+                                        {{ direction.executed }}/{{ direction.total }} exécutées
+                                    </small>
+                                </div>
+                                <div class="text-end">
+                                    <div class="execution-rate text-primary">
+                                        {% set rate = direction.total > 0 ? (direction.executed / direction.total * 100) : 0 %}
+                                        {{ rate|round(1) }}%
+                                    </div>
+                                    <div class="progress mt-1" style="height: 4px; width: 60px;">
+                                        <div class="progress-bar bg-primary" style="width: {{ rate }}%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-muted mb-0">Aucune donnée disponible</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fa fa-tasks text-success"></i> Taux d'exécution des missions par direction
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        {% if executionRateMissions %}
+                            {% for direction in executionRateMissions %}
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <div>
+                                    <strong>{{ direction.direction_name }}</strong>
+                                    <br>
+                                    <small class="text-muted">
+                                        {{ direction.executed }}/{{ direction.total }} exécutées
+                                    </small>
+                                </div>
+                                <div class="text-end">
+                                    <div class="execution-rate text-success">
+                                        {% set rate = direction.total > 0 ? (direction.executed / direction.total * 100) : 0 %}
+                                        {{ rate|round(1) }}%
+                                    </div>
+                                    <div class="progress mt-1" style="height: 4px; width: 60px;">
+                                        <div class="progress-bar bg-success" style="width: {{ rate }}%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-muted mb-0">Aucune donnée disponible</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quatrième ligne : Top/Bottom 5 des activités coûteuses -->
+    <div class="col-xl-12">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fa fa-arrow-up text-danger"></i> Top 5 des formations les plus coûteuses
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        {% if topExpensiveFormations %}
+                            {% for formation in topExpensiveFormations %}
+                            <div class="expense-item">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <strong>{{ formation.titre }}</strong>
+                                        <br>
+                                        <small class="text-muted">{{ formation.service_name }}</small>
+                                    </div>
+                                    <div class="text-end">
+                                        <div class="text-danger fw-bold">
+                                            {{ formation.budgetPrevu|number_format(0, ',', ' ') }} FCFA
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-muted mb-0">Aucune formation avec budget</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fa fa-arrow-down text-success"></i> Top 5 des missions les plus coûteuses
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        {% if topExpensiveMissions %}
+                            {% for mission in topExpensiveMissions %}
+                            <div class="expense-item">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <strong>{{ mission.titre }}</strong>
+                                        <br>
+                                        <small class="text-muted">{{ mission.direction_name }}</small>
+                                    </div>
+                                    <div class="text-end">
+                                        <div class="text-danger fw-bold">
+                                            {{ mission.budgetPrevu|number_format(0, ',', ' ') }} FCFA
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-muted mb-0">Aucune mission avec budget</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cinquième ligne : Participation des utilisateurs -->
+    <div class="col-xl-12">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fa fa-users text-primary"></i> Participation aux formations
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="userParticipationFormationsChart" height="200"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fa fa-users text-success"></i> Participation aux missions
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="userParticipationMissionsChart" height="200"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sixième ligne : Services les plus actifs -->
+    <div class="col-xl-12">
+        <!-- Top services actifs -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fa fa-trophy text-warning"></i> Services les plus actifs (formations uniquement)
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if topServices %}
+                    {% for service in topServices %}
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div>
+                            <strong>{{ service.service_name }}</strong>
+                            <br>
+                            <small class="text-muted">
+                                {{ service.formations_count }} formations
+                            </small>
+                        </div>
+                        <span class="badge bg-primary">{{ service.total_activities }}</span>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted mb-0">Aucune activité enregistrée</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Données pour les graphiques
+    const monthlyData = {{ monthlyData|json_encode|raw }};
+    const formationStatusData = {{ statusDistribution.formations|json_encode|raw }};
+    const missionStatusData = {{ statusDistribution.missions|json_encode|raw }};
+    const userParticipationFormationsData = {{ userParticipationFormations|json_encode|raw }};
+    const userParticipationMissionsData = {{ userParticipationMissions|json_encode|raw }};
+
+    // Graphique mensuel
+    const monthlyCtx = document.getElementById('monthlyChart').getContext('2d');
+    new Chart(monthlyCtx, {
+        type: 'bar',
+        data: {
+            labels: ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'],
+            datasets: [{
+                label: 'Formations',
+                data: Object.values(monthlyData.formations),
+                backgroundColor: 'rgba(75, 192, 192, 0.8)',
+                borderColor: 'rgb(75, 192, 192)',
+                borderWidth: 1
+            }, {
+                label: 'Missions',
+                data: Object.values(monthlyData.missions),
+                backgroundColor: 'rgba(255, 99, 132, 0.8)',
+                borderColor: 'rgb(255, 99, 132)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    position: 'top'
+                }
+            }
+        }
+    });
+
+    // Graphique statuts formations
+    if (formationStatusData.length > 0) {
+        const formationStatusCtx = document.getElementById('formationStatusChart').getContext('2d');
+        new Chart(formationStatusCtx, {
+            type: 'doughnut',
+            data: {
+                labels: formationStatusData.map(item => item.status),
+                datasets: [{
+                    data: formationStatusData.map(item => item.count),
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.8)',
+                        'rgba(54, 162, 235, 0.8)',
+                        'rgba(255, 205, 86, 0.8)',
+                        'rgba(75, 192, 192, 0.8)',
+                        'rgba(153, 102, 255, 0.8)',
+                        'rgba(255, 159, 64, 0.8)'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 10,
+                            usePointStyle: true
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.parsed;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                                return `${label}: ${value} (${percentage}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Graphique statuts missions
+    if (missionStatusData.length > 0) {
+        const missionStatusCtx = document.getElementById('missionStatusChart').getContext('2d');
+        new Chart(missionStatusCtx, {
+            type: 'doughnut',
+            data: {
+                labels: missionStatusData.map(item => item.status),
+                datasets: [{
+                    data: missionStatusData.map(item => item.count),
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.8)',
+                        'rgba(54, 162, 235, 0.8)',
+                        'rgba(255, 205, 86, 0.8)',
+                        'rgba(75, 192, 192, 0.8)',
+                        'rgba(153, 102, 255, 0.8)',
+                        'rgba(255, 159, 64, 0.8)'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 10,
+                            usePointStyle: true
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.parsed;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                                return `${label}: ${value} (${percentage}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Graphique participation formations
+    if (userParticipationFormationsData.length > 0) {
+        const userParticipationFormationsCtx = document.getElementById('userParticipationFormationsChart').getContext('2d');
+        new Chart(userParticipationFormationsCtx, {
+            type: 'doughnut',
+            data: {
+                labels: userParticipationFormationsData.map(item => item.status),
+                datasets: [{
+                    data: userParticipationFormationsData.map(item => item.count),
+                    backgroundColor: [
+                        'rgba(75, 192, 192, 0.8)',
+                        'rgba(255, 99, 132, 0.8)',
+                        'rgba(255, 205, 86, 0.8)',
+                        'rgba(153, 102, 255, 0.8)'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+    }
+
+    // Graphique participation missions
+    if (userParticipationMissionsData.length > 0) {
+        const userParticipationMissionsCtx = document.getElementById('userParticipationMissionsChart').getContext('2d');
+        new Chart(userParticipationMissionsCtx, {
+            type: 'doughnut',
+            data: {
+                labels: userParticipationMissionsData.map(item => item.status),
+                datasets: [{
+                    data: userParticipationMissionsData.map(item => item.count),
+                    backgroundColor: [
+                        'rgba(75, 192, 192, 0.8)',
+                        'rgba(255, 99, 132, 0.8)',
+                        'rgba(255, 205, 86, 0.8)',
+                        'rgba(153, 102, 255, 0.8)'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

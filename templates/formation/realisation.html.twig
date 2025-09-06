@@ -1,0 +1,863 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Réalisation de la Formation{% endblock %}
+
+{% block breadcrumb %}
+<ul class="breadcrumb">
+	<li class="breadcrumb-item"><a href="{{ path('app_formation_index') }}">FORMATIONS</a></li>
+	<li class="breadcrumb-item"><a href="{{ path('app_formation_show', {'id': formation.id}) }}">DÉTAIL</a></li>
+	<li class="breadcrumb-item active">RÉALISATION</li>
+</ul>
+{% endblock %}
+
+{% block page_title %}
+<h1 class="page-header">
+	Réalisation de la Formation <small>{{ formation.titre }}</small>
+</h1>
+{% endblock %}
+
+{% block buttons %}
+<div class="d-flex gap-2">
+	<a href="{{ path('app_formation_show', {'id': formation.id}) }}" class="btn btn-secondary btn-sm">
+		<i class="fa fa-arrow-left"></i> Retour
+	</a>
+</div>
+{% endblock %}
+
+{% block body %}
+<div class="row">
+	<div class="col-xl-12">
+		<div class="card">
+			<div class="card-header">
+				<h5 class="card-title mb-0">
+					<i class="fa fa-check-circle text-success"></i> Marquer la formation comme réalisée
+				</h5>
+			</div>
+			<div class="card-body">
+				<!-- Étapes de progression -->
+				<div class="mb-4">
+					<div class="progress" style="height: 4px;">
+						<div class="progress-bar" id="progressBar" role="progressbar" style="width: 25%;" aria-valuenow="25" aria-valuemin="0" aria-valuemax="100"></div>
+					</div>
+					<div class="d-flex justify-content-between mt-2">
+						<span class="step-indicator active" data-step="1">1. Informations réelles</span>
+						<span class="step-indicator" data-step="2">2. Pointage participants</span>
+						<span class="step-indicator" data-step="3">3. Dépenses réelles</span>
+						<span class="step-indicator" data-step="4">4. Validation</span>
+					</div>
+				</div>
+
+				<!-- Étape 1: Informations réelles -->
+				<div class="step-content" id="step1">
+					<h4 class="mb-3"><i class="fa fa-info-circle text-primary"></i> Informations de la formation</h4>
+					
+					<!-- Informations de prévision (lecture seule) -->
+					<div class="card mb-4">
+						<div class="card-header">
+							<h6 class="mb-0"><i class="fa fa-calendar text-info"></i> Informations prévisionnelles</h6>
+						</div>
+						<div class="card-body">
+							<div class="row">
+								<div class="col-md-6">
+									<div class="mb-3">
+										<label class="form-label">Titre de la formation</label>
+										<input type="text" class="form-control" value="{{ formation.titre }}" readonly>
+									</div>
+								</div>
+								<div class="col-md-6">
+									<div class="mb-3">
+										<label class="form-label">Service responsable</label>
+										<input type="text" class="form-control" value="{{ formation.service.libelle }}" readonly>
+									</div>
+								</div>
+							</div>
+							<div class="row">
+								<div class="col-md-6">
+									<div class="mb-3">
+										<label class="form-label">Type de fonds</label>
+										<input type="text" class="form-control" value="{{ formation.fonds.libelle }}" readonly>
+									</div>
+								</div>
+								<div class="col-md-6">
+									<div class="mb-3">
+										<label class="form-label">Lieu prévu</label>
+										<input type="text" class="form-control" value="{{ formation.lieuPrevu }}" readonly>
+									</div>
+								</div>
+							</div>
+							<div class="row">
+								<div class="col-md-4">
+									<div class="mb-3">
+										<label class="form-label">Date de début prévue</label>
+										<input type="text" class="form-control" value="{{ formation.datePrevueDebut|date('d/m/Y') }}" readonly>
+									</div>
+								</div>
+								<div class="col-md-4">
+									<div class="mb-3">
+										<label class="form-label">Date de fin prévue</label>
+										<input type="text" class="form-control" value="{{ formation.datePrevueFin|date('d/m/Y') }}" readonly>
+									</div>
+								</div>
+								<div class="col-md-4">
+									<div class="mb-3">
+										<label class="form-label">Durée prévue</label>
+										<input type="text" class="form-control" value="{{ formation.dureePrevue }} jours" readonly>
+									</div>
+								</div>
+							</div>
+							{% if formation.description %}
+							<div class="mb-3">
+								<label class="form-label">Description</label>
+								<textarea class="form-control" rows="3" readonly>{{ formation.description }}</textarea>
+							</div>
+							{% endif %}
+						</div>
+					</div>
+					
+					<!-- Informations réelles (modifiables) -->
+					<div class="card">
+						<div class="card-header">
+							<h6 class="mb-0"><i class="fa fa-check-circle text-success"></i> Informations réelles</h6>
+						</div>
+						<div class="card-body">
+							<div class="row">
+								<div class="col-md-6">
+									<div class="mb-3">
+										<label for="dateReelleDebut" class="form-label">Date réelle de début *</label>
+										<input type="date" class="form-control" id="dateReelleDebut" required>
+									</div>
+								</div>
+								<div class="col-md-6">
+									<div class="mb-3">
+										<label for="dateReelleFin" class="form-label">Date réelle de fin *</label>
+										<input type="date" class="form-control" id="dateReelleFin" required>
+									</div>
+								</div>
+							</div>
+							<div class="mb-3">
+								<label for="lieuReel" class="form-label">Lieu réel *</label>
+								<input type="text" class="form-control" id="lieuReel" placeholder="Lieu où s'est réellement déroulée la formation" required>
+							</div>
+						</div>
+					</div>
+					<div class="d-flex justify-content-end mt-3">
+						<button type="button" class="btn btn-primary" onclick="nextStep(2)">
+							Suivant <i class="fa fa-arrow-right"></i>
+						</button>
+					</div>
+				</div>
+
+				<!-- Étape 2: Pointage participants -->
+				<div class="step-content d-none" id="step2">
+					<h4 class="mb-3"><i class="fa fa-users text-primary"></i> Pointage des participants</h4>
+					
+					<!-- Participants prévus -->
+					<div class="mb-4">
+						<h6 class="text-primary">Participants prévus</h6>
+						<div class="table-responsive">
+							<table class="table table-hover" id="participantsTable">
+								<thead class="table-secondary">
+									<tr>
+										<th>Nom</th>
+										<th>Prénom</th>
+										<th>Matricule</th>
+										<th>Statut de participation</th>
+										<th>Statut actuel</th>
+									</tr>
+								</thead>
+								<tbody>
+									<!-- Les données seront chargées via AJAX -->
+								</tbody>
+							</table>
+						</div>
+					</div>
+
+					<!-- Ajouter de nouveaux participants -->
+					<div class="mb-4">
+						<h6 class="text-success">Ajouter des participants non prévus</h6>
+						<div class="row">
+							<div class="col-md-8">
+								<select class="form-select" id="nouveauxParticipants">
+									<option value="">Sélectionner un participant à ajouter...</option>
+								</select>
+							</div>
+							<div class="col-md-4">
+								<button type="button" class="btn btn-success" onclick="ajouterParticipant()">
+									<i class="fa fa-plus"></i> Ajouter
+								</button>
+							</div>
+						</div>
+						<div class="mt-3">
+							<div id="nouveauxParticipantsList">
+								<!-- Liste des nouveaux participants ajoutés -->
+							</div>
+						</div>
+					</div>
+
+					<div class="d-flex justify-content-between mt-4">
+						<button type="button" class="btn btn-secondary" onclick="prevStep(1)">
+							<i class="fa fa-arrow-left"></i> Précédent
+						</button>
+						<button type="button" class="btn btn-primary" onclick="nextStep(3)">
+							Suivant <i class="fa fa-arrow-right"></i>
+						</button>
+					</div>
+				</div>
+
+				<!-- Étape 3: Dépenses réelles -->
+				<div class="step-content d-none" id="step3">
+					<div class="d-flex justify-content-between align-items-center mb-3">
+						<h4 class="mb-0"><i class="fa fa-money-bill text-primary"></i> Dépenses réelles</h4>
+						<button type="button" class="btn btn-success btn-sm" onclick="showAddDepenseModal()">
+							<i class="fa fa-plus"></i> Ajouter une dépense
+						</button>
+					</div>
+					<div class="table-responsive">
+						<table class="table table-hover" id="depensesTable">
+							<thead class="table-secondary">
+								<tr>
+									<th>Catégorie</th>
+									<th>Montant prévu</th>
+									<th>Montant réel</th>
+									<th>Écart</th>
+								</tr>
+							</thead>
+							<tbody>
+								<!-- Les données seront chargées via AJAX -->
+							</tbody>
+							<tfoot class="table-info">
+								<tr id="totalRow" style="display: none;">
+									<th><strong>TOTAL</strong></th>
+									<th><strong id="totalPrevu">0 FCFA</strong></th>
+									<th><strong id="totalReel">0 FCFA</strong></th>
+									<th><strong id="totalEcart">0 FCFA</strong></th>
+								</tr>
+							</tfoot>
+						</table>
+					</div>
+					<div class="d-flex justify-content-between">
+						<button type="button" class="btn btn-secondary" onclick="prevStep(2)">
+							<i class="fa fa-arrow-left"></i> Précédent
+						</button>
+						<button type="button" class="btn btn-primary" onclick="nextStep(4)">
+							Suivant <i class="fa fa-arrow-right"></i>
+						</button>
+					</div>
+				</div>
+
+				<!-- Étape 4: Validation -->
+				<div class="step-content d-none" id="step4">
+					<h4 class="mb-3"><i class="fa fa-check-circle text-primary"></i> Récapitulatif et validation</h4>
+					<div class="row">
+						<div class="col-md-6">
+							<div class="card">
+								<div class="card-header">
+									<h6 class="card-title mb-0">Informations réelles</h6>
+								</div>
+								<div class="card-body">
+									<p><strong>Date début :</strong> <span id="recapDateDebut"></span></p>
+									<p><strong>Date fin :</strong> <span id="recapDateFin"></span></p>
+									<p><strong>Lieu :</strong> <span id="recapLieu"></span></p>
+								</div>
+							</div>
+						</div>
+						<div class="col-md-6">
+							<div class="card">
+								<div class="card-header">
+									<h6 class="card-title mb-0">Participants</h6>
+								</div>
+								<div class="card-body">
+									<p><strong>Participants prévus :</strong> <span id="recapParticipantsPrevus"></span></p>
+									<p><strong>Nouveaux participants :</strong> <span id="recapNouveauxParticipants"></span></p>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="d-flex justify-content-between mt-4">
+						<button type="button" class="btn btn-secondary" onclick="prevStep(3)">
+							<i class="fa fa-arrow-left"></i> Précédent
+						</button>
+						<button type="button" class="btn btn-success" onclick="validerRealisation()">
+							<i class="fa fa-check"></i> Valider la réalisation
+						</button>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
+<!-- Modal pour ajouter une dépense -->
+<div class="modal fade" id="addDepenseModal" tabindex="-1" aria-labelledby="addDepenseModalLabel" aria-hidden="true">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="addDepenseModalLabel">
+					<i class="fa fa-plus text-success"></i> Ajouter une dépense
+				</h5>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body">
+				<form id="addDepenseForm">
+					<div class="mb-3">
+						<label for="depenseCategorie" class="form-label">Catégorie de dépense *</label>
+						<select class="form-select" id="depenseCategorie" required>
+							<option value="">Sélectionner une catégorie...</option>
+						</select>
+					</div>
+					<div class="mb-3">
+						<label for="depenseMontant" class="form-label">Montant prévu *</label>
+						<div class="input-group">
+							<input type="number" class="form-control" id="depenseMontant" min="0" step="1000" required>
+							<span class="input-group-text">FCFA</span>
+						</div>
+					</div>
+				</form>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+				<button type="button" class="btn btn-success" onclick="addDepense()">
+					<i class="fa fa-plus"></i> Ajouter
+				</button>
+			</div>
+		</div>
+	</div>
+</div>
+{% endblock %}
+
+{% block stylesheets %}
+<style>
+.step-indicator {
+    font-size: 0.9rem;
+    color: #6c757d;
+    cursor: pointer;
+    padding: 5px 10px;
+    border-radius: 15px;
+    transition: all 0.3s ease;
+}
+
+.step-indicator.active {
+    background-color: #007bff;
+    color: white;
+}
+
+.step-indicator.completed {
+    background-color: #28a745;
+    color: white;
+}
+
+.step-content {
+    min-height: 400px;
+}
+</style>
+{% endblock %}
+
+{% block javascripts %}
+<script>
+let currentStep = 1;
+let participantsData = {};
+let depensesData = {};
+let statutsParticipation = [];
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadStatutsParticipation();
+    loadParticipants();
+    loadDepenses();
+});
+
+function nextStep(step) {
+    if (validateCurrentStep()) {
+        // Masquer toutes les étapes
+        document.querySelectorAll('.step-content').forEach(content => {
+            content.classList.add('d-none');
+        });
+        
+        // Afficher l'étape demandée
+        document.getElementById(`step${step}`).classList.remove('d-none');
+        
+        // Mettre à jour les indicateurs d'étapes
+        document.querySelectorAll('.step-indicator').forEach((indicator, index) => {
+            indicator.classList.remove('active', 'completed');
+            if (index + 1 < step) {
+                indicator.classList.add('completed');
+            } else if (index + 1 === step) {
+                indicator.classList.add('active');
+            }
+        });
+        
+        updateProgressBar(step);
+        currentStep = step;
+        
+        if (step === 4) {
+            updateRecap();
+        }
+    }
+}
+
+function prevStep(step) {
+    // Masquer toutes les étapes
+    document.querySelectorAll('.step-content').forEach(content => {
+        content.classList.add('d-none');
+    });
+    
+    // Afficher l'étape demandée
+    document.getElementById(`step${step}`).classList.remove('d-none');
+    
+    // Mettre à jour les indicateurs d'étapes
+    document.querySelectorAll('.step-indicator').forEach((indicator, index) => {
+        indicator.classList.remove('active', 'completed');
+        if (index + 1 < step) {
+            indicator.classList.add('completed');
+        } else if (index + 1 === step) {
+            indicator.classList.add('active');
+        }
+    });
+    
+    updateProgressBar(step);
+    currentStep = step;
+}
+
+function updateProgressBar(step) {
+    const progress = (step / 4) * 100;
+    const progressBar = document.getElementById('progressBar');
+    if (progressBar) {
+        progressBar.style.width = progress + '%';
+        progressBar.setAttribute('aria-valuenow', progress);
+    }
+}
+
+function validateCurrentStep() {
+    if (currentStep === 1) {
+        const dateDebut = document.getElementById('dateReelleDebut').value;
+        const dateFin = document.getElementById('dateReelleFin').value;
+        const lieu = document.getElementById('lieuReel').value;
+        
+        if (!dateDebut || !dateFin || !lieu) {
+            showToast('Veuillez remplir tous les champs obligatoires', 'error');
+            return false;
+        }
+        
+        if (new Date(dateDebut) > new Date(dateFin)) {
+            showToast('La date de début ne peut pas être postérieure à la date de fin', 'error');
+            return false;
+        }
+    }
+    
+    return true;
+}
+
+function loadStatutsParticipation() {
+    fetch('/api/statuts-participation')
+        .then(response => response.json())
+        .then(data => {
+            statutsParticipation = data;
+        })
+        .catch(error => {
+            console.error('Erreur lors du chargement des statuts:', error);
+        });
+}
+
+function loadParticipants() {
+    fetch("{{ path('app_formation_realisation_participants', {'id': formation.id}) }}")
+        .then(response => response.json())
+        .then(data => {
+            participantsData = data;
+            
+            // Remplir la table des participants prévus
+            const tbody = document.querySelector('#participantsTable tbody');
+            tbody.innerHTML = '';
+            
+            data.prevus.forEach(participant => {
+                const row = document.createElement('tr');
+                row.setAttribute('data-participant-id', participant.id);
+                const selectOptions = statutsParticipation
+                    .filter(statut => statut.code === 'participe' || statut.code === 'absent')
+                    .map(statut => 
+                        `<option value="${statut.id}" ${participant.statut_participation_id == statut.id ? 'selected' : ''}>${statut.libelle}</option>`
+                    ).join('');
+                
+                row.innerHTML = `
+                    <td>${participant.nom}</td>
+                    <td>${participant.prenom}</td>
+                    <td>${participant.matricule || '-'}</td>
+                    <td>
+                        <select class="form-select form-select-sm" onchange="updateParticipantStatut(${participant.id}, this.value)">
+                            <option value="">Choisir un statut</option>
+                            ${selectOptions}
+                        </select>
+                    </td>
+                    <td>
+                        <span class="badge bg-${participant.statut_couleur || 'secondary'}">${participant.statut_libelle || 'Non défini'}</span>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+            
+            // Remplir la liste des nouveaux participants disponibles
+            const select = document.getElementById('nouveauxParticipants');
+            select.innerHTML = '<option value="">Sélectionner un participant à ajouter...</option>';
+            
+            data.disponibles.forEach(user => {
+                const option = document.createElement('option');
+                option.value = user.id;
+                option.textContent = `${user.nom} ${user.prenom} (${user.matricule || 'N/A'})`;
+                select.appendChild(option);
+            });
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            showToast('Erreur lors du chargement des participants', 'error');
+        });
+}
+
+function loadDepenses() {
+    fetch("{{ path('app_formation_realisation_depenses', {'id': formation.id}) }}")
+        .then(response => response.json())
+        .then(data => {
+            depensesData = data.depenses;
+            
+            const tbody = document.querySelector('#depensesTable tbody');
+            tbody.innerHTML = '';
+            
+            if (data.depenses.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Aucune dépense prévue pour cette formation</td></tr>';
+                document.getElementById('totalRow').style.display = 'none';
+                return;
+            }
+            
+            data.depenses.forEach(depense => {
+                const row = document.createElement('tr');
+                row.setAttribute('data-depense-id', depense.id);
+                
+                const ecartClass = depense.ecart > 0 ? 'text-danger' : depense.ecart < 0 ? 'text-success' : 'text-muted';
+                const ecartSign = depense.ecart > 0 ? '+' : '';
+                
+                row.innerHTML = `
+                    <td>${depense.categorie}</td>
+                    <td>${numberFormat(depense.montantPrevu)} FCFA</td>
+                    <td>
+                        <input type="number" class="form-control form-control-sm" 
+                               value="${depense.montantReel || ''}" 
+                               min="0" step="1000" 
+                               onchange="updateDepenseReelle(${depense.id}, this.value)"
+                               placeholder="Montant réel">
+                    </td>
+                    <td class="${ecartClass}">
+                        ${depense.montantReel ? `${ecartSign}${numberFormat(depense.ecart)} FCFA` : '-'}
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+            
+            // Mettre à jour les totaux
+            updateTotaux(data.totaux);
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            const tbody = document.querySelector('#depensesTable tbody');
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center text-danger">Erreur lors du chargement des dépenses</td></tr>';
+            document.getElementById('totalRow').style.display = 'none';
+        });
+}
+
+function updateDepenseReelle(depenseId, montant) {
+    const depense = depensesData.find(d => d.id === depenseId);
+    if (depense) {
+        depense.montantReel = montant;
+        depense.ecart = montant ? (parseFloat(montant) - parseFloat(depense.montantPrevu)) : -(parseFloat(depense.montantPrevu));
+        
+        // Mettre à jour l'affichage de l'écart
+        const row = document.querySelector(`tr[data-depense-id="${depenseId}"]`);
+        if (row) {
+            const ecartCell = row.querySelector('td:last-child');
+            const ecartClass = depense.ecart > 0 ? 'text-danger' : depense.ecart < 0 ? 'text-success' : 'text-muted';
+            const ecartSign = depense.ecart > 0 ? '+' : '';
+            
+            ecartCell.className = ecartClass;
+            ecartCell.textContent = montant ? `${ecartSign}${numberFormat(depense.ecart)} FCFA` : '-';
+        }
+        
+        // Recalculer les totaux
+        recalculateTotaux();
+    }
+}
+
+function updateTotaux(totaux) {
+    document.getElementById('totalPrevu').textContent = numberFormat(totaux.totalPrevu) + ' FCFA';
+    document.getElementById('totalReel').textContent = numberFormat(totaux.totalReel) + ' FCFA';
+    
+    const ecartClass = totaux.totalEcart > 0 ? 'text-danger' : totaux.totalEcart < 0 ? 'text-success' : 'text-muted';
+    const ecartSign = totaux.totalEcart > 0 ? '+' : '';
+    
+    const totalEcartElement = document.getElementById('totalEcart');
+    totalEcartElement.textContent = `${ecartSign}${numberFormat(totaux.totalEcart)} FCFA`;
+    totalEcartElement.className = ecartClass;
+    
+    document.getElementById('totalRow').style.display = 'table-row';
+}
+
+function recalculateTotaux() {
+    let totalPrevu = 0;
+    let totalReel = 0;
+    
+    depensesData.forEach(depense => {
+        totalPrevu += parseFloat(depense.montantPrevu);
+        totalReel += depense.montantReel ? parseFloat(depense.montantReel) : 0;
+    });
+    
+    const totalEcart = totalReel - totalPrevu;
+    
+    updateTotaux({
+        totalPrevu: totalPrevu,
+        totalReel: totalReel,
+        totalEcart: totalEcart
+    });
+}
+
+function numberFormat(number) {
+    return new Intl.NumberFormat('fr-FR').format(number);
+}
+
+function updateParticipantStatut(userFormationId, statutId) {
+    // Mettre à jour le statut dans les données
+    const participant = participantsData.prevus.find(p => p.id === userFormationId);
+    if (participant) {
+        const statut = statutsParticipation.find(s => s.id == statutId);
+        if (statut) {
+            participant.statut_participation_id = statutId;
+            participant.statut_libelle = statut.libelle;
+            participant.statut_couleur = statut.couleur;
+            
+            // Mettre à jour l'affichage du badge
+            const row = document.querySelector(`tr[data-participant-id="${userFormationId}"]`);
+            if (row) {
+                const badge = row.querySelector('.badge');
+                if (badge) {
+                    badge.className = `badge bg-${statut.couleur}`;
+                    badge.textContent = statut.libelle;
+                }
+            }
+        }
+    }
+}
+
+function ajouterParticipant() {
+    const select = document.getElementById('nouveauxParticipants');
+    const userId = select.value;
+    
+    if (!userId) {
+        showToast('Veuillez sélectionner un participant', 'error');
+        return;
+    }
+    
+    const user = participantsData.disponibles.find(u => u.id == userId);
+    if (!user) return;
+    
+    // Ajouter à la liste des nouveaux participants
+    if (!participantsData.nouveaux) {
+        participantsData.nouveaux = [];
+    }
+    
+    if (!participantsData.nouveaux.find(u => u.id == userId)) {
+        participantsData.nouveaux.push(user);
+        
+        // Mettre à jour l'affichage
+        updateNouveauxParticipantsList();
+        
+        // Retirer de la liste des disponibles
+        const option = select.querySelector(`option[value="${userId}"]`);
+        option.remove();
+        select.value = '';
+        
+        showToast('Participant ajouté avec succès', 'success');
+    } else {
+        showToast('Ce participant a déjà été ajouté', 'warning');
+    }
+}
+
+function updateNouveauxParticipantsList() {
+    const container = document.getElementById('nouveauxParticipantsList');
+    container.innerHTML = '';
+    
+    if (participantsData.nouveaux && participantsData.nouveaux.length > 0) {
+        participantsData.nouveaux.forEach(user => {
+            const badge = document.createElement('span');
+            badge.className = 'badge bg-success me-2 mb-2';
+            badge.innerHTML = `${user.nom} ${user.prenom} <i class="fa fa-times ms-1" onclick="removeParticipant(${user.id})" style="cursor: pointer;"></i>`;
+            container.appendChild(badge);
+        });
+    }
+}
+
+function removeParticipant(userId) {
+    const user = participantsData.nouveaux.find(u => u.id == userId);
+    if (user) {
+        participantsData.nouveaux = participantsData.nouveaux.filter(u => u.id != userId);
+        
+        // Remettre dans la liste des disponibles
+        const select = document.getElementById('nouveauxParticipants');
+        const option = document.createElement('option');
+        option.value = user.id;
+        option.textContent = `${user.nom} ${user.prenom} (${user.matricule || 'N/A'})`;
+        select.appendChild(option);
+        
+        updateNouveauxParticipantsList();
+        showToast('Participant retiré', 'info');
+    }
+}
+
+function updateRecap() {
+    document.getElementById('recapDateDebut').textContent = document.getElementById('dateReelleDebut').value;
+    document.getElementById('recapDateFin').textContent = document.getElementById('dateReelleFin').value;
+    document.getElementById('recapLieu').textContent = document.getElementById('lieuReel').value;
+    
+    const participantsPrevus = participantsData.prevus ? participantsData.prevus.length : 0;
+    const nouveauxParticipants = participantsData.nouveaux ? participantsData.nouveaux.length : 0;
+    
+    document.getElementById('recapParticipantsPrevus').textContent = participantsPrevus;
+    document.getElementById('recapNouveauxParticipants').textContent = nouveauxParticipants;
+}
+
+function validerRealisation() {
+    const submitBtn = event.target;
+    const originalText = submitBtn.innerHTML;
+    
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Validation en cours...';
+    
+    const data = {
+        dateReelleDebut: document.getElementById('dateReelleDebut').value,
+        dateReelleFin: document.getElementById('dateReelleFin').value,
+        lieuReel: document.getElementById('lieuReel').value,
+        participants: participantsData.prevus.map(p => ({
+            userFormationId: p.id,
+            statut_participation_id: p.statut_participation_id
+        })),
+        nouveauxParticipants: participantsData.nouveaux ? participantsData.nouveaux.map(u => u.id) : [],
+        depensesReelles: depensesData.filter(d => d.montantReel).map(d => ({
+            categorieId: d.categorieId,
+            montant: d.montantReel
+        }))
+    };
+    
+    fetch("{{ path('app_formation_realisation_complete', {'id': formation.id}) }}", {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast(data.message, 'success');
+            setTimeout(() => {
+                window.location.href = "{{ path('app_formation_show', {'id': formation.id}) }}";
+            }, 2000);
+        } else {
+            showToast(data.message || 'Erreur lors de la validation', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        showToast('Erreur lors de la validation', 'error');
+    })
+    .finally(() => {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+    });
+}
+
+// Variables globales pour les catégories de dépenses
+let categoriesDepenses = [];
+
+function showAddDepenseModal() {
+    // Charger les catégories de dépenses si pas encore fait
+    if (categoriesDepenses.length === 0) {
+        loadCategoriesDepenses();
+    }
+    
+    // Réinitialiser le formulaire
+    document.getElementById('addDepenseForm').reset();
+    
+    // Afficher le modal
+    const modal = new bootstrap.Modal(document.getElementById('addDepenseModal'));
+    modal.show();
+}
+
+function loadCategoriesDepenses() {
+    fetch('/api/categories-depenses')
+        .then(response => response.json())
+        .then(data => {
+            categoriesDepenses = data;
+            const select = document.getElementById('depenseCategorie');
+            select.innerHTML = '<option value="">Sélectionner une catégorie...</option>';
+            
+            data.forEach(categorie => {
+                const option = document.createElement('option');
+                option.value = categorie.id;
+                option.textContent = categorie.libelle;
+                select.appendChild(option);
+            });
+        })
+        .catch(error => {
+            console.error('Erreur lors du chargement des catégories:', error);
+            showToast('Erreur lors du chargement des catégories', 'error');
+        });
+}
+
+function addDepense() {
+    const categorieId = document.getElementById('depenseCategorie').value;
+    const montant = document.getElementById('depenseMontant').value;
+    
+    if (!categorieId || !montant) {
+        showToast('Veuillez remplir tous les champs', 'error');
+        return;
+    }
+    
+    const submitBtn = event.target;
+    const originalText = submitBtn.innerHTML;
+    
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Ajout...';
+    
+    const data = {
+        categorieId: parseInt(categorieId),
+        montant: parseFloat(montant)
+    };
+    
+    fetch("{{ path('app_formation_add_depense', {'id': formation.id}) }}", {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast(data.message, 'success');
+            
+            // Fermer le modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('addDepenseModal'));
+            modal.hide();
+            
+            // Recharger les dépenses avec les nouveaux totaux
+            loadDepenses();
+        } else {
+            showToast(data.message || 'Erreur lors de l\'ajout', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        showToast('Erreur lors de l\'ajout de la dépense', 'error');
+    })
+    .finally(() => {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+    });
+}
+
+
+</script>
+{% endblock %}

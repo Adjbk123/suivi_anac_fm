@@ -1,0 +1,40 @@
+{% extends 'base_auth.html.twig' %}
+
+{% block title %}ANAC BENIN | Réinitialisation du mot de passe{% endblock %}
+
+{% block auth_content %}
+	<!-- Logo centré -->
+	<div class="text-center mb-4">
+		<img src="{{ asset('assets/images/logo_sf.png') }}" alt="ANAC BENIN" height="50" style="object-fit: contain;">
+	</div>
+
+	{{ form_start(requestForm, {'attr': {'class': 'reset-password-form'}}) }}
+		<h1 class="text-center">Réinitialisation du mot de passe</h1>
+		<div class="text-muted text-center mb-4">
+			Entrez votre adresse email pour recevoir un lien de réinitialisation.
+		</div>
+
+		{% for flash_error in app.flashes('reset_password_error') %}
+			<div class="alert alert-danger" role="alert">{{ flash_error }}</div>
+		{% endfor %}
+
+		<div class="mb-3">
+			{{ form_label(requestForm.email, 'Adresse Email', {'label_attr': {'class': 'form-label'}}) }}
+			{{ form_widget(requestForm.email, {
+				'attr': {
+					'class': 'form-control form-control-lg fs-15px',
+					'placeholder': 'votre@email.com',
+					'autocomplete': 'email',
+					'required': 'required',
+					'autofocus': 'autofocus'
+				}
+			}) }}
+			{{ form_errors(requestForm.email) }}
+		</div>
+
+		<button type="submit" class="btn btn-theme btn-lg d-block w-100 fw-500 mb-3">Envoyer le lien de réinitialisation</button>
+		<div class="text-center text-muted ">
+			<a href="{{ path('app_login') }}" class="btn btn-outline-primary">Retour à la connexion</a>
+		</div>
+	{{ form_end(requestForm) }}
+{% endblock %}

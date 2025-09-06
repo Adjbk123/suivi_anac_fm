@@ -1,0 +1,264 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Modifier la Mission{% endblock %}
+
+{% block breadcrumb %}
+<ul class="breadcrumb">
+	<li class="breadcrumb-item"><a href="{{ path('app_mission_index') }}">MISSIONS</a></li>
+	<li class="breadcrumb-item"><a href="{{ path('app_mission_show', {'id': mission.id}) }}">DÉTAIL</a></li>
+	<li class="breadcrumb-item active">MODIFIER</li>
+</ul>
+{% endblock %}
+
+{% block page_title %}
+<h1 class="page-header">
+	Modifier la Mission <small>{{ mission.titre }}</small>
+</h1>
+{% endblock %}
+
+{% block buttons %}
+<div class="d-flex gap-2">
+	<a href="{{ path('app_mission_show', {'id': mission.id}) }}" class="btn btn-secondary btn-sm">
+		<i class="fa fa-arrow-left"></i> Retour
+	</a>
+</div>
+{% endblock %}
+
+{% block body %}
+<div class="row">
+	<div class="col-xl-12">
+		<div class="card">
+			<div class="card-body">
+				<form id="missionEditForm">
+					<!-- Informations générales -->
+					<div class="mb-4">
+						<h4 class="mb-3"><i class="fa fa-info-circle text-primary"></i> Informations générales</h4>
+						
+						<div class="row">
+							<div class="col-md-6">
+								<div class="mb-3">
+									<label for="titre" class="form-label">Titre de la mission *</label>
+									<input type="text" class="form-control" id="titre" name="titre" required value="{{ mission.titre }}" placeholder="Ex: Mission d'audit sécurité">
+								</div>
+							</div>
+							<div class="col-md-6">
+								<div class="mb-3">
+									<label for="directionId" class="form-label">Direction responsable *</label>
+									<select class="form-select" id="directionId" name="directionId" required>
+										<option value="">Choisir une direction</option>
+									</select>
+								</div>
+							</div>
+						</div>
+
+						<div class="row">
+							<div class="col-md-6">
+								<div class="mb-3">
+									<label for="fondsId" class="form-label">Fonds *</label>
+									<select class="form-select" id="fondsId" name="fondsId" required>
+										<option value="">Choisir le type de fonds</option>
+									</select>
+								</div>
+							</div>
+							<div class="col-md-6">
+								<div class="mb-3">
+									<label for="lieuPrevu" class="form-label">Lieu prévu *</label>
+									<input type="text" class="form-control" id="lieuPrevu" name="lieuPrevu" required value="{{ mission.lieuPrevu }}" placeholder="Ex: Cotonou, Bénin">
+								</div>
+							</div>
+						</div>
+
+						<div class="row">
+							<div class="col-md-6">
+								<div class="mb-3">
+									<label for="datePrevueDebut" class="form-label">Date de début *</label>
+									<input type="date" class="form-control" id="datePrevueDebut" name="datePrevueDebut" required value="{{ mission.datePrevueDebut ? mission.datePrevueDebut|date('Y-m-d') : '' }}">
+								</div>
+							</div>
+							<div class="col-md-6">
+								<div class="mb-3">
+									<label for="datePrevueFin" class="form-label">Date de fin *</label>
+									<input type="date" class="form-control" id="datePrevueFin" name="datePrevueFin" required value="{{ mission.datePrevueFin ? mission.datePrevueFin|date('Y-m-d') : '' }}">
+								</div>
+							</div>
+						</div>
+
+						<input type="hidden" id="dureePrevue" name="dureePrevu" value="{{ mission.dureePrevue }}">
+						<input type="hidden" id="budgetPrevu" name="budgetPrevu" value="{{ mission.budgetPrevu }}">
+
+						<div class="mb-3">
+							<label for="description" class="form-label">Description</label>
+							<textarea class="form-control" id="description" name="description" rows="4" placeholder="Détails de la mission...">{{ mission.description }}</textarea>
+						</div>
+
+						<div class="mb-3">
+							<label for="statutActivite" class="form-label">Statut</label>
+							<select class="form-select" id="statutActivite" name="statutActivite">
+								<option value="">Choisir un statut</option>
+							</select>
+						</div>
+					</div>
+
+					<!-- Boutons -->
+					<div class="d-flex justify-content-end gap-2">
+						<a href="{{ path('app_mission_show', {'id': mission.id}) }}" class="btn btn-secondary">
+							<i class="fa fa-times"></i> Annuler
+						</a>
+						<button type="submit" class="btn btn-primary">
+							<i class="fa fa-save"></i> Enregistrer
+						</button>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+<script>
+// Initialisation au chargement de la page
+document.addEventListener('DOMContentLoaded', function() {
+    loadServices();
+    loadFonds();
+    loadStatutsActivite();
+    loadDirections();
+    setupEventListeners();
+    calculateDuration();
+});
+
+// Charger les services (pour référence uniquement)
+function loadServices() {
+    fetch('/api/services')
+        .then(response => response.json())
+        .then(data => {
+            // Cette fonction n'est plus utilisée car les missions utilisent maintenant les directions
+            console.log('Services chargés:', data);
+        })
+        .catch(error => console.error('Erreur:', error));
+}
+
+// Charger les types de fonds
+function loadFonds() {
+    fetch('/api/fonds')
+        .then(response => response.json())
+        .then(data => {
+            const select = document.getElementById('fondsId');
+            select.innerHTML = '<option value="">Choisir le type de fonds</option>';
+            data.forEach(fond => {
+                const selected = fond.id == {{ mission.fonds ? mission.fonds.id : 'null' }} ? 'selected' : '';
+                select.innerHTML += `<option value="${fond.id}" ${selected}>${fond.libelle}</option>`;
+            });
+        })
+        .catch(error => console.error('Erreur:', error));
+}
+
+// Charger les statuts d'activité
+function loadStatutsActivite() {
+    fetch('/api/statuts-activite')
+        .then(response => response.json())
+        .then(data => {
+            const select = document.getElementById('statutActivite');
+            select.innerHTML = '<option value="">Choisir un statut</option>';
+            data.forEach(statut => {
+                const selected = statut.id == {{ mission.statutActivite ? mission.statutActivite.id : 'null' }} ? 'selected' : '';
+                select.innerHTML += `<option value="${statut.id}" ${selected}>${statut.libelle}</option>`;
+            });
+        })
+        .catch(error => console.error('Erreur:', error));
+}
+
+// Charger les directions
+function loadDirections() {
+    fetch('/api/directions')
+        .then(response => response.json())
+        .then(data => {
+            const select = document.getElementById('directionId');
+            select.innerHTML = '<option value="">Choisir une direction</option>';
+            data.forEach(direction => {
+                const selected = direction.id == {{ mission.direction ? mission.direction.id : 'null' }} ? 'selected' : '';
+                select.innerHTML += `<option value="${direction.id}" ${selected}>${direction.libelle}</option>`;
+            });
+        })
+        .catch(error => console.error('Erreur:', error));
+}
+
+// Configuration des événements
+function setupEventListeners() {
+    // Calcul automatique de la durée
+    document.getElementById('datePrevueDebut').addEventListener('change', calculateDuration);
+    document.getElementById('datePrevueFin').addEventListener('change', calculateDuration);
+}
+
+// Calculer la durée automatiquement
+function calculateDuration() {
+    const debut = document.getElementById('datePrevueDebut').value;
+    const fin = document.getElementById('datePrevueFin').value;
+    
+    if (debut && fin) {
+        const dateDebut = new Date(debut);
+        const dateFin = new Date(fin);
+        const diffTime = Math.abs(dateFin - dateDebut);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+        document.getElementById('dureePrevue').value = diffDays;
+    } else {
+        document.getElementById('dureePrevue').value = '';
+    }
+}
+
+// Gestion de la soumission du formulaire
+document.getElementById('missionEditForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const submitBtn = document.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    
+    // Désactiver le bouton et afficher le spinner
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Enregistrement...';
+    
+    // Préparer les données
+    const formData = {
+        titre: document.getElementById('titre').value,
+        directionId: document.getElementById('directionId').value,
+        fondsId: document.getElementById('fondsId').value,
+        lieuPrevu: document.getElementById('lieuPrevu').value,
+        datePrevueDebut: document.getElementById('datePrevueDebut').value,
+        datePrevueFin: document.getElementById('datePrevueFin').value,
+        dureePrevue: document.getElementById('dureePrevue').value,
+        budgetPrevu: document.getElementById('budgetPrevu').value,
+        description: document.getElementById('description').value,
+        statut: document.getElementById('statut').value
+    };
+    
+    // Envoyer les données
+    fetch('{{ path('app_mission_update', {'id': mission.id}) }}', {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast(data.message, 'success');
+            setTimeout(() => {
+                window.location.href = '{{ path('app_mission_show', {'id': mission.id}) }}';
+            }, 1500);
+        } else {
+            showToast(data.message || 'Erreur lors de la modification', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        showToast('Erreur lors de la modification de la mission', 'error');
+    })
+    .finally(() => {
+        // Réactiver le bouton
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+    });
+});
+</script>
+{% endblock %}

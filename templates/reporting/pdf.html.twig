@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Rapport ANAC BENIN</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            line-height: 1.4;
+            margin: 0;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 15px;
+        }
+        
+        .header h1 {
+            margin: 0;
+            color: #007bff;
+            font-size: 24px;
+        }
+        
+        .header p {
+            margin: 5px 0;
+            color: #666;
+        }
+        
+        .section {
+            margin-bottom: 25px;
+            break-inside: avoid;
+        }
+        
+        .section-title {
+            background: #f8f9fa;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-left: 4px solid #007bff;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        
+        .stats-grid {
+            display: table;
+            width: 100%;
+            margin-bottom: 15px;
+        }
+        
+        .stats-row {
+            display: table-row;
+        }
+        
+        .stat-item {
+            display: table-cell;
+            text-align: center;
+            padding: 10px;
+            border: 1px solid #dee2e6;
+            vertical-align: middle;
+        }
+        
+        .stat-number {
+            font-size: 18px;
+            font-weight: bold;
+            color: #007bff;
+            display: block;
+        }
+        
+        .stat-label {
+            font-size: 10px;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 15px;
+        }
+        
+        table th,
+        table td {
+            border: 1px solid #dee2e6;
+            padding: 8px;
+            text-align: left;
+        }
+        
+        table th {
+            background: #f8f9fa;
+            font-weight: bold;
+            font-size: 11px;
+        }
+        
+        table td {
+            font-size: 10px;
+        }
+        
+        .badge {
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 9px;
+            font-weight: bold;
+        }
+        
+        .badge-success {
+            background: #28a745;
+            color: white;
+        }
+        
+        .badge-warning {
+            background: #ffc107;
+            color: black;
+        }
+        
+        .badge-danger {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .filters-info {
+            background: #f8f9fa;
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+            font-size: 10px;
+        }
+        
+        .page-break {
+            page-break-before: always;
+        }
+        
+        .footer {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            text-align: center;
+            font-size: 9px;
+            color: #666;
+            border-top: 1px solid #dee2e6;
+            padding-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>RAPPORT D'ACTIVITÉS</h1>
+        <p>Agence Nationale de l'Aviation Civile du Bénin</p>
+        <p>Généré le {{ "now"|date("d/m/Y à H:i") }}</p>
+    </div>
+
+    <!-- Informations sur les filtres appliqués -->
+    <div class="filters-info">
+        <strong>Filtres appliqués :</strong>
+        {% if filters.annee %}Année: {{ filters.annee }}{% endif %}
+        {% if filters.type_activite and filters.type_activite != 'all' %} | Type: {{ filters.type_activite|title }}{% endif %}
+        {% if filters.direction_id %} | Direction sélectionnée{% endif %}
+        {% if filters.service_id %} | Service sélectionné{% endif %}
+        {% if filters.statut_id %} | Statut filtré{% endif %}
+        {% if filters.date_debut %} | Période: {{ filters.date_debut }} - {{ filters.date_fin }}{% endif %}
+    </div>
+
+    <!-- 1. Résumé Global -->
+    <div class="section">
+        <div class="section-title">1. RÉSUMÉ GLOBAL</div>
+        <div class="stats-grid">
+            <div class="stats-row">
+                <div class="stat-item">
+                    <span class="stat-number">{{ resume.formations_prevues }}</span>
+                    <div class="stat-label">Formations prévues</div>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number">{{ resume.formations_realisees }}</span>
+                    <div class="stat-label">Formations réalisées</div>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number">{{ resume.missions_prevues }}</span>
+                    <div class="stat-label">Missions prévues</div>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number">{{ resume.missions_realisees }}</span>
+                    <div class="stat-label">Missions réalisées</div>
+                </div>
+            </div>
+            <div class="stats-row">
+                <div class="stat-item">
+                    <span class="stat-number">{{ resume.budget_total_prevu|number_format(0, ',', ' ') }} FCFA</span>
+                    <div class="stat-label">Budget total prévu</div>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number">{{ resume.budget_total_realise|number_format(0, ',', ' ') }} FCFA</span>
+                    <div class="stat-label">Budget total réalisé</div>
+                </div>
+                <div class="stat-item">
+                    {% set tauxExecution = (resume.missions_prevues + resume.formations_prevues) > 0 
+                        ? ((resume.missions_realisees + resume.formations_realisees) / (resume.missions_prevues + resume.formations_prevues) * 100) 
+                        : 0 %}
+                    <span class="stat-number">{{ tauxExecution|round(1) }}%</span>
+                    <div class="stat-label">Taux d'exécution global</div>
+                </div>
+                <div class="stat-item">
+                    {% set ecart = resume.budget_total_realise - resume.budget_total_prevu %}
+                    <span class="stat-number" style="color: {{ ecart >= 0 ? '#28a745' : '#dc3545' }}">
+                        {{ ecart >= 0 ? '+' : '' }}{{ ecart|number_format(0, ',', ' ') }} FCFA
+                    </span>
+                    <div class="stat-label">Écart budgétaire</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. Analyse par Direction -->
+    <div class="section">
+        <div class="section-title">2. ANALYSE PAR DIRECTION</div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Direction</th>
+                    <th>Formations (Réalisées)</th>
+                    <th>Missions (Réalisées)</th>
+                    <th>Taux d'exécution</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% set directions = {} %}
+                {% for item in parDirection.formations %}
+                    {% set directions = directions|merge({(item.direction_name): {
+                        'formations': item.total,
+                        'formations_exec': item.executed,
+                        'missions': 0,
+                        'missions_exec': 0
+                    }}) %}
+                {% endfor %}
+                {% for item in parDirection.missions %}
+                    {% if directions[item.direction_name] is defined %}
+                        {% set temp = directions[item.direction_name] %}
+                        {% set temp = temp|merge({'missions': item.total, 'missions_exec': item.executed}) %}
+                        {% set directions = directions|merge({(item.direction_name): temp}) %}
+                    {% else %}
+                        {% set directions = directions|merge({(item.direction_name): {
+                            'formations': 0,
+                            'formations_exec': 0,
+                            'missions': item.total,
+                            'missions_exec': item.executed
+                        }}) %}
+                    {% endif %}
+                {% endfor %}
+                
+                {% for directionName, data in directions %}
+                    {% set totalActivites = data.formations + data.missions %}
+                    {% set totalExecutees = data.formations_exec + data.missions_exec %}
+                    {% set tauxExecution = totalActivites > 0 ? (totalExecutees / totalActivites * 100) : 0 %}
+                    <tr>
+                        <td>{{ directionName }}</td>
+                        <td>{{ data.formations }} ({{ data.formations_exec }})</td>
+                        <td>{{ data.missions }} ({{ data.missions_exec }})</td>
+                        <td>
+                            <span class="badge badge-{{ tauxExecution >= 70 ? 'success' : (tauxExecution >= 50 ? 'warning' : 'danger') }}">
+                                {{ tauxExecution|round(1) }}%
+                            </span>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="page-break"></div>
+
+    <!-- 3. Indicateurs Clés -->
+    <div class="section">
+        <div class="section-title">3. INDICATEURS CLÉS</div>
+        <div class="stats-grid">
+            <div class="stats-row">
+                <div class="stat-item">
+                    <span class="stat-number">{{ indicateurs.taux_execution_budget|round(1) }}%</span>
+                    <div class="stat-label">Taux d'exécution budget</div>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number">{{ indicateurs.budget_prevu_total|number_format(0, ',', ' ') }} FCFA</span>
+                    <div class="stat-label">Budget prévu total</div>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number">{{ indicateurs.budget_reel_total|number_format(0, ',', ' ') }} FCFA</span>
+                    <div class="stat-label">Budget réel total</div>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number" style="color: {{ indicateurs.ecart_budget >= 0 ? '#28a745' : '#dc3545' }}">
+                        {{ indicateurs.ecart_budget >= 0 ? '↗' : '↘' }} {{ indicateurs.ecart_budget|abs|number_format(0, ',', ' ') }} FCFA
+                    </span>
+                    <div class="stat-label">Écart budgétaire</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. Répartition par Statut -->
+    <div class="section">
+        <div class="section-title">4. RÉPARTITION PAR STATUT</div>
+        
+        <div style="width: 48%; float: left; margin-right: 4%;">
+            <h4 style="font-size: 12px; margin-bottom: 10px;">Formations</h4>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Statut</th>
+                        <th>Nombre</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for statut in statuts.formations %}
+                    <tr>
+                        <td>{{ statut.status }}</td>
+                        <td>{{ statut.count }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <div style="width: 48%; float: right;">
+            <h4 style="font-size: 12px; margin-bottom: 10px;">Missions</h4>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Statut</th>
+                        <th>Nombre</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for statut in statuts.missions %}
+                    <tr>
+                        <td>{{ statut.status }}</td>
+                        <td>{{ statut.count }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <div style="clear: both;"></div>
+    </div>
+
+    <div class="footer">
+        <p>Rapport généré par le système ANAC BENIN - {{ "now"|date("d/m/Y à H:i") }} - Page {PAGE_NUM} sur {PAGE_COUNT}</p>
+    </div>
+</body>
+</html>

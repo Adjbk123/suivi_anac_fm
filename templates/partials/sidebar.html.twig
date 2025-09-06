@@ -1,0 +1,296 @@
+<!-- BEGIN #sidebar -->
+<div id="sidebar" class="app-sidebar">
+	<!-- BEGIN scrollbar -->
+	<div class="app-sidebar-content" data-scrollbar="true" data-height="100%">
+		<!-- BEGIN menu -->
+		<div class="menu">
+			<div class="menu-header">Navigation</div>
+			<div class="menu-item {% if app.current_route=="app_dashboard" %}active{% endif %} ">
+				<a href="{{ path('app_dashboard') }}" class="menu-link">
+					<span class="menu-icon"><i class="fa fa-tachometer-alt"></i></span>
+					<span class="menu-text">Tableau de bord</span>
+				</a>
+			</div>
+
+			<div class="menu-divider"></div>
+			
+			{# Section Gestion - Visible seulement pour les admins #}
+			{% if can_manage_settings() %}
+			<div class="menu-header">Gestion</div>
+			<div class="menu-item {% if app.current_route=="app_direction_index" %}active{% endif %}">
+				<a href="{{ path('app_direction_index') }}" class="menu-link">
+					<span class="menu-icon"><i class="fa fa-building"></i></span>
+					<span class="menu-text">Directions</span>
+				</a>
+			</div>
+			<div class="menu-item {% if app.current_route=="app_domaine_index" %}active{% endif %}">
+				<a href="{{ path('app_domaine_index') }}" class="menu-link">
+					<span class="menu-icon"><i class="fa fa-sitemap"></i></span>
+					<span class="menu-text">Domaines</span>
+				</a>
+			</div>
+			<div class="menu-item {% if app.current_route=="app_service_index" %}active{% endif %}">
+				<a href="{{ path('app_service_index') }}" class="menu-link">
+					<span class="menu-icon"><i class="fa fa-cogs"></i></span>
+					<span class="menu-text">Services</span>
+				</a>
+			</div>
+			<div class="menu-item {% if app.current_route=="app_poste_index" %}active{% endif %}">
+				<a href="{{ path('app_poste_index') }}" class="menu-link">
+					<span class="menu-icon"><i class="fa fa-briefcase"></i></span>
+					<span class="menu-text">Postes</span>
+				</a>
+			</div>
+			<div class="menu-item {% if app.current_route=="app_typefonds_index" %}active{% endif %}">
+				<a href="{{ path('app_typefonds_index') }}" class="menu-link">
+					<span class="menu-icon"><i class="fa fa-money-bill-wave"></i></span>
+					<span class="menu-text">Types de fonds</span>
+				</a>
+			</div>
+			<div class="menu-item {% if app.current_route=="app_categoriedepense_index" %}active{% endif %}">
+				<a href="{{ path('app_categoriedepense_index') }}" class="menu-link">
+					<span class="menu-icon"><i class="fa fa-tags"></i></span>
+					<span class="menu-text">Types de dépenses</span>
+				</a>
+			</div>
+			<div class="menu-item has-sub {% if app.current_route starts with 'app_statut' %}active{% endif %}">
+				<a href="#" class="menu-link">
+					<span class="menu-icon"><i class="fa fa-list-alt"></i></span>
+					<span class="menu-text">Gestion des statuts</span>
+					<span class="menu-caret"><b class="caret"></b></span>
+				</a>
+				<div class="menu-submenu">
+					<div class="menu-item {% if app.current_route=="app_statut_activite_index" %}active{% endif %}">
+						<a href="{{ path('app_statut_activite_index') }}" class="menu-link">
+							<span class="menu-text">Statuts d'activité</span>
+						</a>
+					</div>
+					<div class="menu-item {% if app.current_route=="app_statut_participation_index" %}active{% endif %}">
+						<a href="{{ path('app_statut_participation_index') }}" class="menu-link">
+							<span class="menu-text">Statuts de participation</span>
+						</a>
+					</div>
+				</div>
+			</div>
+			{% endif %}
+
+			{# Section Utilisateurs - Visible seulement pour les admins #}
+			{% if can_manage_users() %}
+			<div class="menu-item {% if app.current_route=="app_user_index" %}active{% endif %}">
+				<a href="{{ path('app_user_index') }}" class="menu-link">
+					<span class="menu-icon"><i class="fa fa-users"></i></span>
+					<span class="menu-text">Utilisateurs</span>
+				</a>
+			</div>
+			{% endif %}
+
+			{# Section Formations - Visible pour tous les utilisateurs connectés #}
+			<div class="menu-item has-sub {% if app.current_route starts with 'app_formation' %}active{% endif %}">
+				<a href="#" class="menu-link">
+					<span class="menu-icon"><i class="fa fa-graduation-cap"></i></span>
+					<span class="menu-text">Formations</span>
+					<span class="menu-caret"><b class="caret"></b></span>
+				</a>
+				<div class="menu-submenu">
+					{% if can_create_formation() %}
+					<div class="menu-item {% if app.current_route=="app_formation_create" %}active{% endif %}">
+						<a href="{{ path('app_formation_create') }}" class="menu-link">
+							<span class="menu-text">Ajouter</span>
+						</a>
+					</div>
+					{% endif %}
+					<div class="menu-item {% if app.current_route=="app_formation_index" %}active{% endif %}">
+						<a href="{{ path('app_formation_index') }}" class="menu-link">
+							<span class="menu-text">Toutes les formations</span>
+						</a>
+					</div>
+					<div class="menu-item {% if app.current_route=="app_formation_planned" %}active{% endif %}">
+						<a href="{{ path('app_formation_planned') }}" class="menu-link">
+							<span class="menu-text">Formations prévues</span>
+						</a>
+					</div>
+					<div class="menu-item {% if app.current_route=="app_formation_executed" %}active{% endif %}">
+						<a href="{{ path('app_formation_executed') }}" class="menu-link">
+							<span class="menu-text">Formations exécutées</span>
+						</a>
+					</div>
+				</div>
+			</div>
+
+			{# Section Missions - Visible pour tous les utilisateurs connectés #}
+			<div class="menu-item has-sub {% if app.current_route starts with 'app_mission' %}active{% endif %}">
+				<a href="#" class="menu-link">
+					<span class="menu-icon"><i class="fa fa-tasks"></i></span>
+					<span class="menu-text">Missions</span>
+					<span class="menu-caret"><b class="caret"></b></span>
+				</a>
+				<div class="menu-submenu">
+					{% if can_create_formation() %}
+					<div class="menu-item {% if app.current_route=="app_mission_create" %}active{% endif %}">
+						<a href="{{ path('app_mission_create') }}" class="menu-link">
+							<span class="menu-text">Ajouter</span>
+						</a>
+					</div>
+					{% endif %}
+					<div class="menu-item {% if app.current_route=="app_mission_index" %}active{% endif %}">
+						<a href="{{ path('app_mission_index') }}" class="menu-link">
+							<span class="menu-text">Toutes les missions</span>
+						</a>
+					</div>
+					<div class="menu-item {% if app.current_route=="app_mission_planned" %}active{% endif %}">
+						<a href="{{ path('app_mission_planned') }}" class="menu-link">
+							<span class="menu-text">Missions prévues</span>
+						</a>
+					</div>
+					<div class="menu-item {% if app.current_route=="app_mission_executed" %}active{% endif %}">
+						<a href="{{ path('app_mission_executed') }}" class="menu-link">
+							<span class="menu-text">Missions exécutées</span>
+						</a>
+					</div>
+				</div>
+			</div>
+
+			{# Section Rapports et Statistiques - Visible seulement pour les directeurs et admins #}
+			{% if can_view_reports() %}
+			<div class="menu-item {% if app.current_route=="app_reporting" %}active{% endif %}">
+				<a href="{{ path('app_reporting') }}" class="menu-link">
+					<span class="menu-icon"><i class="fa fa-chart-bar"></i></span>
+					<span class="menu-text">Rapports</span>
+				</a>
+			</div>
+			{% endif %}
+
+			
+		</div>
+		<!-- END menu -->
+	</div>
+	<!-- END scrollbar -->
+
+	<!-- BEGIN mobile-sidebar-backdrop -->
+	<button class="app-sidebar-mobile-backdrop" data-dismiss="sidebar-mobile"></button>
+	<!-- END mobile-sidebar-backdrop -->
+</div>
+<!-- END #sidebar -->
+
+<style>
+/* Amélioration du menu sidebar */
+.menu-item.active > .menu-link {
+    background-color: var(--bs-primary) !important;
+    color: white !important;
+    border-radius: 8px;
+    margin: 2px 8px;
+    transition: all 0.3s ease;
+}
+
+.menu-item.active > .menu-link:hover {
+    background-color: var(--bs-primary) !important;
+    color: white !important;
+    transform: translateX(2px);
+}
+
+.menu-item.active > .menu-link .menu-icon {
+    color: white !important;
+}
+
+.menu-item.active > .menu-link .menu-text {
+    color: white !important;
+    font-weight: 600;
+}
+
+/* Styles pour les sous-éléments */
+.menu-submenu .menu-item .menu-link {
+    font-weight: 600 !important;
+    color: #495057 !important;
+    padding-left: 20px;
+    transition: all 0.2s ease;
+}
+
+.menu-submenu .menu-item .menu-link:hover {
+    color: var(--bs-primary) !important;
+    background-color: rgba(var(--bs-primary-rgb), 0.1);
+    border-radius: 6px;
+    margin: 1px 4px;
+}
+
+.menu-submenu .menu-item.active .menu-link {
+    background-color: var(--bs-primary) !important;
+    color: white !important;
+    border-radius: 6px;
+    margin: 1px 4px;
+    font-weight: 700 !important;
+}
+
+.menu-submenu .menu-item.active .menu-link:hover {
+    background-color: var(--bs-primary) !important;
+    color: white !important;
+}
+
+/* Amélioration des éléments principaux non-actifs */
+.menu-item:not(.active) > .menu-link {
+    transition: all 0.3s ease;
+    border-radius: 8px;
+    margin: 2px 8px;
+}
+
+.menu-item:not(.active) > .menu-link:hover {
+    background-color: rgba(var(--bs-primary-rgb), 0.1) !important;
+    color: var(--bs-primary) !important;
+    transform: translateX(2px);
+}
+
+.menu-item:not(.active) > .menu-link .menu-icon {
+    transition: color 0.3s ease;
+}
+
+.menu-item:not(.active) > .menu-link:hover .menu-icon {
+    color: var(--bs-primary) !important;
+}
+
+/* Amélioration des headers de menu */
+.menu-header {
+    font-weight: 700 !important;
+    color: var(--bs-primary) !important;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.5px;
+    margin: 15px 8px 8px 8px;
+    padding: 8px 0;
+    border-bottom: 2px solid rgba(var(--bs-primary-rgb), 0.2);
+}
+
+/* Amélioration des séparateurs */
+.menu-divider {
+    border-top: 1px solid rgba(var(--bs-primary-rgb), 0.2);
+    margin: 10px 8px;
+}
+
+/* Animation pour les sous-menus */
+.menu-submenu {
+    background-color: rgba(var(--bs-primary-rgb), 0.05);
+    border-radius: 8px;
+    margin: 4px 8px;
+    padding: 4px 0;
+}
+
+/* Amélioration des icônes */
+.menu-icon {
+    transition: all 0.3s ease;
+}
+
+/* Effet de focus pour l'accessibilité */
+.menu-link:focus {
+    outline: 2px solid var(--bs-primary);
+    outline-offset: 2px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .menu-item.active > .menu-link {
+        margin: 1px 4px;
+    }
+    
+    .menu-submenu {
+        margin: 2px 4px;
+    }
+}
+</style>

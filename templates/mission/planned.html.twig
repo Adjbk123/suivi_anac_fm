@@ -1,0 +1,273 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Missions Prévues{% endblock %}
+
+{% block breadcrumb %}
+<ul class="breadcrumb">
+	<li class="breadcrumb-item"><a href="{{ path('app_mission_index') }}">MISSIONS</a></li>
+	<li class="breadcrumb-item active">MISSIONS PRÉVUES</li>
+</ul>
+{% endblock %}
+
+{% block page_title %}
+<h1 class="page-header">
+	Missions Prévues <small>Planification des missions</small>
+</h1>
+{% endblock %}
+
+{% block buttons %}
+<div class="d-flex gap-2">
+	<a href="{{ path('app_mission_index') }}" class="btn btn-secondary btn-sm">
+		<i class="fa fa-arrow-left"></i> Retour
+	</a>
+	<a href="{{ path('app_mission_create') }}" class="btn btn-primary btn-sm">
+		<i class="fa fa-plus"></i> Nouvelle Mission
+	</a>
+</div>
+{% endblock %}
+
+{% block body %}
+<div class="row">
+	<div class="col-xl-12">
+		<div class="card">
+			<div class="card-body">
+				<div class="table-responsive">
+					<table class="table table-hover" id="missionsPlannedTable">
+						<thead class="table-secondary">
+							<tr>
+								<th>ID</th>
+								<th>Titre</th>
+								<th>Direction</th>
+								<th>Fonds</th>
+								<th>Dates prévues</th>
+								<th>Lieu prévu</th>
+								<th>Durée</th>
+								<th>Budget prévu</th>
+								<th>Participants</th>
+								<th>Statut</th>
+								                        <th><i class="fa fa-cogs"></i></th>
+							</tr>
+						</thead>
+						<tbody>
+							<!-- Les données seront chargées via AJAX -->
+						</tbody>
+					</table>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+<script>
+let missionsPlannedTable = null;
+
+// Initialiser DataTable au chargement de la page
+document.addEventListener('DOMContentLoaded', function() {
+    initializeDataTable();
+    loadMissionsPlanned();
+});
+
+// Initialiser DataTable
+function initializeDataTable() {
+    missionsPlannedTable = $('#missionsPlannedTable').DataTable({
+        language: {
+            "sProcessing":     "Traitement en cours...",
+            "sSearch":         "Rechercher&nbsp;:",
+            "sLengthMenu":     "Afficher _MENU_ éléments",
+            "sInfo":           "Affichage de l'élément _START_ à _END_ sur _TOTAL_ éléments",
+            "sInfoEmpty":      "Affichage de l'élément 0 à 0 sur 0 élément",
+            "sInfoFiltered":   "(filtré de _MAX_ éléments au total)",
+            "sInfoPostFix":    "",
+            "sLoadingRecords": "Chargement...",
+            "sZeroRecords":    "Aucun élément à afficher",
+            "sEmptyTable":     "Aucune donnée disponible dans le tableau",
+            "oPaginate": {
+                "sFirst":    '<i class="fa fa-angle-double-left" style="font-size: 12px;"></i>',
+                "sPrevious": '<i class="fa fa-angle-left" style="font-size: 12px;"></i>',
+                "sNext":     '<i class="fa fa-angle-right" style="font-size: 12px;"></i>',
+                "sLast":     '<i class="fa fa-angle-double-right" style="font-size: 12px;"></i>'
+            },
+            "oAria": {
+                "sSortAscending":  ": activer pour trier la colonne par ordre croissant",
+                "sSortDescending": ": activer pour trier la colonne par ordre décroissant"
+            }
+        },
+        responsive: false,
+        pageLength: 10,
+        lengthMenu: [[5, 10, 25, 50, -1], [5, 10, 25, 50, "Tous"]],
+        order: [[0, 'asc']],
+        columnDefs: [
+            {
+                targets: -1, // Dernière colonne (Actions)
+                orderable: false,
+                searchable: false
+            }
+        ],
+        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>' +
+             '<"row"<"col-sm-12"tr>>' +
+             '<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
+        buttons: [
+            {
+                extend: 'copy',
+                text: '<i class="fa fa-copy"></i> Copier',
+                className: 'btn btn-sm btn-outline-secondary'
+            },
+            {
+                extend: 'csv',
+                text: '<i class="fa fa-file-csv"></i> CSV',
+                className: 'btn btn-sm btn-outline-secondary'
+            },
+            {
+                extend: 'excel',
+                text: '<i class="fa fa-file-excel"></i> Excel',
+                className: 'btn btn-sm btn-outline-secondary'
+            },
+            {
+                extend: 'pdf',
+                text: '<i class="fa fa-file-pdf"></i> PDF',
+                className: 'btn btn-sm btn-outline-secondary'
+            },
+            {
+                extend: 'print',
+                text: '<i class="fa fa-print"></i> Imprimer',
+                className: 'btn btn-sm btn-outline-secondary'
+            }
+        ]
+    });
+}
+
+// Fonction pour charger les missions prévues
+function loadMissionsPlanned() {
+    // Afficher le skeleton loading
+    const tableContainer = document.querySelector('#missionsPlannedTable').closest('.table-responsive');
+    if (tableContainer) {
+        tableContainer.style.position = 'relative';
+        const skeleton = document.createElement('div');
+        skeleton.id = 'skeleton-loading';
+        skeleton.innerHTML = `
+            <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: white; z-index: 1000; display: flex; align-items: center; justify-content: center;">
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Chargement...</span>
+                    </div>
+                    <div class="mt-2">Chargement des données...</div>
+                </div>
+            </div>
+        `;
+        tableContainer.appendChild(skeleton);
+    }
+    
+    fetch('{{ path('app_mission_planned_list') }}')
+        .then(response => response.json())
+        .then(data => {
+            // Masquer le skeleton loading
+            const skeleton = document.getElementById('skeleton-loading');
+            if (skeleton) {
+                skeleton.remove();
+            }
+            
+            // Vider la table DataTable
+            missionsPlannedTable.clear();
+            
+            // Ajouter les données
+            data.forEach(mission => {
+                const statutBadge = getStatutBadge(mission.statut, mission.statut_couleur);
+                missionsPlannedTable.row.add([
+                    mission.id,
+                    mission.titre,
+                    mission.direction,
+                    mission.fonds,
+                    `${mission.datePrevueDebut} - ${mission.datePrevueFin}`,
+                    mission.lieuPrevu,
+                    mission.dureePrevue,
+                    mission.budgetPrevu,
+                    mission.participantsPrevu,
+                    statutBadge,
+                    `<div class="dropdown" style="position: relative;">
+                                        <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="position: relative; z-index: 1;">
+                    <i class="fa fa-ellipsis-h"></i>
+                </button>
+                        <ul class="dropdown-menu dropdown-menu-end" style="position: absolute; z-index: 99999; right: 0; left: auto;">
+                            <li><a class="dropdown-item" href="/mission/${mission.id}">
+                                <i class="fa fa-eye text-info"></i> Voir
+                            </a></li>
+                            <li><a class="dropdown-item" href="/mission/${mission.id}/edit">
+                                <i class="fa fa-edit text-warning"></i> Modifier
+                            </a></li>
+                            <li><a class="dropdown-item" href="#" onclick="startMission(${mission.id})">
+                                <i class="fa fa-play text-success"></i> Démarrer
+                            </a></li>
+                            <li><a class="dropdown-item" href="#" onclick="deleteMission(${mission.id})">
+                                <i class="fa fa-trash text-danger"></i> Supprimer
+                            </a></li>
+                        </ul>
+                    </div>`
+                ]);
+            });
+            
+            // Redessiner la table
+            missionsPlannedTable.draw();
+        })
+        .catch(error => {
+            // Masquer le skeleton loading en cas d'erreur
+            const skeleton = document.getElementById('skeleton-loading');
+            if (skeleton) {
+                skeleton.remove();
+            }
+            console.error('Erreur:', error);
+            showToast('Erreur lors du chargement des missions prévues', 'error');
+        });
+}
+
+                // Fonction pour obtenir le badge de statut
+                function getStatutBadge(statut, couleur) {
+                    return `<span class="badge bg-${couleur}">${statut}</span>`;
+                }
+
+// Fonction pour démarrer une mission
+function startMission(id) {
+    if (confirm('Voulez-vous démarrer cette mission ? Cela changera son statut à "En cours".')) {
+        fetch(`/mission/${id}/start`, {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast(data.message, 'success');
+                loadMissionsPlanned();
+            } else {
+                showToast(data.message || 'Erreur lors du démarrage', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            showToast('Erreur lors du démarrage de la mission', 'error');
+        });
+    }
+}
+
+// Fonction pour supprimer une mission
+function deleteMission(id) {
+    if (confirm('Êtes-vous sûr de vouloir supprimer cette mission ?')) {
+        fetch(`/mission/${id}`, {
+            method: 'DELETE'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast(data.message, 'success');
+                loadMissionsPlanned();
+            } else {
+                showToast(data.message, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            showToast('Erreur lors de la suppression', 'error');
+        });
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,63 @@
+{% extends 'base_auth.html.twig' %}
+
+{% block title %}ANAC BENIN | Nouveau mot de passe{% endblock %}
+
+{% block auth_content %}
+	<!-- Logo centré -->
+	<div class="text-center mb-4">
+		<img src="{{ asset('assets/images/logo_sf.png') }}" alt="ANAC BENIN" height="50" style="object-fit: contain;">
+	</div>
+	
+	{{ form_start(resetForm, {'attr': {'class': 'reset-password-form'}}) }}
+		<h1 class="text-center">Nouveau mot de passe</h1>
+		<div class="text-muted text-center mb-4">
+			Entrez votre nouveau mot de passe ci-dessous.
+		</div>
+		
+		{% for flash_error in app.flashes('reset_password_error') %}
+			<div class="alert alert-danger" role="alert">{{ flash_error }}</div>
+		{% endfor %}
+		
+		<div class="mb-3">
+			{{ form_label(resetForm.plainPassword, 'Nouveau mot de passe', {'label_attr': {'class': 'form-label'}}) }}
+			<div class="position-relative">
+				{{ form_widget(resetForm.plainPassword, {
+					'attr': {
+						'class': 'form-control form-control-lg fs-15px',
+						'placeholder': 'Entrez votre nouveau mot de passe',
+						'autocomplete': 'new-password',
+						'required': 'required',
+						'autofocus': 'autofocus'
+					}
+				}) }}
+				<button type="button" class="btn btn-link position-absolute end-0 top-0 h-100" onclick="togglePassword('reset_form_plainPassword')" style="z-index: 10; border: none; background: none;">
+					<i class="fa fa-eye" id="reset_form_plainPassword-toggle-icon"></i>
+				</button>
+			</div>
+			{{ form_errors(resetForm.plainPassword) }}
+		</div>
+		
+		<div class="mb-3">
+			{{ form_label(resetForm.confirmPassword, 'Confirmer le mot de passe', {'label_attr': {'class': 'form-label'}}) }}
+			<div class="position-relative">
+				{{ form_widget(resetForm.confirmPassword, {
+					'attr': {
+						'class': 'form-control form-control-lg fs-15px',
+						'placeholder': 'Confirmez votre nouveau mot de passe',
+						'autocomplete': 'new-password',
+						'required': 'required'
+					}
+				}) }}
+				<button type="button" class="btn btn-link position-absolute end-0 top-0 h-100" onclick="togglePassword('reset_form_confirmPassword')" style="z-index: 10; border: none; background: none;">
+					<i class="fa fa-eye" id="reset_form_confirmPassword-toggle-icon"></i>
+				</button>
+			</div>
+			{{ form_errors(resetForm.confirmPassword) }}
+		</div>
+		
+		<button type="submit" class="btn btn-theme btn-lg d-block w-100 fw-500 mb-3">Réinitialiser le mot de passe</button>
+		<div class="text-center text-muted">
+			<a href="{{ path('app_login') }}">Retour à la connexion</a>
+		</div>
+	{{ form_end(resetForm) }}
+{% endblock %}

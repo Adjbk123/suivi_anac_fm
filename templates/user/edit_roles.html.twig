@@ -1,0 +1,112 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Modifier les rôles - {{ user.nom }} {{ user.prenom }}{% endblock %}
+
+{% block breadcrumb %}
+<ul class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{{ path('app_dashboard') }}">DASHBOARD</a></li>
+    <li class="breadcrumb-item"><a href="{{ path('app_user_index') }}">UTILISATEURS</a></li>
+    <li class="breadcrumb-item"><a href="{{ path('app_user_show_page', {'id': user.id}) }}">DÉTAILS</a></li>
+    <li class="breadcrumb-item active">MODIFIER RÔLES</li>
+</ul>
+{% endblock %}
+
+{% block page_title %}
+<h1 class="page-header">
+    Modifier les rôles <small>{{ user.nom }} {{ user.prenom }}</small>
+</h1>
+{% endblock %}
+
+{% block buttons %}
+<div class="d-flex gap-2">
+    <a href="{{ path('app_user_show_page', {'id': user.id}) }}" class="btn btn-secondary btn-sm">
+        <i class="fa fa-arrow-left"></i> Retour
+    </a>
+</div>
+{% endblock %}
+
+{% block body %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fa fa-user-shield text-primary"></i>
+                    Gestion des rôles
+                </h5>
+            </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-lg-8">
+                            {{ form_start(form) }}
+                            
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Utilisateur</label>
+                                <div class="form-control-plaintext bg-light p-2 rounded">
+                                    <strong>{{ user.nom }} {{ user.prenom }}</strong> - {{ user.email }}
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Service</label>
+                                <div class="form-control-plaintext bg-light p-2 rounded">
+                                    {{ user.service ? user.service.libelle : 'Non assigné' }}
+                                </div>
+                            </div>
+
+                            <div class="mb-4">
+                                {{ form_label(form.roles, null, {'label_attr': {'class': 'form-label fw-bold'}}) }}
+                                <div class="mt-2">
+                                    {{ form_widget(form.roles) }}
+                                </div>
+                                {{ form_help(form.roles) }}
+                                {{ form_errors(form.roles) }}
+                            </div>
+
+                            <div class="d-flex gap-2">
+                                {{ form_widget(form.submit, {'attr': {'class': 'btn btn-primary'}}) }}
+                                <a href="{{ path('app_user_show_page', {'id': user.id}) }}" class="btn btn-secondary">
+                                    Annuler
+                                </a>
+                            </div>
+
+                            {{ form_end(form) }}
+                        </div>
+                        
+                        <div class="col-lg-4">
+                            <div class="card border-primary">
+                                <div class="card-header bg-primary text-white">
+                                    <h6 class="mb-0">
+                                        <i class="fa fa-info-circle"></i> Rôles disponibles
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <span class="badge bg-secondary me-2">USER</span>
+                                        <small class="text-muted">Accès de base</small>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <span class="badge bg-success me-2">EDITEUR</span>
+                                        <small class="text-muted">Créer/modifier formations/missions</small>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <span class="badge bg-warning me-2">DIRECTEUR</span>
+                                        <small class="text-muted">Statistiques et rapports</small>
+                                    </div>
+                                    
+                                    <div class="mb-0">
+                                        <span class="badge bg-danger me-2">ADMIN</span>
+                                        <small class="text-muted">Accès complet</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

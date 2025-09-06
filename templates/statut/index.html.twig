@@ -1,0 +1,95 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Gestion des Statuts{% endblock %}
+
+{% block breadcrumb %}
+<ul class="breadcrumb">
+	<li class="breadcrumb-item active">GESTION DES STATUTS</li>
+</ul>
+{% endblock %}
+
+{% block page_title %}
+<h1 class="page-header">
+	Gestion des Statuts <small>Configuration des statuts d'activité et de participation</small>
+</h1>
+{% endblock %}
+
+{% block body %}
+<div class="row">
+	<div class="col-xl-6">
+		<div class="card">
+			<div class="card-header">
+				<h4 class="card-title">
+					<i class="fa fa-tasks text-primary"></i> Statuts d'Activité
+				</h4>
+			</div>
+			<div class="card-body">
+				<p class="text-muted mb-3">
+					Gérez les statuts globaux des formations et missions (prévue, exécutée, annulée, etc.)
+				</p>
+				<div class="d-grid">
+					<a href="{{ path('app_statut_activite_index') }}" class="btn btn-primary">
+						<i class="fa fa-cog"></i> Gérer les statuts d'activité
+					</a>
+				</div>
+			</div>
+		</div>
+	</div>
+	
+	<div class="col-xl-6">
+		<div class="card">
+			<div class="card-header">
+				<h4 class="card-title">
+					<i class="fa fa-users text-success"></i> Statuts de Participation
+				</h4>
+			</div>
+			<div class="card-body">
+				<p class="text-muted mb-3">
+					Gérez les statuts de participation des utilisateurs (inscrit, participe, absent, etc.)
+				</p>
+				<div class="d-grid">
+					<a href="{{ path('app_statut_participation_index') }}" class="btn btn-success">
+						<i class="fa fa-user-check"></i> Gérer les statuts de participation
+					</a>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
+<div class="row mt-4">
+	<div class="col-xl-12">
+		<div class="card">
+			<div class="card-header">
+				<h4 class="card-title">
+					<i class="fa fa-info-circle text-info"></i> Informations
+				</h4>
+			</div>
+			<div class="card-body">
+				<div class="row">
+					<div class="col-md-6">
+						<h5>Statuts d'Activité</h5>
+						<p>Les statuts d'activité définissent l'état global d'une formation ou d'une mission :</p>
+						<ul>
+							<li><strong>Prévue non exécutée</strong> : Activité planifiée mais pas encore réalisée</li>
+							<li><strong>Prévue exécutée</strong> : Activité planifiée et réalisée comme prévu</li>
+							<li><strong>Non prévue exécutée</strong> : Activité réalisée sans avoir été planifiée</li>
+							<li><strong>Annulée</strong> : Activité planifiée mais annulée</li>
+						</ul>
+					</div>
+					<div class="col-md-6">
+						<h5>Statuts de Participation</h5>
+						<p>Les statuts de participation définissent le rôle d'un utilisateur :</p>
+						<ul>
+							<li><strong>Inscrit</strong> : Utilisateur prévu comme participant</li>
+							<li><strong>Participe</strong> : Utilisateur a effectivement participé</li>
+							<li><strong>Absent</strong> : Utilisateur prévu mais ne s'est pas présenté</li>
+							<li><strong>Non prévu participe</strong> : Utilisateur non prévu mais a participé</li>
+						</ul>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+{% endblock %}

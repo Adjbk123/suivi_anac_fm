@@ -1,0 +1,359 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Détails de l'utilisateur - {{ user.nom }} {{ user.prenom }}{% endblock %}
+
+{% block breadcrumb %}
+<ul class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{{ path('app_dashboard') }}">DASHBOARD</a></li>
+    <li class="breadcrumb-item"><a href="{{ path('app_user_index') }}">UTILISATEURS</a></li>
+    <li class="breadcrumb-item active">DÉTAILS</li>
+</ul>
+{% endblock %}
+
+{% block page_title %}
+<h1 class="page-header">
+    Détails de l'utilisateur <small>{{ user.nom }} {{ user.prenom }}</small>
+</h1>
+{% endblock %}
+
+{% block body %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fa fa-user text-primary"></i> Informations personnelles
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <table class="table table-borderless">
+                            <tr>
+                                <th width="150">Nom :</th>
+                                <td><strong>{{ user.nom }}</strong></td>
+                            </tr>
+                            <tr>
+                                <th>Prénom :</th>
+                                <td><strong>{{ user.prenom }}</strong></td>
+                            </tr>
+                            <tr>
+                                <th>Email :</th>
+                                <td>{{ user.email ?: '-' }}</td>
+                            </tr>
+                            <tr>
+                                <th>Matricule :</th>
+                                <td>{{ user.matricule ?: '-' }}</td>
+                            </tr>
+                            <tr>
+                                <th>Rôles :</th>
+                                <td>
+                                    {% for role in user.roles %}
+                                        {% if role == 'ROLE_USER' %}
+                                            <span class="badge bg-secondary">Utilisateur</span>
+                                        {% elseif role == 'ROLE_EDITEUR' %}
+                                            <span class="badge bg-success">Éditeur</span>
+                                        {% elseif role == 'ROLE_DIRECTEUR' %}
+                                            <span class="badge bg-warning">Directeur</span>
+                                        {% elseif role == 'ROLE_ADMIN' %}
+                                            <span class="badge bg-danger">Administrateur</span>
+                                        {% else %}
+                                            <span class="badge bg-info">{{ role }}</span>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-muted">Aucun rôle assigné</span>
+                                    {% endfor %}
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <table class="table table-borderless">
+                            <tr>
+                                <th width="150">Service :</th>
+                                <td>{{ user.service ? user.service.libelle : '-' }}</td>
+                            </tr>
+                            <tr>
+                                <th>Direction :</th>
+                                <td>{{ user.service and user.service.direction ? user.service.direction.libelle : '-' }}</td>
+                            </tr>
+                            <tr>
+                                <th>Domaine :</th>
+                                <td>{{ user.domaine ? user.domaine.libelle : '-' }}</td>
+                            </tr>
+                            <tr>
+                                <th>Poste :</th>
+                                <td>{{ user.poste ? user.poste.libelle : '-' }}</td>
+                            </tr>
+                            <tr>
+                                <th>Date création :</th>
+                                <td>{{ user.createdAt ? user.createdAt|date('d/m/Y H:i') : '-' }}</td>
+                            </tr>
+                            <tr>
+                                <th>Dernière modification :</th>
+                                <td>{{ user.updatedAt ? user.updatedAt|date('d/m/Y H:i') : 'Jamais modifié' }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Participations aux formations -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fa fa-graduation-cap text-primary"></i> Participations aux formations
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if user.userFormations|length > 0 %}
+                    <div class="table-responsive">
+                        <table id="formationsTable" class="table table-hover">
+                                                         <thead>
+                                 <tr>
+                                     <th>Formation</th>
+                                     <th>Service</th>
+                                     <th>Statuts</th>
+                                     <th>Date prévue</th>
+                                     <th>Actions</th>
+                                 </tr>
+                             </thead>
+                            <tbody>
+                                {% for userFormation in user.userFormations %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ userFormation.formation.titre }}</strong>
+                                        {% if userFormation.formation.description %}
+                                            <br><small class="text-muted">{{ userFormation.formation.description|slice(0, 100) }}{% if userFormation.formation.description|length > 100 %}...{% endif %}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ userFormation.formation.service ? userFormation.formation.service.libelle : '-' }}</td>
+                                    <td>
+                                                                                 <div class="d-flex flex-column gap-1">
+                                             <!-- Statut de l'activité -->
+                                             <div class="d-flex align-items-center gap-1">
+                                                 <small class="text-muted">Activité:</small>
+                                                 <span class="badge bg-{{ userFormation.formation.statutActivite ? userFormation.formation.statutActivite.couleur : 'secondary' }}">
+                                                     {{ userFormation.formation.statutActivite ? userFormation.formation.statutActivite.libelle : 'Non défini' }}
+                                                 </span>
+                                             </div>
+                                             <!-- Statut de participation -->
+                                             <div class="d-flex align-items-center gap-1">
+                                                 <small class="text-muted">Participation:</small>
+                                                 <span class="badge bg-{{ userFormation.statutParticipation ? userFormation.statutParticipation.couleur : 'secondary' }}">
+                                                     {{ userFormation.statutParticipation ? userFormation.statutParticipation.libelle : 'Non défini' }}
+                                                 </span>
+                                             </div>
+                                         </div>
+                                    </td>
+                                    <td>{{ userFormation.formation.datePrevueDebut ? userFormation.formation.datePrevueDebut|date('d/m/Y') : '-' }}</td>
+                                    <td>
+                                        <a href="{{ path('app_formation_show', {'id': userFormation.formation.id}) }}" class="btn btn-sm btn-outline-primary">
+                                            <i class="fa fa-eye"></i> Voir
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-muted mb-0">Aucune participation aux formations enregistrée.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Participations aux missions -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fa fa-plane text-success"></i> Participations aux missions
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if user.userMissions|length > 0 %}
+                    <div class="table-responsive">
+                        <table id="missionsTable" class="table table-hover">
+                                                         <thead>
+                                 <tr>
+                                     <th>Mission</th>
+                                     <th>Direction</th>
+                                     <th>Statuts</th>
+                                     <th>Date prévue</th>
+                                     <th>Actions</th>
+                                 </tr>
+                             </thead>
+                            <tbody>
+                                {% for userMission in user.userMissions %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ userMission.mission.titre }}</strong>
+                                        {% if userMission.mission.description %}
+                                            <br><small class="text-muted">{{ userMission.mission.description|slice(0, 100) }}{% if userMission.mission.description|length > 100 %}...{% endif %}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ userMission.mission.direction ? userMission.mission.direction.libelle : '-' }}</td>
+                                    <td>
+                                                                                 <div class="d-flex flex-column gap-1">
+                                             <!-- Statut de l'activité -->
+                                             <div class="d-flex align-items-center gap-1">
+                                                 <small class="text-muted">Activité:</small>
+                                                 <span class="badge bg-{{ userMission.mission.statutActivite ? userMission.mission.statutActivite.couleur : 'secondary' }}">
+                                                     {{ userMission.mission.statutActivite ? userMission.mission.statutActivite.libelle : 'Non défini' }}
+                                                 </span>
+                                             </div>
+                                             <!-- Statut de participation -->
+                                             <div class="d-flex align-items-center gap-1">
+                                                 <small class="text-muted">Participation:</small>
+                                                 <span class="badge bg-{{ userMission.statutParticipation ? userMission.statutParticipation.couleur : 'secondary' }}">
+                                                     {{ userMission.statutParticipation ? userMission.statutParticipation.libelle : 'Non défini' }}
+                                                 </span>
+                                             </div>
+                                         </div>
+                                    </td>
+                                    <td>{{ userMission.mission.datePrevueDebut ? userMission.mission.datePrevueDebut|date('d/m/Y') : '-' }}</td>
+                                    <td>
+                                        <a href="{{ path('app_mission_show', {'id': userMission.mission.id}) }}" class="btn btn-sm btn-outline-success">
+                                            <i class="fa fa-eye"></i> Voir
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-muted mb-0">Aucune participation aux missions enregistrée.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="card mt-3">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <a href="{{ path('app_user_index') }}" class="btn btn-outline-secondary">
+                        <i class="fa fa-arrow-left"></i> Retour à la liste
+                    </a>
+                    <div>
+                        <a href="{{ path('app_user_edit_roles', {'id': user.id}) }}" class="btn btn-outline-warning">
+                            <i class="fa fa-user-shield"></i> Gérer les rôles
+                        </a>
+                        <a href="#" class="btn btn-outline-primary" data-user-id="{{ user.id }}" onclick="editUser(this.dataset.userId)">
+                            <i class="fa fa-edit"></i> Modifier
+                        </a>
+                        <a href="#" class="btn btn-outline-danger" data-user-id="{{ user.id }}" onclick="deleteUser(this.dataset.userId)">
+                            <i class="fa fa-trash"></i> Supprimer
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialiser DataTable pour les formations
+    if (document.getElementById('formationsTable')) {
+        $('#formationsTable').DataTable({
+            language: {
+                url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/fr-FR.json'
+            },
+            pageLength: 10,
+            lengthMenu: [[5, 10, 25, 50], [5, 10, 25, 50]],
+            order: [[3, 'desc']], // Trier par date prévue (colonne 3) par ordre décroissant
+            columnDefs: [
+                {
+                    targets: 4, // Colonne Actions
+                    orderable: false,
+                    searchable: false
+                }
+            ],
+            dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>' +
+                 '<"row"<"col-sm-12"tr>>' +
+                 '<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
+            responsive: true,
+            buttons: [
+                {
+                    extend: 'copy',
+                    text: '<i class="fa fa-copy"></i> Copier',
+                    className: 'btn btn-outline-secondary btn-sm'
+                },
+                {
+                    extend: 'csv',
+                    text: '<i class="fa fa-file-csv"></i> CSV',
+                    className: 'btn btn-outline-secondary btn-sm'
+                },
+                {
+                    extend: 'excel',
+                    text: '<i class="fa fa-file-excel"></i> Excel',
+                    className: 'btn btn-outline-secondary btn-sm'
+                },
+                {
+                    extend: 'pdf',
+                    text: '<i class="fa fa-file-pdf"></i> PDF',
+                    className: 'btn btn-outline-secondary btn-sm'
+                },
+                {
+                    extend: 'print',
+                    text: '<i class="fa fa-print"></i> Imprimer',
+                    className: 'btn btn-outline-secondary btn-sm'
+                }
+            ]
+        });
+    }
+
+    // Initialiser DataTable pour les missions
+    if (document.getElementById('missionsTable')) {
+        $('#missionsTable').DataTable({
+            language: {
+                url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/fr-FR.json'
+            },
+            pageLength: 10,
+            lengthMenu: [[5, 10, 25, 50], [5, 10, 25, 50]],
+            order: [[3, 'desc']], // Trier par date prévue (colonne 3) par ordre décroissant
+            columnDefs: [
+                {
+                    targets: 4, // Colonne Actions
+                    orderable: false,
+                    searchable: false
+                }
+            ],
+            dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>' +
+                 '<"row"<"col-sm-12"tr>>' +
+                 '<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
+            responsive: true,
+            buttons: [
+                {
+                    extend: 'copy',
+                    text: '<i class="fa fa-copy"></i> Copier',
+                    className: 'btn btn-outline-secondary btn-sm'
+                },
+                {
+                    extend: 'csv',
+                    text: '<i class="fa fa-file-csv"></i> CSV',
+                    className: 'btn btn-outline-secondary btn-sm'
+                },
+                {
+                    extend: 'excel',
+                    text: '<i class="fa fa-file-excel"></i> Excel',
+                    className: 'btn btn-outline-secondary btn-sm'
+                },
+                {
+                    extend: 'pdf',
+                    text: '<i class="fa fa-file-pdf"></i> PDF',
+                    className: 'btn btn-outline-secondary btn-sm'
+                },
+                {
+                    extend: 'print',
+                    text: '<i class="fa fa-print"></i> Imprimer',
+                    className: 'btn btn-outline-secondary btn-sm'
+                }
+            ]
+        });
+    }
+});
+</script>
+{% endblock %}

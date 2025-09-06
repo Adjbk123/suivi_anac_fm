@@ -1,0 +1,299 @@
+<!-- BEGIN #header -->
+<div id="header" class="app-header">
+	<!-- BEGIN mobile-toggler -->
+	<div class="mobile-toggler">
+		<button type="button" class="menu-toggler" data-toggle="sidebar-mobile">
+			<span class="bar"></span>
+			<span class="bar"></span>
+		</button>
+	</div>
+	<!-- END mobile-toggler -->
+	
+	<!-- BEGIN brand -->
+	<div class="brand">
+		<div class="desktop-toggler">
+			<button type="button" class="menu-toggler" data-toggle="sidebar-minify">
+				<span class="bar"></span>
+				<span class="bar"></span>
+			</button>
+		</div>
+		
+		<a href="{{ path('app_dashboard') }}" class="brand-logo">
+			<img src="{{ asset('assets/images/logo_sf.png') }}" alt="ANAC BENIN" height="40" style="object-fit: contain; max-height: none !important; height: 40px !important; width: auto !important;">
+		</a>
+	</div>
+	<!-- END brand -->
+	
+	<!-- BEGIN menu -->
+	<div class="menu">
+		<div class="menu-search" style="position: relative;">
+			<div class="menu-search-icon"><i class="fa fa-search"></i></div>
+			<div class="menu-search-input">
+				<input type="text" id="globalSearch" class="form-control" placeholder="Rechercher formations, missions, utilisateurs..." autocomplete="off">
+			</div>
+			<!-- Suggestions dropdown -->
+			<div id="searchSuggestions" class="search-suggestions" style="display: none;">
+				<div class="suggestions-content">
+					<!-- Les suggestions seront injectées ici -->
+				</div>
+			</div>
+		</div>
+
+		<div class="menu-item dropdown">
+			<a href="#" data-bs-toggle="dropdown" data-display="static" class="menu-link">
+				<div class="menu-img online">
+					{% if app.user and app.user.photo %}
+						<img src="{{ asset('uploads/photos/' ~ app.user.photo) }}" alt="" class="ms-100 mh-100 rounded-circle" style="object-fit: cover; border-radius: 50% !important; width: 32px !important; height: 32px !important;">
+					{% else %}
+						<img src="{{ asset('assets/img/user/user.jpg') }}" alt="" class="ms-100 mh-100 rounded-circle" style="border-radius: 50% !important; width: 32px !important; height: 32px !important;">
+					{% endif %}
+				</div>
+				<div class="menu-text">{{ app.user ? (app.user.prenom ~ ' ' ~ app.user.nom|first|upper ~ '.') : 'Utilisateur' }}</div>
+			</a>
+			<div class="dropdown-menu dropdown-menu-end me-lg-3">
+				<a class="dropdown-item d-flex align-items-center" href="{{ path('app_profile') }}">Mon Profil <i class="fa fa-user-circle fa-fw ms-auto text-body text-opacity-50"></i></a>
+				<a class="dropdown-item d-flex align-items-center" href="{{ path('app_profile_change_password') }}">Changer mot de passe <i class="fa fa-key fa-fw ms-auto text-body text-opacity-50"></i></a>
+				<div class="dropdown-divider"></div>
+				<a class="dropdown-item d-flex align-items-center" href="{{ path('app_logout') }}">Déconnexion <i class="fa fa-sign-out-alt fa-fw ms-auto text-body text-opacity-50"></i></a>
+			</div>
+		</div>
+	</div>
+	<!-- END menu -->
+</div>
+<!-- END #header -->
+
+<style>
+.search-suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    z-index: 9999;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.suggestions-content {
+    padding: 0;
+}
+
+.suggestion-item {
+    padding: 12px 16px;
+    border-bottom: 1px solid #f0f0f0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    transition: background-color 0.2s;
+}
+
+.suggestion-item:hover,
+.suggestion-item.selected {
+    background-color: #f8f9fa;
+}
+
+.suggestion-item:last-child {
+    border-bottom: none;
+}
+
+.suggestion-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 12px;
+    font-size: 14px;
+    color: white;
+}
+
+.suggestion-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.suggestion-title {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.suggestion-details {
+    font-size: 12px;
+    color: #666;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.suggestion-type {
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 10px;
+    color: white;
+    margin-left: 8px;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.suggestion-type.formation {
+    background-color: #007bff;
+}
+
+.suggestion-type.mission {
+    background-color: #28a745;
+}
+
+.suggestion-type.user {
+    background-color: #17a2b8;
+}
+
+.no-results {
+    padding: 16px;
+    text-align: center;
+    color: #666;
+    font-style: italic;
+}
+
+.search-loading {
+    padding: 16px;
+    text-align: center;
+    color: #666;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('globalSearch');
+    const suggestionsContainer = document.getElementById('searchSuggestions');
+    const suggestionsContent = suggestionsContainer.querySelector('.suggestions-content');
+    
+    let searchTimeout;
+    let currentSearchQuery = '';
+    
+    // Fonction pour afficher les suggestions
+    function showSuggestions(suggestions) {
+        if (suggestions.length === 0) {
+            suggestionsContent.innerHTML = '<div class="no-results">Aucun résultat trouvé</div>';
+        } else {
+            suggestionsContent.innerHTML = suggestions.map(suggestion => `
+                <div class="suggestion-item" onclick="window.location.href='${suggestion.url}'">
+                    <div class="suggestion-icon bg-${suggestion.color}">
+                        <i class="fa ${suggestion.icon}"></i>
+                    </div>
+                    <div class="suggestion-content">
+                        <div class="suggestion-title">${suggestion.title}</div>
+                        <div class="suggestion-details">
+                            ${suggestion.description ? suggestion.description + ' • ' : ''}
+                            ${suggestion.service || suggestion.direction || ''}
+                            ${suggestion.date ? ' • ' + suggestion.date : ''}
+                        </div>
+                    </div>
+                    <span class="suggestion-type ${suggestion.type}">${suggestion.type}</span>
+                </div>
+            `).join('');
+        }
+        suggestionsContainer.style.display = 'block';
+    }
+    
+    // Fonction pour masquer les suggestions
+    function hideSuggestions() {
+        suggestionsContainer.style.display = 'none';
+    }
+    
+    // Fonction pour rechercher les suggestions
+    function searchSuggestions(query) {
+        if (query.length < 2) {
+            hideSuggestions();
+            return;
+        }
+        
+        // Afficher le loading
+        suggestionsContent.innerHTML = '<div class="search-loading"><i class="fa fa-spinner fa-spin"></i> Recherche en cours...</div>';
+        suggestionsContainer.style.display = 'block';
+        
+        fetch(`/api/search/suggestions?q=${encodeURIComponent(query)}`)
+            .then(response => response.json())
+            .then(data => {
+                if (query === currentSearchQuery) {
+                    showSuggestions(data.suggestions);
+                }
+            })
+            .catch(error => {
+                console.error('Erreur lors de la recherche:', error);
+                if (query === currentSearchQuery) {
+                    suggestionsContent.innerHTML = '<div class="no-results">Erreur lors de la recherche</div>';
+                }
+            });
+    }
+    
+    // Événement de saisie dans la barre de recherche
+    searchInput.addEventListener('input', function(e) {
+        const query = e.target.value.trim();
+        currentSearchQuery = query;
+        
+        // Annuler la recherche précédente
+        clearTimeout(searchTimeout);
+        
+        if (query.length >= 2) {
+            // Délai de 300ms pour éviter trop de requêtes
+            searchTimeout = setTimeout(() => {
+                searchSuggestions(query);
+            }, 300);
+        } else {
+            hideSuggestions();
+        }
+    });
+    
+    // Masquer les suggestions quand on clique ailleurs
+    document.addEventListener('click', function(e) {
+        if (!searchInput.contains(e.target) && !suggestionsContainer.contains(e.target)) {
+            hideSuggestions();
+        }
+    });
+    
+    // Navigation au clavier dans les suggestions
+    searchInput.addEventListener('keydown', function(e) {
+        const suggestions = suggestionsContainer.querySelectorAll('.suggestion-item');
+        const currentIndex = Array.from(suggestions).findIndex(item => item.classList.contains('selected'));
+        
+        switch(e.key) {
+            case 'ArrowDown':
+                e.preventDefault();
+                if (currentIndex < suggestions.length - 1) {
+                    if (currentIndex >= 0) suggestions[currentIndex].classList.remove('selected');
+                    suggestions[currentIndex + 1].classList.add('selected');
+                }
+                break;
+            case 'ArrowUp':
+                e.preventDefault();
+                if (currentIndex > 0) {
+                    suggestions[currentIndex].classList.remove('selected');
+                    suggestions[currentIndex - 1].classList.add('selected');
+                }
+                break;
+            case 'Enter':
+                e.preventDefault();
+                const selectedSuggestion = suggestionsContainer.querySelector('.suggestion-item.selected');
+                if (selectedSuggestion) {
+                    window.location.href = selectedSuggestion.onclick.toString().match(/window\.location\.href='([^']+)'/)[1];
+                } else if (searchInput.value.trim().length >= 2) {
+                    // Rediriger vers la page de résultats si aucune suggestion n'est sélectionnée
+                    window.location.href = `/search?q=${encodeURIComponent(searchInput.value.trim())}`;
+                }
+                break;
+            case 'Escape':
+                hideSuggestions();
+                searchInput.blur();
+                break;
+        }
+    });
+});
+</script>

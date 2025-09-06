@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>{{ title }}</title>
+    {% include 'pdf/partials/styles.html.twig' %}
+</head>
+<body>
+    {% include 'pdf/partials/header.html.twig' %}
+    
+    <!-- Titre du document -->
+    <div class="document-title">{{ title }}</div>
+    
+    <!-- Informations de génération -->
+    <div class="info">
+        <strong>Généré le :</strong> {{ generatedAt|date('d/m/Y à H:i') }}
+        <br>
+        <strong>Total d'enregistrements :</strong> {{ data|length }}
+    </div>
+    
+    <!-- Tableau des données -->
+    <table>
+        <thead>
+            <tr>
+                {% for header in headers %}
+                    <th>{{ header }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in data %}
+                <tr>
+                    {% for cell in row %}
+                        <td>{{ cell }}</td>
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    {% include 'pdf/partials/footer.html.twig' %}
+</body>
+</html>

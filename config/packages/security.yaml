@@ -2,16 +2,36 @@ security:
     # https://symfony.com/doc/current/security.html#registering-the-user-hashing-passwords
     password_hashers:
         Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface: 'auto'
+    
     # https://symfony.com/doc/current/security.html#loading-the-user-the-user-provider
     providers:
-        users_in_memory: { memory: null }
+        # used to reload user from session & other features (e.g. switch_user)
+        app_user_provider:
+            entity:
+                class: App\Entity\User
+                property: email
+    
+    # Hiérarchie des rôles
+    role_hierarchy:
+        ROLE_EDITEUR: ROLE_USER
+        ROLE_DIRECTEUR: ROLE_EDITEUR
+        ROLE_ADMIN: ROLE_DIRECTEUR
+    
     firewalls:
         dev:
             pattern: ^/(_(profiler|wdt)|css|images|js)/
             security: false
         main:
             lazy: true
-            provider: users_in_memory
+            provider: app_user_provider
+            form_login:
+                login_path: app_login
+                check_path: app_login
+                enable_csrf: true
+            logout:
+                path: app_logout
+                # where to redirect after logout
+                # target: app_any_route
 
             # activate different ways to authenticate
             # https://symfony.com/doc/current/security.html#the-firewall
@@ -22,8 +42,40 @@ security:
     # Easy way to control access for large sections of your site
     # Note: Only the *first* access control that matches will be used
     access_control:
-        # - { path: ^/admin, roles: ROLE_ADMIN }
-        # - { path: ^/profile, roles: ROLE_USER }
+        # Routes publiques
+        - { path: /login, roles: PUBLIC_ACCESS }
+        - { path: /reset-password, roles: PUBLIC_ACCESS }
+        
+        # Routes nécessitant au minimum ROLE_USER
+        - { path: /, roles: ROLE_USER }
+        - { path: /profile, roles: ROLE_USER }
+        
+        # Routes nécessitant ROLE_EDITEUR
+        - { path: /formation/create, roles: ROLE_EDITEUR }
+        - { path: /formation/new, roles: ROLE_EDITEUR }
+        - { path: /formation/edit, roles: ROLE_EDITEUR }
+        - { path: /formation/update, roles: ROLE_EDITEUR }
+        - { path: /mission/create, roles: ROLE_EDITEUR }
+        - { path: /mission/new, roles: ROLE_EDITEUR }
+        - { path: /mission/edit, roles: ROLE_EDITEUR }
+        - { path: /mission/update, roles: ROLE_EDITEUR }
+        
+        # Routes nécessitant ROLE_DIRECTEUR
+        - { path: /reporting, roles: ROLE_DIRECTEUR }
+        - { path: /statistics, roles: ROLE_DIRECTEUR }
+        
+        # Routes nécessitant ROLE_ADMIN
+        - { path: /admin, roles: ROLE_ADMIN }
+        - { path: /user/new, roles: ROLE_ADMIN }
+        - { path: /user/edit, roles: ROLE_ADMIN }
+        - { path: /user/delete, roles: ROLE_ADMIN }
+        - { path: /direction, roles: ROLE_ADMIN }
+        - { path: /domaine, roles: ROLE_ADMIN }
+        - { path: /service, roles: ROLE_ADMIN }
+        - { path: /poste, roles: ROLE_ADMIN }
+        - { path: /typefonds, roles: ROLE_ADMIN }
+        - { path: /categoriedepense, roles: ROLE_ADMIN }
+        - { path: /statut, roles: ROLE_ADMIN }
 
 when@test:
     security:

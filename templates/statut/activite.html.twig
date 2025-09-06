@@ -1,0 +1,328 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Statuts d'Activité{% endblock %}
+
+{% block breadcrumb %}
+<ul class="breadcrumb">
+	<li class="breadcrumb-item"><a href="{{ path('app_statut_index') }}">STATUTS</a></li>
+	<li class="breadcrumb-item active">STATUTS D'ACTIVITÉ</li>
+</ul>
+{% endblock %}
+
+{% block page_title %}
+<h1 class="page-header">
+	Statuts d'Activité <small>Gestion des statuts pour formations et missions</small>
+</h1>
+{% endblock %}
+
+{% block buttons %}
+<div class="d-flex gap-2">
+	<a href="{{ path('app_statut_index') }}" class="btn btn-secondary btn-sm">
+		<i class="fa fa-arrow-left"></i> Retour
+	</a>
+	<button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addStatutModal">
+		<i class="fa fa-plus"></i> Ajouter un statut
+	</button>
+</div>
+{% endblock %}
+
+{% block body %}
+<div class="row">
+	<div class="col-xl-12">
+		<div class="card">
+			<div class="card-body">
+				<div class="table-responsive">
+					<table class="table table-hover" id="statutsActiviteTable">
+						<thead class="table-secondary">
+							<tr>
+								<th>ID</th>
+								<th>Code</th>
+								<th>Libellé</th>
+								<th>Description</th>
+								<th>Couleur</th>
+								<th>Utilisations</th>
+								                        <th><i class="fa fa-cogs"></i></th>
+							</tr>
+						</thead>
+						<tbody>
+							<!-- Les données seront chargées via AJAX -->
+						</tbody>
+					</table>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
+<!-- Modal pour ajouter un statut -->
+<div class="modal fade" id="addStatutModal" tabindex="-1" aria-labelledby="addStatutModalLabel" aria-hidden="true">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="addStatutModalLabel">Ajouter un statut d'activité</h5>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<form id="addStatutForm">
+				<div class="modal-body">
+					<div class="mb-3">
+						<label for="code" class="form-label">Code *</label>
+						<input type="text" class="form-control" id="code" name="code" required placeholder="Ex: prevue_non_executee">
+					</div>
+					<div class="mb-3">
+						<label for="libelle" class="form-label">Libellé *</label>
+						<input type="text" class="form-control" id="libelle" name="libelle" required placeholder="Ex: Prévue non exécutée">
+					</div>
+					<div class="mb-3">
+						<label for="description" class="form-label">Description</label>
+						<textarea class="form-control" id="description" name="description" rows="3" placeholder="Description du statut..."></textarea>
+					</div>
+					<div class="mb-3">
+						<label for="couleur" class="form-label">Couleur *</label>
+						<select class="form-select" id="couleur" name="couleur" required>
+							<option value="">Choisir une couleur</option>
+							<option value="primary">Primary (Bleu)</option>
+							<option value="secondary">Secondary (Gris)</option>
+							<option value="success">Success (Vert)</option>
+							<option value="danger">Danger (Rouge)</option>
+							<option value="warning">Warning (Orange)</option>
+							<option value="info">Info (Cyan)</option>
+							<option value="light">Light (Clair)</option>
+							<option value="dark">Dark (Sombre)</option>
+						</select>
+					</div>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+					<button type="submit" class="btn btn-primary">
+						<i class="fa fa-save"></i> Enregistrer
+					</button>
+				</div>
+			</form>
+		</div>
+	</div>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+<script>
+let statutsActiviteTable = null;
+
+// Initialiser DataTable au chargement de la page
+document.addEventListener('DOMContentLoaded', function() {
+    initializeDataTable();
+    loadStatutsActivite();
+    setupFormHandlers();
+});
+
+// Initialiser DataTable
+function initializeDataTable() {
+    statutsActiviteTable = $('#statutsActiviteTable').DataTable({
+        language: {
+            "sProcessing":     "Traitement en cours...",
+            "sSearch":         "Rechercher&nbsp;:",
+            "sLengthMenu":     "Afficher _MENU_ éléments",
+            "sInfo":           "Affichage de l'élément _START_ à _END_ sur _TOTAL_ éléments",
+            "sInfoEmpty":      "Affichage de l'élément 0 à 0 sur 0 élément",
+            "sInfoFiltered":   "(filtré de _MAX_ éléments au total)",
+            "sInfoPostFix":    "",
+            "sLoadingRecords": "Chargement...",
+            "sZeroRecords":    "Aucun élément à afficher",
+            "sEmptyTable":     "Aucune donnée disponible dans le tableau",
+            "oPaginate": {
+                "sFirst":    '<i class="fa fa-angle-double-left" style="font-size: 12px;"></i>',
+                "sPrevious": '<i class="fa fa-angle-left" style="font-size: 12px;"></i>',
+                "sNext":     '<i class="fa fa-angle-right" style="font-size: 12px;"></i>',
+                "sLast":     '<i class="fa fa-angle-double-right" style="font-size: 12px;"></i>'
+            },
+            "oAria": {
+                "sSortAscending":  ": activer pour trier la colonne par ordre croissant",
+                "sSortDescending": ": activer pour trier la colonne par ordre décroissant"
+            }
+        },
+        responsive: false,
+        pageLength: 10,
+        lengthMenu: [[5, 10, 25, 50, -1], [5, 10, 25, 50, "Tous"]],
+        order: [[0, 'asc']],
+        columnDefs: [
+            {
+                targets: -1, // Dernière colonne (Actions)
+                orderable: false,
+                searchable: false
+            }
+        ],
+        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>' +
+             '<"row"<"col-sm-12"tr>>' +
+             '<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
+        buttons: [
+            {
+                extend: 'copy',
+                text: '<i class="fa fa-copy"></i> Copier',
+                className: 'btn btn-sm btn-outline-secondary'
+            },
+            {
+                extend: 'csv',
+                text: '<i class="fa fa-file-csv"></i> CSV',
+                className: 'btn btn-sm btn-outline-secondary'
+            },
+            {
+                extend: 'excel',
+                text: '<i class="fa fa-file-excel"></i> Excel',
+                className: 'btn btn-sm btn-outline-secondary'
+            },
+            {
+                extend: 'pdf',
+                text: '<i class="fa fa-file-pdf"></i> PDF',
+                className: 'btn btn-sm btn-outline-secondary'
+            },
+            {
+                extend: 'print',
+                text: '<i class="fa fa-print"></i> Imprimer',
+                className: 'btn btn-sm btn-outline-secondary'
+            }
+        ]
+    });
+}
+
+// Fonction pour charger les statuts d'activité
+function loadStatutsActivite() {
+    // Afficher le skeleton loading
+    const tableContainer = document.querySelector('#statutsActiviteTable').closest('.table-responsive');
+    if (tableContainer) {
+        tableContainer.style.position = 'relative';
+        const skeleton = document.createElement('div');
+        skeleton.id = 'skeleton-loading';
+        skeleton.innerHTML = `
+            <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: white; z-index: 1000; display: flex; align-items: center; justify-content: center;">
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Chargement...</span>
+                    </div>
+                    <div class="mt-2">Chargement des données...</div>
+                </div>
+            </div>
+        `;
+        tableContainer.appendChild(skeleton);
+    }
+    
+    fetch('{{ path('app_statut_activite_list') }}')
+        .then(response => response.json())
+        .then(data => {
+            // Masquer le skeleton loading
+            const skeleton = document.getElementById('skeleton-loading');
+            if (skeleton) {
+                skeleton.remove();
+            }
+            
+            // Vider la table DataTable
+            statutsActiviteTable.clear();
+            
+            // Ajouter les données
+            data.forEach(statut => {
+                const couleurBadge = `<span class="badge bg-${statut.couleur}">${statut.couleur}</span>`;
+                const utilisations = statut.formations_count + statut.missions_count;
+                
+                statutsActiviteTable.row.add([
+                    statut.id,
+                    statut.code,
+                    statut.libelle,
+                    statut.description || '-',
+                    couleurBadge,
+                    utilisations + ' utilisation(s)',
+                    `<div class="dropdown" style="position: relative;">
+                                        <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="position: relative; z-index: 1;">
+                    <i class="fa fa-ellipsis-h"></i>
+                </button>
+                        <ul class="dropdown-menu dropdown-menu-end" style="position: absolute; z-index: 99999; right: 0; left: auto;">
+                            <li><a class="dropdown-item" href="#" onclick="editStatut(${statut.id})">
+                                <i class="fa fa-edit text-warning"></i> Modifier
+                            </a></li>
+                            <li><a class="dropdown-item" href="#" onclick="deleteStatut(${statut.id}, '${statut.libelle}')">
+                                <i class="fa fa-trash text-danger"></i> Supprimer
+                            </a></li>
+                        </ul>
+                    </div>`
+                ]);
+            });
+            
+            // Redessiner la table
+            statutsActiviteTable.draw();
+        })
+        .catch(error => {
+            // Masquer le skeleton loading en cas d'erreur
+            const skeleton = document.getElementById('skeleton-loading');
+            if (skeleton) {
+                skeleton.remove();
+            }
+            console.error('Erreur:', error);
+            showToast('Erreur lors du chargement des statuts d\'activité', 'error');
+        });
+}
+
+// Configuration des gestionnaires de formulaires
+function setupFormHandlers() {
+    document.getElementById('addStatutForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const submitBtn = this.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        
+        // Désactiver le bouton et afficher le spinner
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Enregistrement...';
+        
+        const formData = {
+            code: document.getElementById('code').value,
+            libelle: document.getElementById('libelle').value,
+            description: document.getElementById('description').value,
+            couleur: document.getElementById('couleur').value
+        };
+        
+        fetch('{{ path('app_statut_activite_new') }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast(data.message, 'success');
+                // Fermer le modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('addStatutModal'));
+                modal.hide();
+                // Réinitialiser le formulaire
+                document.getElementById('addStatutForm').reset();
+                // Recharger les données
+                loadStatutsActivite();
+            } else {
+                showToast(data.message || 'Erreur lors de l\'ajout', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            showToast('Erreur lors de l\'ajout du statut', 'error');
+        })
+        .finally(() => {
+            // Réactiver le bouton
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+        });
+    });
+}
+
+// Fonction pour modifier un statut
+function editStatut(id) {
+    // TODO: Implémenter la modification
+    showToast('Fonctionnalité de modification à implémenter', 'info');
+}
+
+// Fonction pour supprimer un statut
+function deleteStatut(id, libelle) {
+    if (confirm(`Êtes-vous sûr de vouloir supprimer le statut "${libelle}" ?`)) {
+        // TODO: Implémenter la suppression
+        showToast('Fonctionnalité de suppression à implémenter', 'info');
+    }
+}
+</script>
+{% endblock %}

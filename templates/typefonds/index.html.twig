@@ -1,0 +1,428 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Types de fonds{% endblock %}
+
+{% block breadcrumb %}
+<ul class="breadcrumb">
+	<li class="breadcrumb-item"><a href="#">GESTION</a></li>
+	<li class="breadcrumb-item active">TYPES DE FONDS</li>
+</ul>
+{% endblock %}
+
+{% block page_title %}
+<h1 class="page-header">
+	Types de fonds <small>Gestion des types de fonds</small>
+</h1>
+{% endblock %}
+
+{% block buttons %}
+<div class="d-flex gap-2">
+	<button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#typeFondsModal">
+		<i class="fa fa-plus"></i> Nouveau type de fonds
+	</button>
+	<button type="button" class="btn btn-success btn-sm" onclick="exportToPDF()">
+		<i class="fa fa-file-pdf"></i> Exporter PDF
+	</button>
+</div>
+{% endblock %}
+
+{% block body %}
+<div class="row">
+	<div class="col-xl-12">
+		<div class="card">
+			<div class="card-body">
+				<div class="table-responsive">
+					<table id="typeFondsTable" class="table table-secondary table-hover">
+						<thead>
+							<tr>
+								<th>ID</th>
+								<th>Libellé</th>
+								<th>Description</th>
+								                        <th><i class="fa fa-cogs"></i></th>
+							</tr>
+						</thead>
+						<tbody>
+						</tbody>
+					</table>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
+<!-- Modal pour créer/modifier un type de fonds -->
+<div class="modal fade" id="typeFondsModal" tabindex="-1" aria-labelledby="typeFondsModalLabel" aria-hidden="true">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="typeFondsModalLabel">Nouveau type de fonds</h5>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<form id="typeFondsForm">
+				<div class="modal-body">
+					<input type="hidden" id="typeFondsId" name="id">
+					<div class="mb-3">
+						<label for="libelle" class="form-label">Libellé <span class="text-danger">*</span></label>
+						<input type="text" class="form-control" id="libelle" name="libelle" required>
+					</div>
+					<div class="mb-3">
+						<label for="description" class="form-label">Description</label>
+						<textarea class="form-control" id="description" name="description" rows="3"></textarea>
+						<small class="form-text text-muted">Optionnel</small>
+					</div>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+					<button type="submit" class="btn btn-primary" id="submitBtn">
+						<span class="btn-text">Enregistrer</span>
+						<span class="btn-spinner d-none">
+							<i class="fa fa-spinner fa-spin"></i> Enregistrement...
+						</span>
+					</button>
+				</div>
+			</form>
+		</div>
+	</div>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+<script>
+let editingId = null;
+let typeFondsTable = null;
+
+// Initialiser DataTable au chargement de la page
+document.addEventListener('DOMContentLoaded', function() {
+    // Vérifier que jQuery et DataTables sont disponibles
+    if (typeof $ === 'undefined') {
+        console.error('jQuery n\'est pas chargé');
+        showToast('Erreur: jQuery n\'est pas disponible', 'error');
+        return;
+    }
+    
+    if (typeof $.fn.DataTable === 'undefined') {
+        console.error('DataTables n\'est pas chargé');
+        showToast('Erreur: DataTables n\'est pas disponible', 'error');
+        return;
+    }
+    
+    initializeDataTable();
+    loadTypeFonds();
+});
+
+// Initialiser DataTable
+function initializeDataTable() {
+    typeFondsTable = $('#typeFondsTable').DataTable({
+        language: {
+            "sProcessing":     "Traitement en cours...",
+            "sSearch":         "Rechercher&nbsp;:",
+            "sLengthMenu":     "Afficher _MENU_ éléments",
+            "sInfo":           "Affichage de l'élément _START_ à _END_ sur _TOTAL_ éléments",
+            "sInfoEmpty":      "Affichage de l'élément 0 à 0 sur 0 élément",
+            "sInfoFiltered":   "(filtré de _MAX_ éléments au total)",
+            "sInfoPostFix":    "",
+            "sLoadingRecords": "Chargement...",
+            "sZeroRecords":    "Aucun élément à afficher",
+            "sEmptyTable":     "Aucune donnée disponible dans le tableau",
+            "oPaginate": {
+                "sFirst":    '<i class="fa fa-angle-double-left" style="font-size: 12px;"></i>',
+                "sPrevious": '<i class="fa fa-angle-left" style="font-size: 12px;"></i>',
+                "sNext":     '<i class="fa fa-angle-right" style="font-size: 12px;"></i>',
+                "sLast":     '<i class="fa fa-angle-double-right" style="font-size: 12px;"></i>'
+            },
+            "oAria": {
+                "sSortAscending":  ": activer pour trier la colonne par ordre croissant",
+                "sSortDescending": ": activer pour trier la colonne par ordre décroissant"
+            }
+        },
+        pageLength: 10,
+        lengthMenu: [[10, 25, 50, -1], [10, 25, 50, "Tous"]],
+        order: [[0, 'asc']],
+        columnDefs: [
+            {
+                targets: 3,
+                orderable: false,
+                searchable: false
+            }
+        ]
+    });
+}
+
+// Charger les types de fonds
+function loadTypeFonds() {
+    // Afficher le skeleton loading
+    const tableContainer = document.querySelector('#typeFondsTable').closest('.table-responsive');
+    if (tableContainer) {
+        tableContainer.style.position = 'relative';
+        const skeleton = document.createElement('div');
+        skeleton.id = 'skeleton-loading';
+        skeleton.innerHTML = `
+            <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: white; z-index: 1000; display: flex; align-items: center; justify-content: center;">
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Chargement...</span>
+                    </div>
+                    <div class="mt-2">Chargement des données...</div>
+                </div>
+            </div>
+        `;
+        tableContainer.appendChild(skeleton);
+    }
+    
+    fetch('{{ path('app_typefonds_list') }}')
+        .then(response => response.json())
+        .then(data => {
+            // Masquer le skeleton loading
+            const skeleton = document.getElementById('skeleton-loading');
+            if (skeleton) {
+                skeleton.remove();
+            }
+            
+            typeFondsTable.clear();
+            
+            data.forEach(function(item) {
+                const actions = `
+                    <div class="dropdown" style="position: relative;">
+                        <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="position: relative; z-index: 1;">
+                            <i class="fa fa-ellipsis-h"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" style="position: absolute; z-index: 99999; right: 0; left: auto;">
+                            <li><a class="dropdown-item" href="#" onclick="showTypeFonds(${item.id})"><i class="fa fa-eye text-primary"></i> Voir</a></li>
+                            <li><a class="dropdown-item" href="#" onclick="editTypeFonds(${item.id})"><i class="fa fa-edit text-warning"></i> Modifier</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="#" onclick="deleteTypeFonds(${item.id})"><i class="fa fa-trash text-danger"></i> Supprimer</a></li>
+                        </ul>
+                    </div>
+                `;
+                
+                typeFondsTable.row.add([
+                    item.id,
+                    item.libelle,
+                    item.description || '-',
+                    actions
+                ]);
+            });
+            
+            typeFondsTable.draw();
+        })
+        .catch(error => {
+            // Masquer le skeleton loading en cas d'erreur
+            const skeleton = document.getElementById('skeleton-loading');
+            if (skeleton) {
+                skeleton.remove();
+            }
+            console.error('Erreur lors du chargement des types de fonds:', error);
+            showToast('Erreur lors du chargement des types de fonds', 'error');
+        });
+}
+
+// Afficher un type de fonds
+function showTypeFonds(id) {
+    fetch(`{{ path('app_typefonds_show', {'id': 'PLACEHOLDER'}) }}`.replace('PLACEHOLDER', id))
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const typeFond = data.data;
+                showToast(`Type de fonds: ${typeFond.libelle}`, 'info');
+            } else {
+                showToast('Erreur lors de la récupération du type de fonds', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            showToast('Erreur lors de la récupération du type de fonds', 'error');
+        });
+}
+
+// Modifier un type de fonds
+function editTypeFonds(id) {
+    editingId = id;
+    
+    fetch(`{{ path('app_typefonds_show', {'id': 'PLACEHOLDER'}) }}`.replace('PLACEHOLDER', id))
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const typeFond = data.data;
+                $('#typeFondsId').val(typeFond.id);
+                $('#libelle').val(typeFond.libelle);
+                $('#description').val(typeFond.description);
+                $('#typeFondsModalLabel').text('Modifier le type de fonds');
+                $('#typeFondsModal').modal('show');
+            } else {
+                showToast('Erreur lors de la récupération du type de fonds', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            showToast('Erreur lors de la récupération du type de fonds', 'error');
+        });
+}
+
+// Supprimer un type de fonds
+function deleteTypeFonds(id) {
+    if (confirm('Êtes-vous sûr de vouloir supprimer ce type de fonds ?')) {
+        fetch(`{{ path('app_typefonds_delete', {'id': 'PLACEHOLDER'}) }}`.replace('PLACEHOLDER', id), {
+            method: 'DELETE'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast(data.message, 'success');
+                loadTypeFonds();
+            } else {
+                showToast(data.message || 'Erreur lors de la suppression', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            showToast('Erreur lors de la suppression', 'error');
+        });
+    }
+}
+
+// Gestion du formulaire
+$('#typeFondsForm').on('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = {
+        libelle: $('#libelle').val(),
+        description: $('#description').val()
+    };
+    
+    const submitBtn = $('#submitBtn');
+    const btnText = submitBtn.find('.btn-text');
+    const btnSpinner = submitBtn.find('.btn-spinner');
+    
+    // Désactiver le bouton et afficher le spinner
+    submitBtn.prop('disabled', true);
+    btnText.addClass('d-none');
+    btnSpinner.removeClass('d-none');
+    
+    const url = editingId 
+        ? `{{ path('app_typefonds_edit', {'id': 'PLACEHOLDER'}) }}`.replace('PLACEHOLDER', editingId)
+        : '{{ path('app_typefonds_new') }}';
+    
+    fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast(data.message, 'success');
+            $('#typeFondsModal').modal('hide');
+            resetForm();
+            loadTypeFonds();
+        } else {
+            showToast(data.message || 'Erreur lors de l\'enregistrement', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        showToast('Erreur lors de l\'enregistrement', 'error');
+    })
+    .finally(() => {
+        // Réactiver le bouton
+        submitBtn.prop('disabled', false);
+        btnText.removeClass('d-none');
+        btnSpinner.addClass('d-none');
+    });
+});
+
+// Réinitialiser le formulaire
+function resetForm() {
+    $('#typeFondsForm')[0].reset();
+    $('#typeFondsId').val('');
+    editingId = null;
+    $('#typeFondsModalLabel').text('Nouveau type de fonds');
+}
+
+// Réinitialiser le formulaire quand le modal se ferme
+$('#typeFondsModal').on('hidden.bs.modal', function() {
+    resetForm();
+});
+
+// Fonction d'export PDF
+function exportToPDF() {
+    showToast('Génération du PDF en cours...', 'info');
+    
+    // Récupérer les données actuelles du tableau
+    const data = typeFondsTable.data().toArray();
+    
+    if (data.length === 0) {
+        showToast('Aucune donnée à exporter', 'warning');
+        return;
+    }
+    
+    // Créer le contenu HTML pour le PDF
+    let htmlContent = `
+        <html>
+        <head>
+            <style>
+                body { font-family: Arial, sans-serif; margin: 20px; }
+                h1 { color: #333; text-align: center; margin-bottom: 30px; }
+                table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                th { background-color: #f2f2f2; font-weight: bold; }
+                .header { text-align: center; margin-bottom: 20px; }
+                .date { color: #666; font-size: 12px; }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h1>Liste des Types de Fonds</h1>
+                <p class="date">Généré le ${new Date().toLocaleDateString('fr-FR')}</p>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Libellé</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+    
+    // Ajouter les données
+    data.forEach(function(row) {
+        htmlContent += `
+            <tr>
+                <td>${row[0]}</td>
+                <td>${row[1]}</td>
+                <td>${row[2] || '-'}</td>
+            </tr>
+        `;
+    });
+    
+    htmlContent += `
+                </tbody>
+            </table>
+        </body>
+        </html>
+    `;
+    
+    // Créer un blob avec le contenu HTML
+    const blob = new Blob([htmlContent], { type: 'text/html' });
+    const url = window.URL.createObjectURL(blob);
+    
+    // Créer un lien temporaire pour le téléchargement
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `types_fonds_${new Date().toISOString().split('T')[0]}.html`;
+    
+    // Déclencher le téléchargement
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    // Libérer l'URL
+    window.URL.revokeObjectURL(url);
+    
+    showToast('Export terminé !', 'success');
+}
+</script>
+{% endblock %}

@@ -1,0 +1,251 @@
+================================================================================
+                    SYSTÈME DE GESTION DES RÔLES - APPLICATION SUIVI
+================================================================================
+
+📋 TABLE DES MATIÈRES
+1. Hiérarchie des Rôles
+2. Permissions par Rôle
+3. Fichiers de Configuration
+4. Utilisation dans les Templates
+5. Contrôle d'Accès dans les Contrôleurs
+6. Comment Ajouter un Nouveau Rôle
+7. Exemples Pratiques
+
+================================================================================
+1. HIÉRARCHIE DES RÔLES
+================================================================================
+
+ROLE_USER (Base)
+    ↓
+ROLE_EDITEUR (Hérite de ROLE_USER)
+    ↓
+ROLE_DIRECTEUR (Hérite de ROLE_EDITEUR + ROLE_USER)
+    ↓
+ROLE_ADMIN (Hérite de tous les autres rôles)
+
+Configuration dans: config/packages/security.yaml
+```yaml
+role_hierarchy:
+    ROLE_EDITEUR: ROLE_USER
+    ROLE_DIRECTEUR: ROLE_EDITEUR
+    ROLE_ADMIN: ROLE_DIRECTEUR
+```
+
+================================================================================
+2. PERMISSIONS PAR RÔLE
+================================================================================
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    MATRICE DES PERMISSIONS                                  │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ Action                    │ USER │ EDITEUR │ DIRECTEUR │ ADMIN │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ Accès de base             │  ✅  │   ✅    │    ✅     │  ✅   │
+│ Créer formations/missions │  ❌  │   ✅    │    ❌     │  ✅   │
+│ Modifier formations       │  ❌  │   ✅    │    ❌     │  ✅   │
+│ Valider formations        │  ❌  │   ✅    │    ❌     │  ✅   │
+│ Supprimer formations      │  ❌  │   ❌    │    ❌     │  ✅   │
+│ Voir rapports/statistiques│  ❌  │   ❌    │    ✅     │  ✅   │
+│ Gérer utilisateurs        │  ❌  │   ❌    │    ❌     │  ✅   │
+│ Gérer paramètres système  │  ❌  │   ❌    │    ❌     │  ✅   │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+3. FICHIERS DE CONFIGURATION
+================================================================================
+
+📁 src/Service/RoleService.php
+   - Service principal de gestion des rôles
+   - Fonctions de vérification des permissions
+   - Logique métier centralisée
+
+📁 src/Twig/RoleExtension.php
+   - Extension Twig pour utiliser les fonctions dans les templates
+   - Rend les fonctions disponibles partout dans l'application
+
+📁 config/packages/security.yaml
+   - Configuration de la hiérarchie des rôles
+   - Configuration de l'authentification
+
+================================================================================
+4. UTILISATION DANS LES TEMPLATES
+================================================================================
+
+Fonctions disponibles dans les templates Twig:
+
+🔹 Vérification de rôles:
+   - {% if is_editeur() %} ... {% endif %}
+   - {% if is_directeur() %} ... {% endif %}
+   - {% if is_admin() %} ... {% endif %}
+
+🔹 Vérification de permissions:
+   - {% if can_create_formation() %} ... {% endif %}
+   - {% if can_manage_users() %} ... {% endif %}
+   - {% if can_view_reports() %} ... {% endif %}
+   - {% if can_manage_settings() %} ... {% endif %}
+
+Exemples dans templates/partials/sidebar.html.twig:
+```twig
+{# Section visible seulement pour les admins #}
+{% if can_manage_settings() %}
+    <div class="menu-item">
+        <a href="{{ path('app_direction_index') }}">Directions</a>
+    </div>
+{% endif %}
+
+{# Bouton visible seulement pour les éditeurs et admins #}
+{% if can_create_formation() %}
+    <div class="menu-item">
+        <a href="{{ path('app_formation_create') }}">Ajouter</a>
+    </div>
+{% endif %}
+```
+
+================================================================================
+5. CONTRÔLE D'ACCÈS DANS LES CONTRÔLEURS
+================================================================================
+
+Annotations de sécurité dans les contrôleurs:
+
+```php
+// Seuls les éditeurs et admins peuvent accéder
+#[Route('/create', name: 'app_formation_create')]
+#[IsGranted('ROLE_EDITEUR')]
+public function create(): Response
+
+// Seuls les admins peuvent supprimer
+#[Route('/{id}', name: 'app_formation_delete')]
+#[IsGranted('ROLE_ADMIN')]
+public function delete(Formation $formation): JsonResponse
+
+// Contrôleur entier réservé aux admins
+#[Route('/user')]
+#[IsGranted('ROLE_ADMIN')]
+class UserController extends AbstractController
+```
+
+================================================================================
+6. COMMENT AJOUTER UN NOUVEAU RÔLE
+================================================================================
+
+Étape 1: Ajouter dans config/packages/security.yaml
+```yaml
+role_hierarchy:
+    ROLE_SUPERVISEUR: ROLE_EDITEUR
+```
+
+Étape 2: Ajouter dans src/Service/RoleService.php
+```php
+public function isSuperviseur(): bool
+{
+    return $this->hasRole('ROLE_SUPERVISEUR');
+}
+
+public function canSupervise(): bool
+{
+    return $this->isSuperviseur() || $this->isAdmin();
+}
+```
+
+Étape 3: Ajouter dans src/Twig/RoleExtension.php
+```php
+new TwigFunction('is_superviseur', [$this->roleService, 'isSuperviseur']),
+new TwigFunction('can_supervise', [$this->roleService, 'canSupervise']),
+```
+
+Étape 4: Utiliser dans les templates
+```twig
+{% if is_superviseur() %}
+    <!-- Contenu pour superviseurs -->
+{% endif %}
+```
+
+================================================================================
+7. EXEMPLES PRATIQUES
+================================================================================
+
+🔹 Menu Sidebar (templates/partials/sidebar.html.twig):
+   - Section "Gestion" → Visible seulement pour les admins
+   - Section "Formations" → Bouton "Ajouter" visible pour éditeurs et admins
+   - Section "Rapports" → Visible pour directeurs et admins
+
+🔹 Pages de détail:
+   - Bouton "Modifier" → Masqué si formation/mission déjà validée
+   - Bouton "Gérer les rôles" → Visible seulement pour les admins
+
+🔹 Contrôleurs:
+   - FormationController → Création/modification réservée aux éditeurs
+   - UserController → Entièrement réservé aux admins
+   - ReportingController → Réservé aux directeurs et admins
+
+================================================================================
+8. FONCTIONS DISPONIBLES DANS RoleService
+================================================================================
+
+Vérification de rôles:
+- hasRole(string $role): bool
+- isEditeur(): bool
+- isDirecteur(): bool
+- isAdmin(): bool
+
+Permissions formations:
+- canCreateFormation(): bool
+- canEditFormation(): bool
+- canValidateFormation(): bool
+- canDeleteFormation(): bool
+
+Permissions système:
+- canManageUsers(): bool
+- canManageSettings(): bool
+- canViewStatistics(): bool
+- canViewReports(): bool
+- canViewAdvancedFilters(): bool
+
+Utilitaires:
+- getCurrentUser(): ?User
+- getHighestRole(): string
+- requireRole(string $role): void
+- requireCanCreateFormation(): void
+
+================================================================================
+9. SÉCURITÉ ET BONNES PRATIQUES
+================================================================================
+
+✅ Points forts du système:
+- Contrôle d'accès à deux niveaux (contrôleur + template)
+- Logique centralisée dans RoleService
+- Hiérarchie automatique des rôles
+- Fonctions réutilisables dans les templates
+- Code maintenable et extensible
+
+⚠️ Points d'attention:
+- Toujours vérifier les permissions côté serveur (contrôleur)
+- Ne pas se fier uniquement à l'affichage côté client (template)
+- Tester les permissions avec différents rôles
+- Documenter les nouveaux rôles ajoutés
+
+================================================================================
+10. FLUX DE VÉRIFICATION DES PERMISSIONS
+================================================================================
+
+1. Utilisateur accède à une page
+   ↓
+2. Symfony vérifie l'annotation #[IsGranted('ROLE_XXX')]
+   ↓
+3. Si autorisé → Page affichée
+   ↓
+4. Dans le template, {% if can_create_formation() %} vérifie les permissions
+   ↓
+5. RoleService.isEditeur() || RoleService.isAdmin() retourne true/false
+   ↓
+6. Élément affiché ou masqué selon le résultat
+
+================================================================================
+                                FIN DU DOCUMENT
+================================================================================
+
+Ce document explique le système de gestion des rôles de l'application de suivi.
+Pour toute question ou modification, consulter les fichiers sources mentionnés.
+
+Date de création: $(date)
+Version: 1.0
