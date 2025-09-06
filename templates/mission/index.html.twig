@@ -73,6 +73,9 @@
 						<button type="button" class="btn btn-success btn-sm" onclick="exportPdf()">
 							<i class="fa fa-file-pdf"></i> Exporter en PDF
 						</button>
+						<button type="button" class="btn btn-info btn-sm" onclick="exportExcel()">
+							<i class="fa fa-file-excel"></i> Exporter en Excel
+						</button>
 					</div>
 				</div>
 			</div>
@@ -164,7 +167,19 @@ function populateFilters() {
 
 // Initialiser DataTable
 function initializeDataTable() {
-    if (typeof $.fn.DataTable !== 'undefined') {
+    // Vérifier que DataTables est bien chargé
+    if (typeof $.fn.DataTable === 'undefined') {
+        console.error('DataTables n\'est pas chargé');
+        return;
+    }
+    
+    // Vérifier que la table existe
+    if ($('#missionsTable').length === 0) {
+        console.error('Table missionsTable non trouvée');
+        return;
+    }
+    
+    try {
         // Initialiser DataTable
         missionsTable = $('#missionsTable').DataTable({
             ajax: {
@@ -226,7 +241,25 @@ function initializeDataTable() {
                 }
             ],
             language: {
-                url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/fr-FR.json'
+                "sProcessing":     "Traitement en cours...",
+                "sSearch":         "Rechercher&nbsp;:",
+                "sLengthMenu":     "Afficher _MENU_ éléments",
+                "sInfo":           "Affichage de l'élément _START_ à _END_ sur _TOTAL_ éléments",
+                "sInfoEmpty":      "Affichage de l'élément 0 à 0 sur 0 élément",
+                "sInfoFiltered":   "(filtré de _MAX_ éléments au total)",
+                "sLoadingRecords": "Chargement...",
+                "sZeroRecords":    "Aucun élément à afficher",
+                "sEmptyTable":     "Aucune donnée disponible dans le tableau",
+                "oPaginate": {
+                    "sFirst":    '<i class="fa fa-angle-double-left" style="font-size: 12px;"></i>',
+                    "sPrevious": '<i class="fa fa-angle-left" style="font-size: 12px;"></i>',
+                    "sNext":     '<i class="fa fa-angle-right" style="font-size: 12px;"></i>',
+                    "sLast":     '<i class="fa fa-angle-double-right" style="font-size: 12px;"></i>'
+                },
+                "oAria": {
+                    "sSortAscending":  ": activer pour trier la colonne par ordre croissant",
+                    "sSortDescending": ": activer pour trier la colonne par ordre décroissant"
+                }
             },
             responsive: true,
             dom: 'Bfrtip',
@@ -310,6 +343,20 @@ function exportPdf() {
     });
     
     // Ouvrir dans un nouvel onglet pour télécharger le PDF
+    window.open(url.toString(), '_blank');
+}
+
+function exportExcel() {
+    const filters = getFilters();
+    const url = new URL("{{ path('app_mission_export_excel') }}", window.location.origin);
+    
+    Object.keys(filters).forEach(key => {
+        if (filters[key] && filters[key] !== '') {
+            url.searchParams.append(key, filters[key]);
+        }
+    });
+    
+    // Ouvrir dans un nouvel onglet pour télécharger le Excel
     window.open(url.toString(), '_blank');
 }
 

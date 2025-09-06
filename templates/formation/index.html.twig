@@ -74,6 +74,9 @@
 						<button type="button" class="btn btn-success btn-sm" onclick="exportPdf()">
 							<i class="fa fa-file-pdf"></i> Exporter en PDF
 						</button>
+						<button type="button" class="btn btn-info btn-sm" onclick="exportExcel()">
+							<i class="fa fa-file-excel"></i> Exporter en Excel
+						</button>
 					</div>
 				</div>
 			</div>
@@ -359,6 +362,20 @@ function exportPdf() {
     });
     
     // Ouvrir dans un nouvel onglet pour télécharger le PDF
+    window.open(url.toString(), '_blank');
+}
+
+function exportExcel() {
+    const filters = getFilters();
+    const url = new URL("{{ path('app_formation_export_excel') }}", window.location.origin);
+    
+    Object.keys(filters).forEach(key => {
+        if (filters[key] && filters[key] !== '') {
+            url.searchParams.append(key, filters[key]);
+        }
+    });
+    
+    // Ouvrir dans un nouvel onglet pour télécharger le Excel
     window.open(url.toString(), '_blank');
 }
 

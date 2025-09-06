@@ -10,6 +10,7 @@ use App\Repository\DirectionRepository;
 use App\Repository\StatutActiviteRepository;
 use App\Repository\UserRepository;
 use App\Service\PdfService;
+use App\Service\ExcelExportService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -26,6 +27,24 @@ class MissionController extends AbstractController
     public function index(): Response
     {
         return $this->render('mission/index.html.twig');
+    }
+
+    #[Route('/export-excel', name: 'app_mission_export_excel', methods: ['GET'])]
+    public function exportExcel(Request $request, MissionRepository $missionRepository, ExcelExportService $excelExportService): Response
+    {
+        // Récupérer les filtres depuis la requête
+        $filters = [
+            'direction' => $request->query->get('direction'),
+            'statut' => $request->query->get('statut'),
+            'date_debut' => $request->query->get('date_debut'),
+            'date_fin' => $request->query->get('date_fin'),
+            'search' => $request->query->get('search')
+        ];
+
+        // Récupérer les missions avec les filtres
+        $missions = $missionRepository->findWithFilters($filters);
+
+        return $excelExportService->exportMissionsToExcel($missions, $filters);
     }
 
     #[Route('/create', name: 'app_mission_create', methods: ['GET'])]
@@ -551,7 +570,10 @@ class MissionController extends AbstractController
     #[Route('/{id}/realisation/participants', name: 'app_mission_realisation_participants', methods: ['GET'])]
     public function getParticipantsForRealisation(Mission $mission, EntityManagerInterface $entityManager): JsonResponse
     {
-        $data = [];
+        $data = [
+            'prevus' => [],
+            'disponibles' => []
+        ];
         
         // Participants prévus (déjà inscrits)
         foreach ($mission->getUserMissions() as $userMission) {
@@ -636,6 +658,9 @@ class MissionController extends AbstractController
     {
         $data = json_decode($request->getContent(), true);
         
+        // Log pour débogage
+        error_log('Mission realisation data received: ' . json_encode($data));
+        
         try {
             // 1. Mettre à jour les informations de la mission
             if (isset($data['dateReelleDebut'])) {
@@ -646,6 +671,14 @@ class MissionController extends AbstractController
             }
             if (isset($data['lieuReel'])) {
                 $mission->setLieuReel($data['lieuReel']);
+            }
+            
+            // Calculer la durée réelle
+            if (isset($data['dateReelleDebut']) && isset($data['dateReelleFin'])) {
+                $dateDebut = new \DateTime($data['dateReelleDebut']);
+                $dateFin = new \DateTime($data['dateReelleFin']);
+                $dureeReelle = $dateDebut->diff($dateFin)->days + 1; // +1 pour inclure le jour de fin
+                $mission->setDureeReelle($dureeReelle);
             }
             
             // 2. Mettre à jour le statut de l'activité
@@ -702,6 +735,15 @@ class MissionController extends AbstractController
                     }
                 }
             }
+            
+            // Calculer le budget réel total
+            $budgetReel = 0;
+            foreach ($mission->getDepenseMissions() as $depense) {
+                if ($depense->getMontantReel()) {
+                    $budgetReel += (float)$depense->getMontantReel();
+                }
+            }
+            $mission->setBudgetReel($budgetReel);
             
             $entityManager->flush();
             

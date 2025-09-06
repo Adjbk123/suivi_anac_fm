@@ -7,6 +7,7 @@ use App\Entity\User;
 use App\Entity\UserFormation;
 use App\Repository\FormationRepository;
 use App\Service\RoleService;
+use App\Service\ExcelExportService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -27,6 +28,24 @@ class FormationController extends AbstractController
     public function index(): Response
     {
         return $this->render('formation/index.html.twig');
+    }
+
+    #[Route('/export-excel', name: 'app_formation_export_excel', methods: ['GET'])]
+    public function exportExcel(Request $request, FormationRepository $formationRepository, ExcelExportService $excelExportService): Response
+    {
+        // Récupérer les filtres depuis la requête
+        $filters = [
+            'service' => $request->query->get('service'),
+            'statut' => $request->query->get('statut'),
+            'date_debut' => $request->query->get('date_debut'),
+            'date_fin' => $request->query->get('date_fin'),
+            'search' => $request->query->get('search')
+        ];
+
+        // Récupérer les formations avec les filtres
+        $formations = $formationRepository->findWithFilters($filters);
+
+        return $excelExportService->exportFormationsToExcel($formations, $filters);
     }
 
     #[Route('/create', name: 'app_formation_create', methods: ['GET'])]
@@ -562,7 +581,10 @@ class FormationController extends AbstractController
     #[Route('/{id}/realisation/participants', name: 'app_formation_realisation_participants', methods: ['GET'])]
     public function getParticipantsForRealisation(Formation $formation, EntityManagerInterface $entityManager): JsonResponse
     {
-        $data = [];
+        $data = [
+            'prevus' => [],
+            'disponibles' => []
+        ];
         
         // Participants prévus (déjà inscrits)
         foreach ($formation->getUserFormations() as $userFormation) {
@@ -652,6 +674,14 @@ class FormationController extends AbstractController
                 $formation->setLieuReel($data['lieuReel']);
             }
             
+            // Calculer la durée réelle
+            if (isset($data['dateReelleDebut']) && isset($data['dateReelleFin'])) {
+                $dateDebut = new \DateTime($data['dateReelleDebut']);
+                $dateFin = new \DateTime($data['dateReelleFin']);
+                $dureeReelle = $dateDebut->diff($dateFin)->days + 1; // +1 pour inclure le jour de fin
+                $formation->setDureeReelle($dureeReelle);
+            }
+            
             // 2. Mettre à jour le statut de l'activité
             $statutExecutee = $entityManager->getRepository(\App\Entity\StatutActivite::class)->findOneBy(['code' => 'prevue_executee']);
             $formation->setStatutActivite($statutExecutee);
@@ -706,6 +736,15 @@ class FormationController extends AbstractController
                     }
                 }
             }
+            
+            // Calculer le budget réel total
+            $budgetReel = 0;
+            foreach ($formation->getDepenseFormations() as $depense) {
+                if ($depense->getMontantReel()) {
+                    $budgetReel += (float)$depense->getMontantReel();
+                }
+            }
+            $formation->setBudgetReel($budgetReel);
             
             $entityManager->flush();
             

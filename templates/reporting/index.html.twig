@@ -288,7 +288,7 @@
                     <div class="row">
                         <div class="col-12">
                             <div class="table-responsive">
-                                <table class="table table-striped w-100" id="formationsTable">
+                                <table class="table table-striped w-100" id="reportingFormationsTable">
                                     <thead>
                                         <tr>
                                             <th>Titre</th>
@@ -317,7 +317,7 @@
                     <div class="row">
                         <div class="col-12">
                             <div class="table-responsive">
-                                <table class="table table-striped w-100" id="missionsTable">
+                                <table class="table table-striped w-100" id="reportingMissionsTable">
                                     <thead>
                                         <tr>
                                             <th>Titre</th>
@@ -725,7 +725,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function populateFormations(formations) {
-        const tbody = document.querySelector('#formationsTable tbody');
+        const tbody = document.querySelector('#reportingFormationsTable tbody');
         let html = '';
         
         console.log('Formations data:', formations);
@@ -777,7 +777,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function populateMissions(missions) {
-        const tbody = document.querySelector('#missionsTable tbody');
+        const tbody = document.querySelector('#reportingMissionsTable tbody');
         let html = '';
         
         console.log('Missions data:', missions);

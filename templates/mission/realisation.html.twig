@@ -206,7 +206,12 @@
 
 				<!-- Étape 3: Dépenses réelles -->
 				<div class="step-content d-none" id="step3">
-					<h4 class="mb-3"><i class="fa fa-money-bill text-primary"></i> Dépenses réelles</h4>
+					<div class="d-flex justify-content-between align-items-center mb-3">
+						<h4 class="mb-0"><i class="fa fa-money-bill text-primary"></i> Dépenses réelles</h4>
+						<button type="button" class="btn btn-success btn-sm" onclick="showAddDepenseModal()">
+							<i class="fa fa-plus"></i> Ajouter une dépense
+						</button>
+					</div>
 					<div class="table-responsive">
 						<table class="table table-hover" id="depensesTable">
 							<thead class="table-secondary">
@@ -220,6 +225,14 @@
 							<tbody>
 								<!-- Les données seront chargées via AJAX -->
 							</tbody>
+							<tfoot class="table-info">
+								<tr id="totalRow" style="display: none;">
+									<th><strong>TOTAL</strong></th>
+									<th><strong id="totalPrevu">0 FCFA</strong></th>
+									<th><strong id="totalReel">0 FCFA</strong></th>
+									<th><strong id="totalEcart">0 FCFA</strong></th>
+								</tr>
+							</tfoot>
 						</table>
 					</div>
 					<div class="d-flex justify-content-between">
@@ -236,7 +249,7 @@
 				<div class="step-content d-none" id="step4">
 					<h4 class="mb-3"><i class="fa fa-check-circle text-primary"></i> Récapitulatif et validation</h4>
 					<div class="row">
-						<div class="col-md-6">
+						<div class="col-md-4">
 							<div class="card">
 								<div class="card-header">
 									<h6 class="card-title mb-0">Informations réelles</h6>
@@ -245,10 +258,11 @@
 									<p><strong>Date début :</strong> <span id="recapDateDebut"></span></p>
 									<p><strong>Date fin :</strong> <span id="recapDateFin"></span></p>
 									<p><strong>Lieu :</strong> <span id="recapLieu"></span></p>
+									<p><strong>Durée réelle :</strong> <span id="recapDureeReelle"></span></p>
 								</div>
 							</div>
 						</div>
-						<div class="col-md-6">
+						<div class="col-md-4">
 							<div class="card">
 								<div class="card-header">
 									<h6 class="card-title mb-0">Participants</h6>
@@ -256,6 +270,21 @@
 								<div class="card-body">
 									<p><strong>Participants prévus :</strong> <span id="recapParticipantsPrevus"></span></p>
 									<p><strong>Nouveaux participants :</strong> <span id="recapNouveauxParticipants"></span></p>
+									<p><strong>Total participants :</strong> <span id="recapTotalParticipants"></span></p>
+									<p><strong>Participants présents :</strong> <span id="recapParticipantsPresents"></span></p>
+								</div>
+							</div>
+						</div>
+						<div class="col-md-4">
+							<div class="card">
+								<div class="card-header">
+									<h6 class="card-title mb-0">Dépenses</h6>
+								</div>
+								<div class="card-body">
+									<p><strong>Budget prévu :</strong> <span id="recapBudgetPrevu"></span></p>
+									<p><strong>Dépenses réelles :</strong> <span id="recapDepensesReelles"></span></p>
+									<p><strong>Écart :</strong> <span id="recapEcartBudget"></span></p>
+									<p><strong>Nombre de dépenses :</strong> <span id="recapNombreDepenses"></span></p>
 								</div>
 							</div>
 						</div>
@@ -269,6 +298,43 @@
 						</button>
 					</div>
 				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
+<!-- Modal pour ajouter une dépense -->
+<div class="modal fade" id="addDepenseModal" tabindex="-1" aria-labelledby="addDepenseModalLabel" aria-hidden="true">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="addDepenseModalLabel">
+					<i class="fa fa-plus text-success"></i> Ajouter une dépense
+				</h5>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body">
+				<form id="addDepenseForm">
+					<div class="mb-3">
+						<label for="depenseCategorie" class="form-label">Catégorie de dépense *</label>
+						<select class="form-select" id="depenseCategorie" required>
+							<option value="">Sélectionner une catégorie...</option>
+						</select>
+					</div>
+					<div class="mb-3">
+						<label for="depenseMontant" class="form-label">Montant prévu *</label>
+						<div class="input-group">
+							<input type="number" class="form-control" id="depenseMontant" min="0" step="1000" required>
+							<span class="input-group-text">FCFA</span>
+						</div>
+					</div>
+				</form>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+				<button type="button" class="btn btn-success" onclick="addDepense()">
+					<i class="fa fa-plus"></i> Ajouter
+				</button>
 			</div>
 		</div>
 	</div>
@@ -310,9 +376,11 @@ let depensesData = {};
 let statutsParticipation = [];
 
 document.addEventListener('DOMContentLoaded', function() {
-    loadStatutsParticipation();
-    loadParticipants();
-    loadDepenses();
+    // Charger d'abord les statuts, puis les participants
+    loadStatutsParticipation().then(() => {
+        loadParticipants();
+        loadDepenses();
+    });
 });
 
 function nextStep(step) {
@@ -397,13 +465,20 @@ function validateCurrentStep() {
 }
 
 function loadStatutsParticipation() {
-    fetch('/api/statuts-participation')
-        .then(response => response.json())
+    return fetch('/api/statuts-participation')
+        .then(response => {
+            console.log('Réponse API statuts:', response.status);
+            return response.json();
+        })
         .then(data => {
+            console.log('Statuts de participation reçus:', data);
             statutsParticipation = data;
+            return data; // Retourner les données pour la chaîne de Promises
         })
         .catch(error => {
             console.error('Erreur lors du chargement des statuts:', error);
+            showToast('Erreur lors du chargement des statuts de participation', 'error');
+            throw error; // Propager l'erreur
         });
 }
 
@@ -411,20 +486,39 @@ function loadParticipants() {
     fetch('{{ path('app_mission_realisation_participants', {'id': mission.id}) }}')
         .then(response => response.json())
         .then(data => {
+            console.log('Données participants reçues:', data); // Debug
             participantsData = data;
             
             // Remplir la table des participants prévus
             const tbody = document.querySelector('#participantsTable tbody');
             tbody.innerHTML = '';
             
+            // Vérifier que data.prevus est un tableau
+            if (!data.prevus || !Array.isArray(data.prevus)) {
+                console.error('data.prevus is not an array:', data.prevus);
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Erreur: Format de données invalide</td></tr>';
+                return;
+            }
+            
+            // Si aucun participant prévu, afficher un message
+            if (data.prevus.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Aucun participant prévu pour cette mission. Vous pouvez en ajouter dans la section ci-dessous.</td></tr>';
+            }
+            
             data.prevus.forEach(participant => {
                 const row = document.createElement('tr');
                 row.setAttribute('data-participant-id', participant.id);
+                
+                console.log('Statuts disponibles pour le participant:', statutsParticipation);
+                console.log('Statut actuel du participant:', participant.statut_participation_id);
+                
                 const selectOptions = statutsParticipation
                     .filter(statut => statut.code === 'participe' || statut.code === 'absent')
                     .map(statut => 
                         `<option value="${statut.id}" ${participant.statut_participation_id == statut.id ? 'selected' : ''}>${statut.libelle}</option>`
                     ).join('');
+                
+                console.log('Options générées:', selectOptions);
                 
                 row.innerHTML = `
                     <td>${participant.nom}</td>
@@ -447,15 +541,20 @@ function loadParticipants() {
             const select = document.getElementById('nouveauxParticipants');
             select.innerHTML = '<option value="">Sélectionner un participant à ajouter...</option>';
             
-            data.disponibles.forEach(user => {
-                const option = document.createElement('option');
-                option.value = user.id;
-                option.textContent = `${user.nom} ${user.prenom} (${user.matricule || 'N/A'})`;
-                select.appendChild(option);
-            });
+            // Vérifier que data.disponibles est un tableau
+            if (data.disponibles && Array.isArray(data.disponibles)) {
+                data.disponibles.forEach(user => {
+                    const option = document.createElement('option');
+                    option.value = user.id;
+                    option.textContent = `${user.nom} ${user.prenom} (${user.matricule || 'N/A'})`;
+                    select.appendChild(option);
+                });
+            }
         })
         .catch(error => {
-            console.error('Erreur:', error);
+            console.error('Erreur lors du chargement des participants:', error);
+            const tbody = document.querySelector('#participantsTable tbody');
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Erreur lors du chargement des participants</td></tr>';
             showToast('Erreur lors du chargement des participants', 'error');
         });
 }
@@ -464,17 +563,19 @@ function loadDepenses() {
     fetch('{{ path('app_mission_realisation_depenses', {'id': mission.id}) }}')
         .then(response => response.json())
         .then(data => {
-            depensesData = data;
+            // S'assurer que depensesData est toujours un tableau
+            depensesData = Array.isArray(data.depenses) ? data.depenses : [];
             
             const tbody = document.querySelector('#depensesTable tbody');
             tbody.innerHTML = '';
             
-            if (data.length === 0) {
+            if (depensesData.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Aucune dépense prévue pour cette mission</td></tr>';
+                document.getElementById('totalRow').style.display = 'none';
                 return;
             }
             
-            data.forEach(depense => {
+            depensesData.forEach(depense => {
                 const row = document.createElement('tr');
                 row.setAttribute('data-depense-id', depense.id);
                 
@@ -497,11 +598,15 @@ function loadDepenses() {
                 `;
                 tbody.appendChild(row);
             });
+            
+            // Mettre à jour les totaux
+            updateTotaux(data.totaux);
         })
         .catch(error => {
             console.error('Erreur:', error);
             const tbody = document.querySelector('#depensesTable tbody');
             tbody.innerHTML = '<tr><td colspan="4" class="text-center text-danger">Erreur lors du chargement des dépenses</td></tr>';
+            document.getElementById('totalRow').style.display = 'none';
         });
 }
 
@@ -521,7 +626,42 @@ function updateDepenseReelle(depenseId, montant) {
             ecartCell.className = ecartClass;
             ecartCell.textContent = montant ? `${ecartSign}${numberFormat(depense.ecart)} FCFA` : '-';
         }
+        
+        // Recalculer les totaux
+        recalculateTotaux();
     }
+}
+
+function updateTotaux(totaux) {
+    document.getElementById('totalPrevu').textContent = numberFormat(totaux.totalPrevu) + ' FCFA';
+    document.getElementById('totalReel').textContent = numberFormat(totaux.totalReel) + ' FCFA';
+    
+    const ecartClass = totaux.totalEcart > 0 ? 'text-danger' : totaux.totalEcart < 0 ? 'text-success' : 'text-muted';
+    const ecartSign = totaux.totalEcart > 0 ? '+' : '';
+    
+    const totalEcartElement = document.getElementById('totalEcart');
+    totalEcartElement.textContent = `${ecartSign}${numberFormat(totaux.totalEcart)} FCFA`;
+    totalEcartElement.className = ecartClass;
+    
+    document.getElementById('totalRow').style.display = 'table-row';
+}
+
+function recalculateTotaux() {
+    let totalPrevu = 0;
+    let totalReel = 0;
+    
+    depensesData.forEach(depense => {
+        totalPrevu += parseFloat(depense.montantPrevu);
+        totalReel += depense.montantReel ? parseFloat(depense.montantReel) : 0;
+    });
+    
+    const totalEcart = totalReel - totalPrevu;
+    
+    updateTotaux({
+        totalPrevu: totalPrevu,
+        totalReel: totalReel,
+        totalEcart: totalEcart
+    });
 }
 
 function numberFormat(number) {
@@ -617,15 +757,75 @@ function removeParticipant(userId) {
 }
 
 function updateRecap() {
-    document.getElementById('recapDateDebut').textContent = document.getElementById('dateReelleDebut').value;
-    document.getElementById('recapDateFin').textContent = document.getElementById('dateReelleFin').value;
-    document.getElementById('recapLieu').textContent = document.getElementById('lieuReel').value;
+    // Informations de base
+    const dateDebut = document.getElementById('dateReelleDebut').value;
+    const dateFin = document.getElementById('dateReelleFin').value;
+    const lieu = document.getElementById('lieuReel').value;
     
+    document.getElementById('recapDateDebut').textContent = dateDebut || 'Non renseigné';
+    document.getElementById('recapDateFin').textContent = dateFin || 'Non renseigné';
+    document.getElementById('recapLieu').textContent = lieu || 'Non renseigné';
+    
+    // Calculer la durée réelle
+    if (dateDebut && dateFin) {
+        const debut = new Date(dateDebut);
+        const fin = new Date(dateFin);
+        const diffTime = Math.abs(fin - debut);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // +1 pour inclure le jour de fin
+        document.getElementById('recapDureeReelle').textContent = diffDays + ' jour(s)';
+    } else {
+        document.getElementById('recapDureeReelle').textContent = 'Non calculable';
+    }
+    
+    // Participants
     const participantsPrevus = participantsData.prevus ? participantsData.prevus.length : 0;
     const nouveauxParticipants = participantsData.nouveaux ? participantsData.nouveaux.length : 0;
+    const totalParticipants = participantsPrevus + nouveauxParticipants;
+    
+    // Compter les participants présents (statut "participe")
+    let participantsPresents = 0;
+    if (participantsData.prevus) {
+        participantsPresents = participantsData.prevus.filter(p => {
+            const statut = statutsParticipation.find(s => s.id == p.statut_participation_id);
+            return statut && statut.code === 'participe';
+        }).length;
+    }
+    if (participantsData.nouveaux) {
+        participantsPresents += participantsData.nouveaux.length; // Les nouveaux participants sont considérés comme présents
+    }
     
     document.getElementById('recapParticipantsPrevus').textContent = participantsPrevus;
     document.getElementById('recapNouveauxParticipants').textContent = nouveauxParticipants;
+    document.getElementById('recapTotalParticipants').textContent = totalParticipants;
+    document.getElementById('recapParticipantsPresents').textContent = participantsPresents;
+    
+    // Dépenses
+    let totalPrevu = 0;
+    let totalReel = 0;
+    let nombreDepenses = 0;
+    
+    if (Array.isArray(depensesData)) {
+        depensesData.forEach(depense => {
+            totalPrevu += parseFloat(depense.montantPrevu) || 0;
+            totalReel += parseFloat(depense.montantReel) || 0;
+            if (depense.montantReel) {
+                nombreDepenses++;
+            }
+        });
+    }
+    
+    const ecart = totalReel - totalPrevu;
+    const ecartClass = ecart > 0 ? 'text-danger' : ecart < 0 ? 'text-success' : 'text-muted';
+    const ecartSign = ecart > 0 ? '+' : '';
+    
+    document.getElementById('recapBudgetPrevu').textContent = numberFormat(totalPrevu) + ' FCFA';
+    document.getElementById('recapDepensesReelles').textContent = numberFormat(totalReel) + ' FCFA';
+    
+    const ecartElement = document.getElementById('recapEcartBudget');
+    ecartElement.textContent = `${ecartSign}${numberFormat(ecart)} FCFA`;
+    ecartElement.className = ecartClass;
+    
+    document.getElementById('recapNombreDepenses').textContent = nombreDepenses + ' dépense(s) renseignée(s)';
 }
 
 function validerRealisation() {
@@ -635,20 +835,34 @@ function validerRealisation() {
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Validation en cours...';
     
+    // Validation des champs requis
+    const dateReelleDebut = document.getElementById('dateReelleDebut').value;
+    const dateReelleFin = document.getElementById('dateReelleFin').value;
+    const lieuReel = document.getElementById('lieuReel').value;
+    
+    if (!dateReelleDebut || !dateReelleFin || !lieuReel) {
+        showToast('Veuillez remplir tous les champs obligatoires', 'error');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+        return;
+    }
+    
     const data = {
-        dateReelleDebut: document.getElementById('dateReelleDebut').value,
-        dateReelleFin: document.getElementById('dateReelleFin').value,
-        lieuReel: document.getElementById('lieuReel').value,
-        participants: participantsData.prevus.map(p => ({
+        dateReelleDebut: dateReelleDebut,
+        dateReelleFin: dateReelleFin,
+        lieuReel: lieuReel,
+        participants: (Array.isArray(participantsData.prevus) ? participantsData.prevus : []).map(p => ({
             userMissionId: p.id,
             statut_participation_id: p.statut_participation_id
         })),
         nouveauxParticipants: participantsData.nouveaux ? participantsData.nouveaux.map(u => u.id) : [],
-        depensesReelles: depensesData.filter(d => d.montantReel).map(d => ({
+        depensesReelles: (Array.isArray(depensesData) ? depensesData : []).filter(d => d.montantReel).map(d => ({
             categorieId: d.categorieId,
             montant: d.montantReel
         }))
     };
+    
+    console.log('Données envoyées pour validation:', data);
     
     fetch('{{ path('app_mission_realisation_complete', {'id': mission.id}) }}', {
         method: 'POST',
@@ -657,8 +871,15 @@ function validerRealisation() {
         },
         body: JSON.stringify(data)
     })
-    .then(response => response.json())
+    .then(response => {
+        console.log('Réponse du serveur:', response.status);
+        if (!response.ok) {
+            throw new Error(`Erreur HTTP: ${response.status}`);
+        }
+        return response.json();
+    })
     .then(data => {
+        console.log('Données reçues:', data);
         if (data.success) {
             showToast(data.message, 'success');
             setTimeout(() => {
@@ -669,8 +890,98 @@ function validerRealisation() {
         }
     })
     .catch(error => {
+        console.error('Erreur détaillée:', error);
+        showToast('Erreur lors de la validation: ' + error.message, 'error');
+    })
+    .finally(() => {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+    });
+}
+
+// Variables globales pour les catégories de dépenses
+let categoriesDepenses = [];
+
+function showAddDepenseModal() {
+    // Charger les catégories de dépenses si pas encore fait
+    if (categoriesDepenses.length === 0) {
+        loadCategoriesDepenses();
+    }
+    
+    // Réinitialiser le formulaire
+    document.getElementById('addDepenseForm').reset();
+    
+    // Afficher le modal
+    const modal = new bootstrap.Modal(document.getElementById('addDepenseModal'));
+    modal.show();
+}
+
+function loadCategoriesDepenses() {
+    fetch('/api/categories-depenses')
+        .then(response => response.json())
+        .then(data => {
+            categoriesDepenses = data;
+            const select = document.getElementById('depenseCategorie');
+            select.innerHTML = '<option value="">Sélectionner une catégorie...</option>';
+            
+            data.forEach(categorie => {
+                const option = document.createElement('option');
+                option.value = categorie.id;
+                option.textContent = categorie.libelle;
+                select.appendChild(option);
+            });
+        })
+        .catch(error => {
+            console.error('Erreur lors du chargement des catégories:', error);
+            showToast('Erreur lors du chargement des catégories', 'error');
+        });
+}
+
+function addDepense() {
+    const categorieId = document.getElementById('depenseCategorie').value;
+    const montant = document.getElementById('depenseMontant').value;
+    
+    if (!categorieId || !montant) {
+        showToast('Veuillez remplir tous les champs', 'error');
+        return;
+    }
+    
+    const submitBtn = event.target;
+    const originalText = submitBtn.innerHTML;
+    
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Ajout...';
+    
+    const data = {
+        categorieId: parseInt(categorieId),
+        montant: parseFloat(montant)
+    };
+    
+    fetch("{{ path('app_mission_add_depense', {'id': mission.id}) }}", {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast(data.message, 'success');
+            
+            // Fermer le modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('addDepenseModal'));
+            modal.hide();
+            
+            // Recharger les dépenses avec les nouveaux totaux
+            loadDepenses();
+        } else {
+            showToast(data.message || 'Erreur lors de l\'ajout', 'error');
+        }
+    })
+    .catch(error => {
         console.error('Erreur:', error);
-        showToast('Erreur lors de la validation', 'error');
+        showToast('Erreur lors de l\'ajout de la dépense', 'error');
     })
     .finally(() => {
         submitBtn.disabled = false;

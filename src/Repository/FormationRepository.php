@@ -507,4 +507,47 @@ class FormationRepository extends ServiceEntityRepository
             
         return $qb->getQuery()->getResult();
     }
+
+    /**
+     * Trouve les formations avec des filtres
+     */
+    public function findWithFilters(array $filters = []): array
+    {
+        $qb = $this->createQueryBuilder('f')
+            ->leftJoin('f.service', 's')
+            ->leftJoin('f.statutActivite', 'sa')
+            ->orderBy('f.datePrevueDebut', 'DESC');
+
+        // Filtre par service
+        if (!empty($filters['service'])) {
+            $qb->andWhere('s.id = :service')
+               ->setParameter('service', $filters['service']);
+        }
+
+        // Filtre par statut
+        if (!empty($filters['statut'])) {
+            $qb->andWhere('sa.id = :statut')
+               ->setParameter('statut', $filters['statut']);
+        }
+
+        // Filtre par date de début
+        if (!empty($filters['date_debut'])) {
+            $qb->andWhere('f.datePrevueDebut >= :date_debut')
+               ->setParameter('date_debut', new \DateTime($filters['date_debut']));
+        }
+
+        // Filtre par date de fin
+        if (!empty($filters['date_fin'])) {
+            $qb->andWhere('f.datePrevueFin <= :date_fin')
+               ->setParameter('date_fin', new \DateTime($filters['date_fin']));
+        }
+
+        // Filtre par recherche textuelle
+        if (!empty($filters['search'])) {
+            $qb->andWhere('f.titre LIKE :search OR f.description LIKE :search OR s.libelle LIKE :search')
+               ->setParameter('search', '%' . $filters['search'] . '%');
+        }
+
+        return $qb->getQuery()->getResult();
+    }
 }

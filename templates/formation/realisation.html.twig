@@ -249,7 +249,7 @@
 				<div class="step-content d-none" id="step4">
 					<h4 class="mb-3"><i class="fa fa-check-circle text-primary"></i> Récapitulatif et validation</h4>
 					<div class="row">
-						<div class="col-md-6">
+						<div class="col-md-4">
 							<div class="card">
 								<div class="card-header">
 									<h6 class="card-title mb-0">Informations réelles</h6>
@@ -258,10 +258,11 @@
 									<p><strong>Date début :</strong> <span id="recapDateDebut"></span></p>
 									<p><strong>Date fin :</strong> <span id="recapDateFin"></span></p>
 									<p><strong>Lieu :</strong> <span id="recapLieu"></span></p>
+									<p><strong>Durée réelle :</strong> <span id="recapDureeReelle"></span></p>
 								</div>
 							</div>
 						</div>
-						<div class="col-md-6">
+						<div class="col-md-4">
 							<div class="card">
 								<div class="card-header">
 									<h6 class="card-title mb-0">Participants</h6>
@@ -269,6 +270,21 @@
 								<div class="card-body">
 									<p><strong>Participants prévus :</strong> <span id="recapParticipantsPrevus"></span></p>
 									<p><strong>Nouveaux participants :</strong> <span id="recapNouveauxParticipants"></span></p>
+									<p><strong>Total participants :</strong> <span id="recapTotalParticipants"></span></p>
+									<p><strong>Participants présents :</strong> <span id="recapParticipantsPresents"></span></p>
+								</div>
+							</div>
+						</div>
+						<div class="col-md-4">
+							<div class="card">
+								<div class="card-header">
+									<h6 class="card-title mb-0">Dépenses</h6>
+								</div>
+								<div class="card-body">
+									<p><strong>Budget prévu :</strong> <span id="recapBudgetPrevu"></span></p>
+									<p><strong>Dépenses réelles :</strong> <span id="recapDepensesReelles"></span></p>
+									<p><strong>Écart :</strong> <span id="recapEcartBudget"></span></p>
+									<p><strong>Nombre de dépenses :</strong> <span id="recapNombreDepenses"></span></p>
 								</div>
 							</div>
 						</div>
@@ -360,9 +376,11 @@ let depensesData = {};
 let statutsParticipation = [];
 
 document.addEventListener('DOMContentLoaded', function() {
-    loadStatutsParticipation();
-    loadParticipants();
-    loadDepenses();
+    // Charger d'abord les statuts, puis les participants
+    loadStatutsParticipation().then(() => {
+        loadParticipants();
+        loadDepenses();
+    });
 });
 
 function nextStep(step) {
@@ -447,13 +465,16 @@ function validateCurrentStep() {
 }
 
 function loadStatutsParticipation() {
-    fetch('/api/statuts-participation')
+    return fetch('/api/statuts-participation')
         .then(response => response.json())
         .then(data => {
             statutsParticipation = data;
+            return data; // Retourner les données pour la chaîne de Promises
         })
         .catch(error => {
             console.error('Erreur lors du chargement des statuts:', error);
+            showToast('Erreur lors du chargement des statuts de participation', 'error');
+            throw error; // Propager l'erreur
         });
 }
 
@@ -466,6 +487,13 @@ function loadParticipants() {
             // Remplir la table des participants prévus
             const tbody = document.querySelector('#participantsTable tbody');
             tbody.innerHTML = '';
+            
+            // Vérifier que data.prevus est un tableau
+            if (!data.prevus || !Array.isArray(data.prevus)) {
+                console.error('data.prevus is not an array:', data.prevus);
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Erreur: Format de données invalide</td></tr>';
+                return;
+            }
             
             data.prevus.forEach(participant => {
                 const row = document.createElement('tr');
@@ -497,12 +525,15 @@ function loadParticipants() {
             const select = document.getElementById('nouveauxParticipants');
             select.innerHTML = '<option value="">Sélectionner un participant à ajouter...</option>';
             
-            data.disponibles.forEach(user => {
-                const option = document.createElement('option');
-                option.value = user.id;
-                option.textContent = `${user.nom} ${user.prenom} (${user.matricule || 'N/A'})`;
-                select.appendChild(option);
-            });
+            // Vérifier que data.disponibles est un tableau
+            if (data.disponibles && Array.isArray(data.disponibles)) {
+                data.disponibles.forEach(user => {
+                    const option = document.createElement('option');
+                    option.value = user.id;
+                    option.textContent = `${user.nom} ${user.prenom} (${user.matricule || 'N/A'})`;
+                    select.appendChild(option);
+                });
+            }
         })
         .catch(error => {
             console.error('Erreur:', error);
@@ -707,15 +738,75 @@ function removeParticipant(userId) {
 }
 
 function updateRecap() {
-    document.getElementById('recapDateDebut').textContent = document.getElementById('dateReelleDebut').value;
-    document.getElementById('recapDateFin').textContent = document.getElementById('dateReelleFin').value;
-    document.getElementById('recapLieu').textContent = document.getElementById('lieuReel').value;
+    // Informations de base
+    const dateDebut = document.getElementById('dateReelleDebut').value;
+    const dateFin = document.getElementById('dateReelleFin').value;
+    const lieu = document.getElementById('lieuReel').value;
     
+    document.getElementById('recapDateDebut').textContent = dateDebut || 'Non renseigné';
+    document.getElementById('recapDateFin').textContent = dateFin || 'Non renseigné';
+    document.getElementById('recapLieu').textContent = lieu || 'Non renseigné';
+    
+    // Calculer la durée réelle
+    if (dateDebut && dateFin) {
+        const debut = new Date(dateDebut);
+        const fin = new Date(dateFin);
+        const diffTime = Math.abs(fin - debut);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // +1 pour inclure le jour de fin
+        document.getElementById('recapDureeReelle').textContent = diffDays + ' jour(s)';
+    } else {
+        document.getElementById('recapDureeReelle').textContent = 'Non calculable';
+    }
+    
+    // Participants
     const participantsPrevus = participantsData.prevus ? participantsData.prevus.length : 0;
     const nouveauxParticipants = participantsData.nouveaux ? participantsData.nouveaux.length : 0;
+    const totalParticipants = participantsPrevus + nouveauxParticipants;
+    
+    // Compter les participants présents (statut "participe")
+    let participantsPresents = 0;
+    if (participantsData.prevus) {
+        participantsPresents = participantsData.prevus.filter(p => {
+            const statut = statutsParticipation.find(s => s.id == p.statut_participation_id);
+            return statut && statut.code === 'participe';
+        }).length;
+    }
+    if (participantsData.nouveaux) {
+        participantsPresents += participantsData.nouveaux.length; // Les nouveaux participants sont considérés comme présents
+    }
     
     document.getElementById('recapParticipantsPrevus').textContent = participantsPrevus;
     document.getElementById('recapNouveauxParticipants').textContent = nouveauxParticipants;
+    document.getElementById('recapTotalParticipants').textContent = totalParticipants;
+    document.getElementById('recapParticipantsPresents').textContent = participantsPresents;
+    
+    // Dépenses
+    let totalPrevu = 0;
+    let totalReel = 0;
+    let nombreDepenses = 0;
+    
+    if (Array.isArray(depensesData)) {
+        depensesData.forEach(depense => {
+            totalPrevu += parseFloat(depense.montantPrevu) || 0;
+            totalReel += parseFloat(depense.montantReel) || 0;
+            if (depense.montantReel) {
+                nombreDepenses++;
+            }
+        });
+    }
+    
+    const ecart = totalReel - totalPrevu;
+    const ecartClass = ecart > 0 ? 'text-danger' : ecart < 0 ? 'text-success' : 'text-muted';
+    const ecartSign = ecart > 0 ? '+' : '';
+    
+    document.getElementById('recapBudgetPrevu').textContent = numberFormat(totalPrevu) + ' FCFA';
+    document.getElementById('recapDepensesReelles').textContent = numberFormat(totalReel) + ' FCFA';
+    
+    const ecartElement = document.getElementById('recapEcartBudget');
+    ecartElement.textContent = `${ecartSign}${numberFormat(ecart)} FCFA`;
+    ecartElement.className = ecartClass;
+    
+    document.getElementById('recapNombreDepenses').textContent = nombreDepenses + ' dépense(s) renseignée(s)';
 }
 
 function validerRealisation() {
@@ -729,12 +820,12 @@ function validerRealisation() {
         dateReelleDebut: document.getElementById('dateReelleDebut').value,
         dateReelleFin: document.getElementById('dateReelleFin').value,
         lieuReel: document.getElementById('lieuReel').value,
-        participants: participantsData.prevus.map(p => ({
+        participants: (Array.isArray(participantsData.prevus) ? participantsData.prevus : []).map(p => ({
             userFormationId: p.id,
             statut_participation_id: p.statut_participation_id
         })),
         nouveauxParticipants: participantsData.nouveaux ? participantsData.nouveaux.map(u => u.id) : [],
-        depensesReelles: depensesData.filter(d => d.montantReel).map(d => ({
+        depensesReelles: (Array.isArray(depensesData) ? depensesData : []).filter(d => d.montantReel).map(d => ({
             categorieId: d.categorieId,
             montant: d.montantReel
         }))

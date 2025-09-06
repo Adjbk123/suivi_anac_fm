@@ -55,8 +55,14 @@ class Mission
     #[ORM\Column]
     private ?int $dureePrevue = null;
 
+    #[ORM\Column(nullable: true)]
+    private ?int $dureeReelle = null;
+
     #[ORM\Column]
     private ?float $budgetPrevu = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?float $budgetReel = null;
 
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $notes = null;
@@ -291,6 +297,18 @@ class Mission
         return $this;
     }
 
+    public function getDureeReelle(): ?int
+    {
+        return $this->dureeReelle;
+    }
+
+    public function setDureeReelle(?int $dureeReelle): static
+    {
+        $this->dureeReelle = $dureeReelle;
+
+        return $this;
+    }
+
     public function getBudgetPrevu(): ?float
     {
         return $this->budgetPrevu;
@@ -299,6 +317,18 @@ class Mission
     public function setBudgetPrevu(float $budgetPrevu): static
     {
         $this->budgetPrevu = $budgetPrevu;
+
+        return $this;
+    }
+
+    public function getBudgetReel(): ?float
+    {
+        return $this->budgetReel;
+    }
+
+    public function setBudgetReel(?float $budgetReel): static
+    {
+        $this->budgetReel = $budgetReel;
 
         return $this;
     }

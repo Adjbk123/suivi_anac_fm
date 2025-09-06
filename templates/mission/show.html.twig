@@ -280,20 +280,6 @@
 	</div>
 </div>
 
-<!-- Modal de prévisualisation des documents -->
-<div class="modal fade" id="documentPreviewModal" tabindex="-1" aria-labelledby="documentPreviewModalLabel" aria-hidden="true">
-	<div class="modal-dialog modal-xl">
-		<div class="modal-content">
-			<div class="modal-header">
-				<h5 class="modal-title" id="documentPreviewModalLabel">Prévisualisation du document</h5>
-				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-			</div>
-			<div class="modal-body" id="documentPreviewContent">
-				<!-- Le contenu sera chargé dynamiquement -->
-			</div>
-		</div>
-	</div>
-</div>
 
 <!-- Modal d'ajout de document -->
 <div class="modal fade" id="addDocumentModal" tabindex="-1" aria-labelledby="addDocumentModalLabel" aria-hidden="true">
@@ -391,33 +377,6 @@
 
 {% block javascripts %}
 <script>
-// Prévisualisation des documents
-function previewDocument(url, nom, type) {
-    const modal = new bootstrap.Modal(document.getElementById('documentPreviewModal'));
-    const content = document.getElementById('documentPreviewContent');
-    const title = document.getElementById('documentPreviewModalLabel');
-    
-    title.textContent = `Prévisualisation - ${nom}`;
-    
-    if (type.startsWith('image/')) {
-        content.innerHTML = `<img src="${url}" class="img-fluid" alt="${nom}">`;
-    } else if (type === 'application/pdf') {
-        content.innerHTML = `<iframe src="${url}" width="100%" height="600px"></iframe>`;
-    } else if (type.startsWith('text/')) {
-        fetch(url)
-            .then(response => response.text())
-            .then(text => {
-                content.innerHTML = `<pre class="bg-light p-3">${text}</pre>`;
-            })
-            .catch(error => {
-                content.innerHTML = '<p class="text-danger">Erreur lors du chargement du fichier texte.</p>';
-            });
-    } else {
-        content.innerHTML = '<p class="text-muted">Prévisualisation non disponible pour ce type de fichier.</p>';
-    }
-    
-    modal.show();
-}
 
 // Ouvrir le modal d'ajout de document
 function openAddDocumentModal() {

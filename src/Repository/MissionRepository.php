@@ -500,4 +500,47 @@ class MissionRepository extends ServiceEntityRepository
             
         return $qb->getQuery()->getResult();
     }
+
+    /**
+     * Trouve les missions avec des filtres
+     */
+    public function findWithFilters(array $filters = []): array
+    {
+        $qb = $this->createQueryBuilder('m')
+            ->leftJoin('m.direction', 'd')
+            ->leftJoin('m.statutActivite', 'sa')
+            ->orderBy('m.datePrevueDebut', 'DESC');
+
+        // Filtre par direction
+        if (!empty($filters['direction'])) {
+            $qb->andWhere('d.id = :direction')
+               ->setParameter('direction', $filters['direction']);
+        }
+
+        // Filtre par statut
+        if (!empty($filters['statut'])) {
+            $qb->andWhere('sa.id = :statut')
+               ->setParameter('statut', $filters['statut']);
+        }
+
+        // Filtre par date de début
+        if (!empty($filters['date_debut'])) {
+            $qb->andWhere('m.datePrevueDebut >= :date_debut')
+               ->setParameter('date_debut', new \DateTime($filters['date_debut']));
+        }
+
+        // Filtre par date de fin
+        if (!empty($filters['date_fin'])) {
+            $qb->andWhere('m.datePrevueFin <= :date_fin')
+               ->setParameter('date_fin', new \DateTime($filters['date_fin']));
+        }
+
+        // Filtre par recherche textuelle
+        if (!empty($filters['search'])) {
+            $qb->andWhere('m.titre LIKE :search OR m.description LIKE :search OR d.libelle LIKE :search')
+               ->setParameter('search', '%' . $filters['search'] . '%');
+        }
+
+        return $qb->getQuery()->getResult();
+    }
 }
