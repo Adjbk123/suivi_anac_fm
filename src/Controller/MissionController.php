@@ -47,6 +47,24 @@ class MissionController extends AbstractController
         return $excelExportService->exportMissionsToExcel($missions, $filters);
     }
 
+    #[Route('/export-budget-report', name: 'app_mission_export_budget_report', methods: ['GET'])]
+    public function exportBudgetReport(Request $request, MissionRepository $missionRepository, ExcelExportService $excelExportService): Response
+    {
+        // Récupérer les filtres depuis la requête
+        $filters = [
+            'direction' => $request->query->get('direction'),
+            'statut' => $request->query->get('statut'),
+            'date_debut' => $request->query->get('date_debut'),
+            'date_fin' => $request->query->get('date_fin'),
+            'search' => $request->query->get('search')
+        ];
+
+        // Récupérer les missions avec les filtres
+        $missions = $missionRepository->findWithFilters($filters);
+
+        return $excelExportService->exportMissionBudgetReport($missions, $filters);
+    }
+
     #[Route('/create', name: 'app_mission_create', methods: ['GET'])]
     #[IsGranted('ROLE_EDITEUR')]
     public function create(): Response

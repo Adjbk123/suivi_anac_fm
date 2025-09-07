@@ -31,7 +31,8 @@ class TypeFondsController extends AbstractController
                 'id' => $typeFond->getId(),
                 'libelle' => $typeFond->getLibelle(),
                 'description' => $typeFond->getDescription(),
-                'actions' => ''
+                'actions' => '',
+                'isUsed' => $typeFond->isUsed()
             ];
         }
 
@@ -106,6 +107,14 @@ class TypeFondsController extends AbstractController
     #[Route('/{id}', name: 'app_typefonds_delete', methods: ['DELETE'])]
     public function delete(TypeFonds $typeFond, EntityManagerInterface $entityManager): JsonResponse
     {
+        // Vérifier si le type de fonds est utilisé
+        if ($typeFond->isUsed()) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Impossible de supprimer ce type de fonds car il est utilisé dans des missions ou formations'
+            ], 400);
+        }
+        
         $entityManager->remove($typeFond);
         $entityManager->flush();
 

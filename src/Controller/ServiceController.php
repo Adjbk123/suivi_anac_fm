@@ -36,7 +36,8 @@ class ServiceController extends AbstractController
                 'libelle' => $service->getLibelle(),
                 'description' => $service->getDescription(),
                 'direction' => $service->getDirection() ? $service->getDirection()->getLibelle() : '-',
-                'direction_id' => $service->getDirection() ? $service->getDirection()->getId() : null
+                'direction_id' => $service->getDirection() ? $service->getDirection()->getId() : null,
+                'isUsed' => $service->isUsed()
             ];
         }
         
@@ -105,6 +106,14 @@ class ServiceController extends AbstractController
     #[Route('/{id}', name: 'app_service_delete', methods: ['DELETE'])]
     public function delete(Service $service, EntityManagerInterface $entityManager): JsonResponse
     {
+        // Vérifier si le service est utilisé
+        if ($service->isUsed()) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Impossible de supprimer ce service car il est utilisé dans des missions ou formations'
+            ], 400);
+        }
+        
         $entityManager->remove($service);
         $entityManager->flush();
         

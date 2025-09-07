@@ -33,6 +33,7 @@ class PosteController extends AbstractController
                 'id' => $poste->getId(),
                 'libelle' => $poste->getLibelle(),
                 'description' => $poste->getDescription(),
+                'isUsed' => $poste->isUsed()
             ];
         }
         
@@ -110,6 +111,14 @@ class PosteController extends AbstractController
     #[Route('/{id}', name: 'app_poste_delete', methods: ['DELETE'])]
     public function delete(Poste $poste, EntityManagerInterface $entityManager): JsonResponse
     {
+        // Vérifier si le poste est utilisé
+        if ($poste->isUsed()) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Impossible de supprimer ce poste car il est utilisé par des utilisateurs'
+            ], 400);
+        }
+        
         $entityManager->remove($poste);
         $entityManager->flush();
         

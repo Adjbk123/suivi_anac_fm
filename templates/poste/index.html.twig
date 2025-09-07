@@ -311,23 +311,39 @@ function loadPostes() {
             
             // Ajouter les données
             data.forEach(poste => {
+                // Construire le menu des actions
+                let actionsMenu = `
+                    <div class="dropdown" style="position: relative;">
+                        <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="dropdown" style="position: relative; z-index: 1;">
+                            <i class="fa fa-ellipsis-h"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" style="position: absolute; z-index: 99999; right: 0; left: auto;">
+                            <li><a class="dropdown-item" href="#" onclick="editPoste(${poste.id})">
+                                <i class="fa fa-edit text-warning"></i> Modifier
+                            </a></li>`;
+                
+                // Ajouter le bouton de suppression seulement si le poste n'est pas utilisé
+                if (!poste.isUsed) {
+                    actionsMenu += `
+                            <li><a class="dropdown-item" href="#" onclick="deletePoste(${poste.id})">
+                                <i class="fa fa-trash text-danger"></i> Supprimer
+                            </a></li>`;
+                } else {
+                    actionsMenu += `
+                            <li><a class="dropdown-item disabled" href="#" title="Ce poste est utilisé par des utilisateurs">
+                                <i class="fa fa-lock text-muted"></i> Utilisé
+                            </a></li>`;
+                }
+                
+                actionsMenu += `
+                        </ul>
+                    </div>`;
+                
                 table.row.add([
                     poste.id,
                     poste.libelle,
                     poste.description,
-                    `<div class="dropdown" style="position: relative;">
-                                        <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="dropdown" style="position: relative; z-index: 1;">
-                    <i class="fa fa-ellipsis-h"></i>
-                </button>
-                        <ul class="dropdown-menu dropdown-menu-end" style="position: absolute; z-index: 99999; right: 0; left: auto;">
-                            <li><a class="dropdown-item" href="#" onclick="editPoste(${poste.id})">
-                                <i class="fa fa-edit text-warning"></i> Modifier
-                            </a></li>
-                            <li><a class="dropdown-item" href="#" onclick="deletePoste(${poste.id})">
-                                <i class="fa fa-trash text-danger"></i> Supprimer
-                            </a></li>
-                        </ul>
-                    </div>`
+                    actionsMenu
                 ]);
             });
             

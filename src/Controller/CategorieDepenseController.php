@@ -32,7 +32,8 @@ class CategorieDepenseController extends AbstractController
             $data[] = [
                 'id' => $categorieDepense->getId(),
                 'libelle' => $categorieDepense->getLibelle(),
-                'description' => $categorieDepense->getDescription()
+                'description' => $categorieDepense->getDescription(),
+                'isUsed' => $categorieDepense->isUsed()
             ];
         }
         
@@ -96,6 +97,14 @@ class CategorieDepenseController extends AbstractController
     #[Route('/{id}', name: 'app_categoriedepense_delete', methods: ['DELETE'])]
     public function delete(CategorieDepense $categorieDepense, EntityManagerInterface $entityManager): JsonResponse
     {
+        // Vérifier si la catégorie est utilisée
+        if ($categorieDepense->isUsed()) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Impossible de supprimer cette catégorie car elle est utilisée dans des dépenses de missions ou formations'
+            ], 400);
+        }
+        
         $entityManager->remove($categorieDepense);
         $entityManager->flush();
         

@@ -202,24 +202,40 @@ function loadDirections() {
             
             // Ajouter les données
             data.forEach(direction => {
+                // Construire le menu des actions
+                let actionsMenu = `
+                    <div class="dropdown" style="position: relative;">
+                        <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="position: relative; z-index: 1;">
+                            <i class="fa fa-ellipsis-h"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" style="position: absolute; z-index: 99999; right: 0; left: auto;">
+                            <li><a class="dropdown-item" href="#" onclick="editDirection(${direction.id})">
+                                <i class="fa fa-edit text-warning"></i> Modifier
+                            </a></li>`;
+                
+                // Ajouter le bouton de suppression seulement si la direction n'est pas utilisée
+                if (!direction.isUsed) {
+                    actionsMenu += `
+                            <li><a class="dropdown-item" href="#" onclick="deleteDirection(${direction.id})">
+                                <i class="fa fa-trash text-danger"></i> Supprimer
+                            </a></li>`;
+                } else {
+                    actionsMenu += `
+                            <li><a class="dropdown-item disabled" href="#" title="Cette direction est utilisée dans des services ou missions">
+                                <i class="fa fa-lock text-muted"></i> Utilisée
+                            </a></li>`;
+                }
+                
+                actionsMenu += `
+                        </ul>
+                    </div>`;
+                
                 directionsTable.row.add([
                     direction.id,
                     direction.libelle,
                     direction.description || '-',
                     `<span class="badge bg-info">${direction.services_count}</span>`,
-                    `<div class="dropdown" style="position: relative;">
-                                        <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="position: relative; z-index: 1;">
-                    <i class="fa fa-ellipsis-h"></i>
-                </button>
-                        <ul class="dropdown-menu dropdown-menu-end" style="position: absolute; z-index: 99999; right: 0; left: auto;">
-                            <li><a class="dropdown-item" href="#" onclick="editDirection(${direction.id})">
-                                <i class="fa fa-edit text-warning"></i> Modifier
-                            </a></li>
-                            <li><a class="dropdown-item" href="#" onclick="deleteDirection(${direction.id})">
-                                <i class="fa fa-trash text-danger"></i> Supprimer
-                            </a></li>
-                        </ul>
-                    </div>`
+                    actionsMenu
                 ]);
             });
             

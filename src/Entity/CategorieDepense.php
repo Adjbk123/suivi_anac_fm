@@ -121,4 +121,12 @@ class CategorieDepense
 
         return $this;
     }
+
+    /**
+     * Vérifie si cette catégorie est utilisée dans des dépenses
+     */
+    public function isUsed(): bool
+    {
+        return !$this->depenseFormations->isEmpty() || !$this->depenseMissions->isEmpty();
+    }
 }

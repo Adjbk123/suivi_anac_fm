@@ -201,23 +201,39 @@ function loadCategorieDepenses() {
             
             // Ajouter les données
             data.forEach(categorieDepense => {
+                // Construire le menu des actions
+                let actionsMenu = `
+                    <div class="dropdown" style="position: relative;">
+                        <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="position: relative; z-index: 1;">
+                            <i class="fa fa-ellipsis-h"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" style="position: absolute; z-index: 99999; right: 0; left: auto;">
+                            <li><a class="dropdown-item" href="#" onclick="editCategorieDepense(${categorieDepense.id})">
+                                <i class="fa fa-edit text-warning"></i> Modifier
+                            </a></li>`;
+                
+                // Ajouter le bouton de suppression seulement si la catégorie n'est pas utilisée
+                if (!categorieDepense.isUsed) {
+                    actionsMenu += `
+                            <li><a class="dropdown-item" href="#" onclick="deleteCategorieDepense(${categorieDepense.id})">
+                                <i class="fa fa-trash text-danger"></i> Supprimer
+                            </a></li>`;
+                } else {
+                    actionsMenu += `
+                            <li><a class="dropdown-item disabled" href="#" title="Cette catégorie est utilisée dans des dépenses">
+                                <i class="fa fa-lock text-muted"></i> Utilisée
+                            </a></li>`;
+                }
+                
+                actionsMenu += `
+                        </ul>
+                    </div>`;
+                
                 categorieDepensesTable.row.add([
                     categorieDepense.id,
                     categorieDepense.libelle,
                     categorieDepense.description || '-',
-                    `<div class="dropdown" style="position: relative;">
-                                        <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="position: relative; z-index: 1;">
-                    <i class="fa fa-ellipsis-h"></i>
-                </button>
-                        <ul class="dropdown-menu dropdown-menu-end" style="position: absolute; z-index: 99999; right: 0; left: auto;">
-                            <li><a class="dropdown-item" href="#" onclick="editCategorieDepense(${categorieDepense.id})">
-                                <i class="fa fa-edit text-warning"></i> Modifier
-                            </a></li>
-                            <li><a class="dropdown-item" href="#" onclick="deleteCategorieDepense(${categorieDepense.id})">
-                                <i class="fa fa-trash text-danger"></i> Supprimer
-                            </a></li>
-                        </ul>
-                    </div>`
+                    actionsMenu
                 ]);
             });
             

@@ -77,6 +77,38 @@ class RoleService
     }
 
     /**
+     * Vérifie si l'utilisateur peut créer des missions
+     */
+    public function canCreateMission(): bool
+    {
+        return $this->isEditeur() || $this->isAdmin();
+    }
+
+    /**
+     * Vérifie si l'utilisateur peut modifier des missions
+     */
+    public function canEditMission(): bool
+    {
+        return $this->isEditeur() || $this->isAdmin();
+    }
+
+    /**
+     * Vérifie si l'utilisateur peut valider des missions
+     */
+    public function canValidateMission(): bool
+    {
+        return $this->isEditeur() || $this->isAdmin();
+    }
+
+    /**
+     * Vérifie si l'utilisateur peut supprimer des missions
+     */
+    public function canDeleteMission(): bool
+    {
+        return $this->isAdmin();
+    }
+
+    /**
      * Vérifie si l'utilisateur peut gérer les utilisateurs
      */
     public function canManageUsers(): bool

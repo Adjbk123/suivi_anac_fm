@@ -121,4 +121,12 @@ class Direction
 
         return $this;
     }
+
+    /**
+     * Vérifie si cette direction est utilisée
+     */
+    public function isUsed(): bool
+    {
+        return !$this->services->isEmpty() || !$this->missions->isEmpty();
+    }
 }

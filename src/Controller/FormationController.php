@@ -48,6 +48,20 @@ class FormationController extends AbstractController
         return $excelExportService->exportFormationsToExcel($formations, $filters);
     }
 
+    #[Route('/export-budget-report', name: 'app_formation_export_budget_report', methods: ['GET'])]
+    public function exportBudgetReport(Request $request, FormationRepository $formationRepository, ExcelExportService $excelExportService): Response
+    {
+        $filters = [
+            'service' => $request->query->get('service'),
+            'statut' => $request->query->get('statut'),
+            'date_debut' => $request->query->get('date_debut'),
+            'date_fin' => $request->query->get('date_fin'),
+            'search' => $request->query->get('search')
+        ];
+        $formations = $formationRepository->findWithFilters($filters);
+        return $excelExportService->exportFormationBudgetReport($formations, $filters);
+    }
+
     #[Route('/create', name: 'app_formation_create', methods: ['GET'])]
     #[IsGranted('ROLE_EDITEUR')]
     public function create(): Response

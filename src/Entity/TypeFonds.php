@@ -121,4 +121,12 @@ class TypeFonds
 
         return $this;
     }
+
+    /**
+     * Vérifie si ce type de fonds est utilisé
+     */
+    public function isUsed(): bool
+    {
+        return !$this->formations->isEmpty() || !$this->missions->isEmpty();
+    }
 }

@@ -32,7 +32,8 @@ class DomaineController extends AbstractController
             $data[] = [
                 'id' => $domaine->getId(),
                 'libelle' => $domaine->getLibelle(),
-                'description' => $domaine->getDescription()
+                'description' => $domaine->getDescription(),
+                'isUsed' => $domaine->isUsed()
             ];
         }
         
@@ -96,6 +97,14 @@ class DomaineController extends AbstractController
     #[Route('/{id}', name: 'app_domaine_delete', methods: ['DELETE'])]
     public function delete(Domaine $domaine, EntityManagerInterface $entityManager): JsonResponse
     {
+        // Vérifier si le domaine est utilisé
+        if ($domaine->isUsed()) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Impossible de supprimer ce domaine car il est utilisé par des utilisateurs'
+            ], 400);
+        }
+        
         $entityManager->remove($domaine);
         $entityManager->flush();
         

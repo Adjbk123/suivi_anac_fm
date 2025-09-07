@@ -179,14 +179,9 @@
     color: white !important;
     border-radius: 8px;
     margin: 2px 8px;
-    transition: all 0.3s ease;
 }
 
-.menu-item.active > .menu-link:hover {
-    background-color: var(--bs-primary) !important;
-    color: white !important;
-    transform: translateX(2px);
-}
+/* Pas d'effet de survol */
 
 .menu-item.active > .menu-link .menu-icon {
     color: white !important;
@@ -202,14 +197,6 @@
     font-weight: 600 !important;
     color: #495057 !important;
     padding-left: 20px;
-    transition: all 0.2s ease;
-}
-
-.menu-submenu .menu-item .menu-link:hover {
-    color: var(--bs-primary) !important;
-    background-color: rgba(var(--bs-primary-rgb), 0.1);
-    border-radius: 6px;
-    margin: 1px 4px;
 }
 
 .menu-submenu .menu-item.active .menu-link {
@@ -220,30 +207,12 @@
     font-weight: 700 !important;
 }
 
-.menu-submenu .menu-item.active .menu-link:hover {
-    background-color: var(--bs-primary) !important;
-    color: white !important;
-}
+/* Pas d'effet de survol sur les éléments actifs des sous-menus */
 
 /* Amélioration des éléments principaux non-actifs */
 .menu-item:not(.active) > .menu-link {
-    transition: all 0.3s ease;
     border-radius: 8px;
     margin: 2px 8px;
-}
-
-.menu-item:not(.active) > .menu-link:hover {
-    background-color: rgba(var(--bs-primary-rgb), 0.1) !important;
-    color: var(--bs-primary) !important;
-    transform: translateX(2px);
-}
-
-.menu-item:not(.active) > .menu-link .menu-icon {
-    transition: color 0.3s ease;
-}
-
-.menu-item:not(.active) > .menu-link:hover .menu-icon {
-    color: var(--bs-primary) !important;
 }
 
 /* Amélioration des headers de menu */
@@ -272,10 +241,7 @@
     padding: 4px 0;
 }
 
-/* Amélioration des icônes */
-.menu-icon {
-    transition: all 0.3s ease;
-}
+/* Amélioration des icônes - pas de transition */
 
 /* Effet de focus pour l'accessibilité */
 .menu-link:focus {

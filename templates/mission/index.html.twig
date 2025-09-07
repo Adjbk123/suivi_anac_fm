@@ -16,9 +16,11 @@
 
 {% block buttons %}
 <div class="d-flex gap-2">
+	{% if can_create_mission() %}
 	<a href="{{ path('app_mission_create') }}" class="btn btn-primary btn-sm">
 		<i class="fa fa-plus"></i> Nouvelle Mission
 	</a>
+	{% endif %}
 </div>
 {% endblock %}
 
@@ -63,18 +65,15 @@
 					</div>
 				</div>
 				<div class="row mt-3">
-					<div class="col-12">
+					<div class="col-12 text-center">
 						<button type="button" class="btn btn-primary btn-sm" onclick="applyFilters()">
 							<i class="fa fa-search"></i> Appliquer les filtres
 						</button>
 						<button type="button" class="btn btn-outline-secondary btn-sm" onclick="resetFilters()">
 							<i class="fa fa-refresh"></i> Réinitialiser
 						</button>
-						<button type="button" class="btn btn-success btn-sm" onclick="exportPdf()">
-							<i class="fa fa-file-pdf"></i> Exporter en PDF
-						</button>
-						<button type="button" class="btn btn-info btn-sm" onclick="exportExcel()">
-							<i class="fa fa-file-excel"></i> Exporter en Excel
+						<button type="button" class="btn btn-warning btn-sm" onclick="exportBudgetReport()">
+							<i class="fa fa-chart-line"></i> Rapport Budget
 						</button>
 					</div>
 				</div>
@@ -179,9 +178,8 @@ function initializeDataTable() {
         return;
     }
     
-    try {
-        // Initialiser DataTable
-        missionsTable = $('#missionsTable').DataTable({
+    // Initialiser DataTable
+    missionsTable = $('#missionsTable').DataTable({
             ajax: {
                 url: "{{ path('app_mission_list') }}",
                 dataSrc: '',
@@ -300,7 +298,6 @@ function initializeDataTable() {
             `);
         });
     }
-}
 
 // Obtenir les valeurs des filtres
 function getFilters() {
@@ -331,21 +328,6 @@ function resetFilters() {
     }
 }
 
-// Exporter en PDF
-function exportPdf() {
-    const filters = getFilters();
-    const url = new URL("{{ path('app_mission_export_pdf') }}", window.location.origin);
-    
-    Object.keys(filters).forEach(key => {
-        if (filters[key] && filters[key] !== '') {
-            url.searchParams.append(key, filters[key]);
-        }
-    });
-    
-    // Ouvrir dans un nouvel onglet pour télécharger le PDF
-    window.open(url.toString(), '_blank');
-}
-
 function exportExcel() {
     const filters = getFilters();
     const url = new URL("{{ path('app_mission_export_excel') }}", window.location.origin);
@@ -357,6 +339,20 @@ function exportExcel() {
     });
     
     // Ouvrir dans un nouvel onglet pour télécharger le Excel
+    window.open(url.toString(), '_blank');
+}
+
+function exportBudgetReport() {
+    const filters = getFilters();
+    const url = new URL("{{ path('app_mission_export_budget_report') }}", window.location.origin);
+    
+    Object.keys(filters).forEach(key => {
+        if (filters[key] && filters[key] !== '') {
+            url.searchParams.append(key, filters[key]);
+        }
+    });
+    
+    // Ouvrir dans un nouvel onglet pour télécharger le rapport budget
     window.open(url.toString(), '_blank');
 }
 

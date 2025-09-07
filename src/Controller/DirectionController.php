@@ -33,7 +33,8 @@ class DirectionController extends AbstractController
                 'id' => $direction->getId(),
                 'libelle' => $direction->getLibelle(),
                 'description' => $direction->getDescription(),
-                'services_count' => $direction->getServices()->count()
+                'services_count' => $direction->getServices()->count(),
+                'isUsed' => $direction->isUsed()
             ];
         }
         
@@ -98,10 +99,11 @@ class DirectionController extends AbstractController
     #[Route('/{id}', name: 'app_direction_delete', methods: ['DELETE'])]
     public function delete(Direction $direction, EntityManagerInterface $entityManager): JsonResponse
     {
-        if ($direction->getServices()->count() > 0) {
+        // Vérifier si la direction est utilisée
+        if ($direction->isUsed()) {
             return $this->json([
                 'success' => false,
-                'message' => 'Impossible de supprimer cette direction car elle contient des services'
+                'message' => 'Impossible de supprimer cette direction car elle est utilisée dans des services ou missions'
             ], 400);
         }
         

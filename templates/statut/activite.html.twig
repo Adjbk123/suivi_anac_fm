@@ -221,6 +221,34 @@ function loadStatutsActivite() {
                 const couleurBadge = `<span class="badge bg-${statut.couleur}">${statut.couleur}</span>`;
                 const utilisations = statut.formations_count + statut.missions_count;
                 
+                // Construire le menu des actions
+                let actionsMenu = `
+                    <div class="dropdown" style="position: relative;">
+                        <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="position: relative; z-index: 1;">
+                            <i class="fa fa-ellipsis-h"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" style="position: absolute; z-index: 99999; right: 0; left: auto;">
+                            <li><a class="dropdown-item" href="#" onclick="editStatut(${statut.id})">
+                                <i class="fa fa-edit text-warning"></i> Modifier
+                            </a></li>`;
+                
+                // Ajouter le bouton de suppression seulement si le statut n'est pas utilisé
+                if (!statut.isUsed) {
+                    actionsMenu += `
+                            <li><a class="dropdown-item" href="#" onclick="deleteStatut(${statut.id}, '${statut.libelle}')">
+                                <i class="fa fa-trash text-danger"></i> Supprimer
+                            </a></li>`;
+                } else {
+                    actionsMenu += `
+                            <li><a class="dropdown-item disabled" href="#" title="Ce statut d'activité est utilisé dans des missions ou formations">
+                                <i class="fa fa-lock text-muted"></i> Utilisé
+                            </a></li>`;
+                }
+                
+                actionsMenu += `
+                        </ul>
+                    </div>`;
+                
                 statutsActiviteTable.row.add([
                     statut.id,
                     statut.code,
@@ -228,19 +256,7 @@ function loadStatutsActivite() {
                     statut.description || '-',
                     couleurBadge,
                     utilisations + ' utilisation(s)',
-                    `<div class="dropdown" style="position: relative;">
-                                        <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="position: relative; z-index: 1;">
-                    <i class="fa fa-ellipsis-h"></i>
-                </button>
-                        <ul class="dropdown-menu dropdown-menu-end" style="position: absolute; z-index: 99999; right: 0; left: auto;">
-                            <li><a class="dropdown-item" href="#" onclick="editStatut(${statut.id})">
-                                <i class="fa fa-edit text-warning"></i> Modifier
-                            </a></li>
-                            <li><a class="dropdown-item" href="#" onclick="deleteStatut(${statut.id}, '${statut.libelle}')">
-                                <i class="fa fa-trash text-danger"></i> Supprimer
-                            </a></li>
-                        </ul>
-                    </div>`
+                    actionsMenu
                 ]);
             });
             
@@ -320,8 +336,22 @@ function editStatut(id) {
 // Fonction pour supprimer un statut
 function deleteStatut(id, libelle) {
     if (confirm(`Êtes-vous sûr de vouloir supprimer le statut "${libelle}" ?`)) {
-        // TODO: Implémenter la suppression
-        showToast('Fonctionnalité de suppression à implémenter', 'info');
+        fetch(`{{ path('app_statut_activite_delete', {'id': 'PLACEHOLDER'}) }}`.replace('PLACEHOLDER', id), {
+            method: 'DELETE'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast(data.message, 'success');
+                loadStatutsActivite();
+            } else {
+                showToast(data.message, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            showToast('Erreur lors de la suppression', 'error');
+        });
     }
 }
 </script>

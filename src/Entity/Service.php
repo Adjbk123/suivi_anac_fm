@@ -137,4 +137,12 @@ class Service
 
         return $this;
     }
+
+    /**
+     * Vérifie si ce service est utilisé
+     */
+    public function isUsed(): bool
+    {
+        return !$this->formations->isEmpty() || !$this->missions->isEmpty();
+    }
 }

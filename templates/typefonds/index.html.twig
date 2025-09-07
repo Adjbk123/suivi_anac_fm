@@ -181,7 +181,8 @@ function loadTypeFonds() {
             typeFondsTable.clear();
             
             data.forEach(function(item) {
-                const actions = `
+                // Construire le menu des actions
+                let actions = `
                     <div class="dropdown" style="position: relative;">
                         <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="position: relative; z-index: 1;">
                             <i class="fa fa-ellipsis-h"></i>
@@ -189,8 +190,20 @@ function loadTypeFonds() {
                         <ul class="dropdown-menu dropdown-menu-end" style="position: absolute; z-index: 99999; right: 0; left: auto;">
                             <li><a class="dropdown-item" href="#" onclick="showTypeFonds(${item.id})"><i class="fa fa-eye text-primary"></i> Voir</a></li>
                             <li><a class="dropdown-item" href="#" onclick="editTypeFonds(${item.id})"><i class="fa fa-edit text-warning"></i> Modifier</a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="#" onclick="deleteTypeFonds(${item.id})"><i class="fa fa-trash text-danger"></i> Supprimer</a></li>
+                            <li><hr class="dropdown-divider"></li>`;
+                
+                // Ajouter le bouton de suppression seulement si le type de fonds n'est pas utilisé
+                if (!item.isUsed) {
+                    actions += `
+                            <li><a class="dropdown-item" href="#" onclick="deleteTypeFonds(${item.id})"><i class="fa fa-trash text-danger"></i> Supprimer</a></li>`;
+                } else {
+                    actions += `
+                            <li><a class="dropdown-item disabled" href="#" title="Ce type de fonds est utilisé dans des missions ou formations">
+                                <i class="fa fa-lock text-muted"></i> Utilisé
+                            </a></li>`;
+                }
+                
+                actions += `
                         </ul>
                     </div>
                 `;

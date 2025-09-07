@@ -48,6 +48,7 @@ class StatutController extends AbstractController
                 'description' => $statut->getDescription(),
                 'couleur' => $statut->getCouleur(),
                 'formations_count' => count($statut->getFormations()),
+                'isUsed' => $statut->isUsed(),
                 'missions_count' => count($statut->getMissions())
             ];
         }
@@ -123,6 +124,26 @@ class StatutController extends AbstractController
                 'code' => $statut->getCode(),
                 'libelle' => $statut->getLibelle()
             ]
+        ]);
+    }
+
+    #[Route('/activite/{id}', name: 'app_statut_activite_delete', methods: ['DELETE'])]
+    public function deleteActivite(StatutActivite $statut, EntityManagerInterface $entityManager): JsonResponse
+    {
+        // Vérifier si le statut d'activité est utilisé
+        if ($statut->isUsed()) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Impossible de supprimer ce statut d\'activité car il est utilisé dans des missions ou formations'
+            ], 400);
+        }
+        
+        $entityManager->remove($statut);
+        $entityManager->flush();
+        
+        return $this->json([
+            'success' => true,
+            'message' => 'Statut d\'activité supprimé avec succès'
         ]);
     }
 }
