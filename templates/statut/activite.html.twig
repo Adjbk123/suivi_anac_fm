@@ -11,7 +11,7 @@
 
 {% block page_title %}
 <h1 class="page-header">
-	Statuts d'Activité <small>Gestion des statuts pour formations et missions</small>
+	Statuts d'Activité <small>Consultation des statuts pour formations et missions - Lecture seule</small>
 </h1>
 {% endblock %}
 
@@ -20,9 +20,9 @@
 	<a href="{{ path('app_statut_index') }}" class="btn btn-secondary btn-sm">
 		<i class="fa fa-arrow-left"></i> Retour
 	</a>
-	<button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addStatutModal">
-		<i class="fa fa-plus"></i> Ajouter un statut
-	</button>
+	<div class="alert alert-info mb-0 py-2 px-3">
+		<i class="fa fa-info-circle"></i> <strong>Lecture seule :</strong> Les statuts sont configurés une fois pour toutes et ne peuvent pas être modifiés.
+	</div>
 </div>
 {% endblock %}
 
@@ -41,7 +41,6 @@
 								<th>Description</th>
 								<th>Couleur</th>
 								<th>Utilisations</th>
-								                        <th><i class="fa fa-cogs"></i></th>
 							</tr>
 						</thead>
 						<tbody>
@@ -54,53 +53,7 @@
 	</div>
 </div>
 
-<!-- Modal pour ajouter un statut -->
-<div class="modal fade" id="addStatutModal" tabindex="-1" aria-labelledby="addStatutModalLabel" aria-hidden="true">
-	<div class="modal-dialog">
-		<div class="modal-content">
-			<div class="modal-header">
-				<h5 class="modal-title" id="addStatutModalLabel">Ajouter un statut d'activité</h5>
-				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-			</div>
-			<form id="addStatutForm">
-				<div class="modal-body">
-					<div class="mb-3">
-						<label for="code" class="form-label">Code *</label>
-						<input type="text" class="form-control" id="code" name="code" required placeholder="Ex: prevue_non_executee">
-					</div>
-					<div class="mb-3">
-						<label for="libelle" class="form-label">Libellé *</label>
-						<input type="text" class="form-control" id="libelle" name="libelle" required placeholder="Ex: Prévue non exécutée">
-					</div>
-					<div class="mb-3">
-						<label for="description" class="form-label">Description</label>
-						<textarea class="form-control" id="description" name="description" rows="3" placeholder="Description du statut..."></textarea>
-					</div>
-					<div class="mb-3">
-						<label for="couleur" class="form-label">Couleur *</label>
-						<select class="form-select" id="couleur" name="couleur" required>
-							<option value="">Choisir une couleur</option>
-							<option value="primary">Primary (Bleu)</option>
-							<option value="secondary">Secondary (Gris)</option>
-							<option value="success">Success (Vert)</option>
-							<option value="danger">Danger (Rouge)</option>
-							<option value="warning">Warning (Orange)</option>
-							<option value="info">Info (Cyan)</option>
-							<option value="light">Light (Clair)</option>
-							<option value="dark">Dark (Sombre)</option>
-						</select>
-					</div>
-				</div>
-				<div class="modal-footer">
-					<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-					<button type="submit" class="btn btn-primary">
-						<i class="fa fa-save"></i> Enregistrer
-					</button>
-				</div>
-			</form>
-		</div>
-	</div>
-</div>
+<!-- Modal d'ajout supprimé - Lecture seule -->
 {% endblock %}
 
 {% block javascripts %}
@@ -111,7 +64,6 @@ let statutsActiviteTable = null;
 document.addEventListener('DOMContentLoaded', function() {
     initializeDataTable();
     loadStatutsActivite();
-    setupFormHandlers();
 });
 
 // Initialiser DataTable
@@ -143,13 +95,7 @@ function initializeDataTable() {
         pageLength: 10,
         lengthMenu: [[5, 10, 25, 50, -1], [5, 10, 25, 50, "Tous"]],
         order: [[0, 'asc']],
-        columnDefs: [
-            {
-                targets: -1, // Dernière colonne (Actions)
-                orderable: false,
-                searchable: false
-            }
-        ],
+        // Pas de colonnes d'actions en lecture seule
         dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>' +
              '<"row"<"col-sm-12"tr>>' +
              '<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
@@ -216,38 +162,10 @@ function loadStatutsActivite() {
             // Vider la table DataTable
             statutsActiviteTable.clear();
             
-            // Ajouter les données
+            // Ajouter les données (lecture seule)
             data.forEach(statut => {
                 const couleurBadge = `<span class="badge bg-${statut.couleur}">${statut.couleur}</span>`;
                 const utilisations = statut.formations_count + statut.missions_count;
-                
-                // Construire le menu des actions
-                let actionsMenu = `
-                    <div class="dropdown" style="position: relative;">
-                        <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="position: relative; z-index: 1;">
-                            <i class="fa fa-ellipsis-h"></i>
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end" style="position: absolute; z-index: 99999; right: 0; left: auto;">
-                            <li><a class="dropdown-item" href="#" onclick="editStatut(${statut.id})">
-                                <i class="fa fa-edit text-warning"></i> Modifier
-                            </a></li>`;
-                
-                // Ajouter le bouton de suppression seulement si le statut n'est pas utilisé
-                if (!statut.isUsed) {
-                    actionsMenu += `
-                            <li><a class="dropdown-item" href="#" onclick="deleteStatut(${statut.id}, '${statut.libelle}')">
-                                <i class="fa fa-trash text-danger"></i> Supprimer
-                            </a></li>`;
-                } else {
-                    actionsMenu += `
-                            <li><a class="dropdown-item disabled" href="#" title="Ce statut d'activité est utilisé dans des missions ou formations">
-                                <i class="fa fa-lock text-muted"></i> Utilisé
-                            </a></li>`;
-                }
-                
-                actionsMenu += `
-                        </ul>
-                    </div>`;
                 
                 statutsActiviteTable.row.add([
                     statut.id,
@@ -255,8 +173,7 @@ function loadStatutsActivite() {
                     statut.libelle,
                     statut.description || '-',
                     couleurBadge,
-                    utilisations + ' utilisation(s)',
-                    actionsMenu
+                    utilisations + ' utilisation(s)'
                 ]);
             });
             
@@ -274,85 +191,6 @@ function loadStatutsActivite() {
         });
 }
 
-// Configuration des gestionnaires de formulaires
-function setupFormHandlers() {
-    document.getElementById('addStatutForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        const submitBtn = this.querySelector('button[type="submit"]');
-        const originalText = submitBtn.innerHTML;
-        
-        // Désactiver le bouton et afficher le spinner
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Enregistrement...';
-        
-        const formData = {
-            code: document.getElementById('code').value,
-            libelle: document.getElementById('libelle').value,
-            description: document.getElementById('description').value,
-            couleur: document.getElementById('couleur').value
-        };
-        
-        fetch('{{ path('app_statut_activite_new') }}', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(formData)
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                showToast(data.message, 'success');
-                // Fermer le modal
-                const modal = bootstrap.Modal.getInstance(document.getElementById('addStatutModal'));
-                modal.hide();
-                // Réinitialiser le formulaire
-                document.getElementById('addStatutForm').reset();
-                // Recharger les données
-                loadStatutsActivite();
-            } else {
-                showToast(data.message || 'Erreur lors de l\'ajout', 'error');
-            }
-        })
-        .catch(error => {
-            console.error('Erreur:', error);
-            showToast('Erreur lors de l\'ajout du statut', 'error');
-        })
-        .finally(() => {
-            // Réactiver le bouton
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = originalText;
-        });
-    });
-}
-
-// Fonction pour modifier un statut
-function editStatut(id) {
-    // TODO: Implémenter la modification
-    showToast('Fonctionnalité de modification à implémenter', 'info');
-}
-
-// Fonction pour supprimer un statut
-function deleteStatut(id, libelle) {
-    if (confirm(`Êtes-vous sûr de vouloir supprimer le statut "${libelle}" ?`)) {
-        fetch(`{{ path('app_statut_activite_delete', {'id': 'PLACEHOLDER'}) }}`.replace('PLACEHOLDER', id), {
-            method: 'DELETE'
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                showToast(data.message, 'success');
-                loadStatutsActivite();
-            } else {
-                showToast(data.message, 'error');
-            }
-        })
-        .catch(error => {
-            console.error('Erreur:', error);
-            showToast('Erreur lors de la suppression', 'error');
-        });
-    }
-}
+// Fonctions d'ajout, modification et suppression supprimées - Lecture seule
 </script>
 {% endblock %}

@@ -143,6 +143,16 @@ class Service
      */
     public function isUsed(): bool
     {
-        return !$this->formations->isEmpty() || !$this->missions->isEmpty();
+        try {
+            // Vérifier si les collections sont initialisées
+            if ($this->formations === null || $this->missions === null) {
+                return false;
+            }
+            
+            return !$this->formations->isEmpty() || !$this->missions->isEmpty();
+        } catch (\Exception $e) {
+            // En cas d'erreur, considérer comme non utilisé
+            return false;
+        }
     }
 }

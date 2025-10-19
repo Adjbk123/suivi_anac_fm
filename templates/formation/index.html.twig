@@ -26,6 +26,28 @@
 {% endblock %}
 
 {% block body %}
+<!-- Widget de Performance des Formations -->
+<div class="row mb-3">
+    <div class="col-xl-12">
+        {% include 'widgets/performance_summary.html.twig' with {
+            'title': 'Performance Formations ' ~ currentYear,
+            'header_color': 'primary',
+            'header_icon': 'fa-graduation-cap',
+            'physique_taux': performanceData.taux_physique,
+            'physique_color': performanceData.couleur_physique,
+            'physique_icon': performanceData.icon_physique,
+            'financier_taux': performanceData.taux_financier,
+            'financier_color': performanceData.couleur_financier,
+            'financier_icon': performanceData.icon_financier,
+            'realisees': performanceData.formations_realisees,
+            'prevues': performanceData.formations_prevues,
+            'budget_reel': performanceData.depenses_reelles,
+            'budget_prevu': performanceData.budget_prevu,
+            'en_cours': performanceData.formations_en_cours
+        } %}
+    </div>
+</div>
+
 <div class="row">
 	<div class="col-xl-12">
 		<!-- Section des filtres -->

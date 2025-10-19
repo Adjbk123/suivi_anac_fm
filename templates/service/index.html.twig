@@ -354,13 +354,27 @@ function hideButtonSpinner() {
 document.getElementById('serviceForm').addEventListener('submit', function(e) {
     e.preventDefault();
     
+    // Validation côté client
+    const libelle = document.getElementById('libelle').value.trim();
+    const directionId = document.getElementById('direction_id').value;
+    
+    if (!libelle) {
+        showToast('Le libellé est requis', 'error');
+        return;
+    }
+    
+    if (!directionId) {
+        showToast('La direction est requise', 'error');
+        return;
+    }
+    
     // Afficher le spinner et désactiver le bouton
     showButtonSpinner();
     
     const formData = {
-        libelle: document.getElementById('libelle').value,
-        description: document.getElementById('description').value,
-        direction_id: document.getElementById('direction_id').value
+        libelle: libelle,
+        description: document.getElementById('description').value.trim(),
+        direction_id: directionId
     };
     
     const url = editingId 
@@ -376,7 +390,19 @@ document.getElementById('serviceForm').addEventListener('submit', function(e) {
         },
         body: JSON.stringify(formData)
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.text().then(text => {
+            try {
+                return JSON.parse(text);
+            } catch (e) {
+                console.error('Réponse non-JSON reçue:', text);
+                throw new Error('Réponse serveur invalide');
+            }
+        });
+    })
     .then(data => {
         // Masquer le spinner et réactiver le bouton
         hideButtonSpinner();
@@ -387,14 +413,14 @@ document.getElementById('serviceForm').addEventListener('submit', function(e) {
             loadServices();
             resetForm();
         } else {
-            showToast(data.message, 'error');
+            showToast(data.message || 'Erreur lors de l\'enregistrement', 'error');
         }
     })
     .catch(error => {
         // Masquer le spinner et réactiver le bouton en cas d'erreur
         hideButtonSpinner();
         console.error('Erreur:', error);
-        showToast('Erreur lors de l\'enregistrement', 'error');
+        showToast('Erreur lors de l\'enregistrement: ' + error.message, 'error');
     });
 });
 </script>

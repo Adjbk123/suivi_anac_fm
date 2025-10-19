@@ -35,10 +35,9 @@
 					</div>
 					<div class="d-flex justify-content-between mt-2">
 						<span class="step-indicator active" data-step="1">1. Informations générales</span>
-						<span class="step-indicator" data-step="2">2. Participants</span>
-						<span class="step-indicator" data-step="3">3. Budget</span>
-						<span class="step-indicator" data-step="4">4. Documents</span>
-						<span class="step-indicator" data-step="5">5. Récapitulatif</span>
+						<span class="step-indicator" data-step="2">2. Budget</span>
+						<span class="step-indicator" data-step="3">3. Documents</span>
+						<span class="step-indicator" data-step="4">4. Récapitulatif</span>
 					</div>
 				</div>
 
@@ -105,38 +104,9 @@
 						</div>
 					</div>
 
-					<!-- Étape 2: Participants prévus -->
-					<div id="step2" class="step-content" style="display: none;">
-						<h4 class="mb-3"><i class="fa fa-users text-primary"></i> Participants prévus</h4>
-						<p class="text-muted mb-3">Sélectionnez les participants de la direction choisie à l'étape 1</p>
-						
-						<div class="table-responsive">
-							<table class="table table-hover" id="participantsTable">
-								<thead class="table-secondary">
-									<tr>
-										<th width="50">
-											<input type="checkbox" id="selectAll" class="form-check-input">
-										</th>
-										<th>Matricule</th>
-										<th>Nom</th>
-										<th>Prénom</th>
-										<th>Email</th>
-										<th>Poste</th>
-									</tr>
-								</thead>
-								<tbody id="participantsTableBody">
-									<tr>
-										<td colspan="6" class="text-center text-muted">
-											Veuillez d'abord sélectionner une direction à l'étape 1
-										</td>
-									</tr>
-								</tbody>
-							</table>
-						</div>
-					</div>
 
-					<!-- Étape 3: Budget prévisionnel -->
-					<div id="step3" class="step-content" style="display: none;">
+					<!-- Étape 2: Budget prévisionnel -->
+					<div id="step2" class="step-content" style="display: none;">
 						<h4 class="mb-3"><i class="fa fa-money-bill text-primary"></i> Budget prévisionnel</h4>
 						<p class="text-muted mb-3">Définissez les dépenses prévues par catégorie</p>
 						
@@ -169,8 +139,8 @@
 						</div>
 					</div>
 
-					<!-- Étape 4: Documents/Notes -->
-					<div id="step4" class="step-content" style="display: none;">
+					<!-- Étape 3: Documents/Notes -->
+					<div id="step3" class="step-content" style="display: none;">
 						<h4 class="mb-3"><i class="fa fa-file-alt text-primary"></i> Documents et Notes</h4>
 						
 						<!-- Notes -->
@@ -205,8 +175,8 @@
 						</div>
 					</div>
 
-					<!-- Étape 5: Récapitulatif -->
-					<div id="step5" class="step-content" style="display: none;">
+					<!-- Étape 4: Récapitulatif -->
+					<div id="step4" class="step-content" style="display: none;">
 						<h4 class="mb-3"><i class="fa fa-check-circle text-primary"></i> Récapitulatif</h4>
 						
 						<div id="recapContent">
@@ -236,8 +206,7 @@
 {% block javascripts %}
 <script>
 let currentStep = 1;
-let totalSteps = 5;
-let selectedParticipants = [];
+let totalSteps = 4;
 let depenses = [];
 let documents = [];
 
@@ -335,28 +304,6 @@ function setupEventListeners() {
     if (dateDebut) dateDebut.addEventListener('change', calculateDuration);
     if (dateFin) dateFin.addEventListener('change', calculateDuration);
     
-    // Charger les participants quand la direction change
-    const directionSelect = document.getElementById('directionId');
-    if (directionSelect) directionSelect.addEventListener('change', loadParticipants);
-    
-    // Gestion du "sélectionner tout"
-    const selectAll = document.getElementById('selectAll');
-    if (selectAll) {
-        selectAll.addEventListener('change', function() {
-            const checkboxes = document.querySelectorAll('#participantsTableBody input[type="checkbox"]');
-            checkboxes.forEach(checkbox => {
-                checkbox.checked = this.checked;
-                if (this.checked) {
-                    if (!selectedParticipants.includes(parseInt(checkbox.value))) {
-                        selectedParticipants.push(parseInt(checkbox.value));
-                    }
-                } else {
-                    selectedParticipants = [];
-                }
-            });
-            console.log('Participants sélectionnés mis à jour:', selectedParticipants);
-        });
-    }
 }
 
 // Fonction debounce pour éviter trop de sauvegardes
@@ -397,99 +344,7 @@ function calculateDuration() {
     }
 }
 
-// Charger les participants de la direction sélectionnée
-function loadParticipants() {
-    const directionSelect = document.getElementById('directionId');
-    const participantsTableBody = document.getElementById('participantsTableBody');
-    
-    if (!directionSelect || !participantsTableBody) {
-        console.error('Éléments de participants non trouvés');
-        return;
-    }
-    
-    const directionId = directionSelect.value;
-    if (!directionId) {
-        participantsTableBody.innerHTML = `
-            <tr>
-                <td colspan="6" class="text-center text-muted">
-                    Veuillez d'abord sélectionner une direction
-                </td>
-            </tr>
-        `;
-        return;
-    }
-    
-    fetch(`/api/users-by-direction/${directionId}`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.length === 0) {
-                participantsTableBody.innerHTML = `
-                    <tr>
-                        <td colspan="6" class="text-center text-muted">
-                            Aucun utilisateur trouvé dans cette direction
-                        </td>
-                    </tr>
-                `;
-                return;
-            }
-            
-            participantsTableBody.innerHTML = '';
-            data.forEach(user => {
-                const row = document.createElement('tr');
-                row.style.cursor = 'pointer';
-                row.onclick = function() {
-                    const checkbox = this.querySelector('input[type="checkbox"]');
-                    if (checkbox) {
-                        checkbox.checked = !checkbox.checked;
-                        handleParticipantSelection(checkbox);
-                    }
-                };
-                
-                row.innerHTML = `
-                    <td>
-                        <input type="checkbox" class="form-check-input" value="${user.id}" onchange="handleParticipantSelection(this)">
-                    </td>
-                    <td>${user.matricule || '-'}</td>
-                    <td>${user.nom}</td>
-                    <td>${user.prenom}</td>
-                    <td>${user.email}</td>
-                    <td>${user.poste ? user.poste.libelle : '-'}</td>
-                `;
-                participantsTableBody.appendChild(row);
-            });
-            
-            // Appliquer les sélections sauvegardées si on est en mode restauration
-            if (selectedParticipants.length > 0) {
-                console.log('Application des sélections sauvegardées:', selectedParticipants);
-                document.querySelectorAll('#participantsTableBody input[type="checkbox"]').forEach(checkbox => {
-                    checkbox.checked = selectedParticipants.includes(parseInt(checkbox.value));
-                });
-            }
-        })
-        .catch(error => {
-            console.error('Erreur lors du chargement des participants:', error);
-            participantsTableBody.innerHTML = `
-                <tr>
-                    <td colspan="6" class="text-center text-danger">
-                        Erreur lors du chargement des participants
-                    </td>
-                </tr>
-            `;
-        });
-}
 
-// Gérer la sélection d'un participant
-function handleParticipantSelection(checkbox) {
-    const userId = parseInt(checkbox.value);
-    if (checkbox.checked) {
-        if (!selectedParticipants.includes(userId)) {
-            selectedParticipants.push(userId);
-        }
-    } else {
-        selectedParticipants = selectedParticipants.filter(id => id !== userId);
-    }
-    console.log('Participants sélectionnés mis à jour:', selectedParticipants);
-}
 
 // Ajouter une ligne de dépense
 function addDepenseRow() {
@@ -635,10 +490,8 @@ function nextStep() {
             updateStepDisplay();
             
             // Actions spécifiques à chaque étape
-            if (currentStep === 2) {
-                loadParticipants();
-            } else if (currentStep === 5) {
-                updateRecap();
+            if (currentStep === 4) {
+                generateRecap();
             }
         }
     }
@@ -662,8 +515,6 @@ function validateCurrentStep() {
         case 2:
             return validateStep2();
         case 3:
-            return validateStep3();
-        case 4:
             return true; // Étape optionnelle
         default:
             return true;
@@ -694,17 +545,8 @@ function validateStep1() {
     return true;
 }
 
-// Valider l'étape 2
+// Valider l'étape 2 (Budget)
 function validateStep2() {
-    if (selectedParticipants.length === 0) {
-        showToast('Veuillez sélectionner au moins un participant.', 'error');
-        return false;
-    }
-    return true;
-}
-
-// Valider l'étape 3
-function validateStep3() {
     const validDepenses = Object.values(depenses).filter(d => d.categorieId && d.montant > 0);
     if (validDepenses.length === 0) {
         showToast('Veuillez ajouter au moins une dépense valide.', 'error');
@@ -721,13 +563,6 @@ function generateRecap() {
         return;
     }
     
-    // Recalculer le nombre de participants sélectionnés
-    const selectedParticipantsCount = document.querySelectorAll('#participantsTableBody input[type="checkbox"]:checked').length;
-    let finalParticipantsCount = selectedParticipantsCount;
-    if (selectedParticipantsCount === 0) {
-        // Utiliser la variable si le calcul direct est vide
-        finalParticipantsCount = selectedParticipants.length;
-    }
     
     // Recalculer le nombre de documents
     const documentsCount = Object.keys(documents).filter(key => documents[key] && (documents[key].nom || documents[key].file)).length;
@@ -753,7 +588,6 @@ function generateRecap() {
         duree: dureeField ? dureeField.value : '',
         budget: budgetField ? budgetField.value : '0',
         description: descField ? descField.value : '',
-        participants: finalParticipantsCount,
         notes: notesField ? notesField.value : ''
     };
     
@@ -772,9 +606,6 @@ function generateRecap() {
                 </table>
             </div>
             <div class="col-md-6">
-                <h5>Participants</h5>
-                <p><strong>Nombre de participants:</strong> ${missionData.participants}</p>
-                
                 <h5>Description</h5>
                 <p>${missionData.description || 'Aucune description'}</p>
                 
@@ -845,27 +676,15 @@ function updateStepDisplay() {
     if (nextBtn) nextBtn.style.display = currentStep < totalSteps ? 'block' : 'none';
     if (submitBtn) submitBtn.style.display = currentStep === totalSteps ? 'block' : 'none';
     
-    // Initialiser le tableau des participants si on arrive à l'étape 2
+    // Initialiser le tableau des dépenses si on arrive à l'étape 2
     if (currentStep === 2) {
-        setTimeout(() => {
-            // Mettre à jour selectedParticipants basé sur les checkboxes actuelles
-            const currentSelectedParticipants = [];
-            document.querySelectorAll('#participantsTableBody input[type="checkbox"]:checked').forEach(checkbox => {
-                currentSelectedParticipants.push(parseInt(checkbox.value));
-            });
-            selectedParticipants = currentSelectedParticipants;
-        }, 100);
-    }
-    
-    // Initialiser le tableau des dépenses si on arrive à l'étape 3
-    if (currentStep === 3) {
         setTimeout(() => {
             addDepenseRow(); // Ajouter une ligne par défaut
         }, 100);
     }
     
-    // Initialiser le tableau des documents si on arrive à l'étape 4
-    if (currentStep === 4) {
+    // Initialiser le tableau des documents si on arrive à l'étape 3
+    if (currentStep === 3) {
         setTimeout(() => {
             addDocumentRow();
         }, 50);
@@ -890,6 +709,31 @@ document.getElementById('missionCreateForm').addEventListener('submit', function
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Création...';
     
+    // Recalculer la durée et le budget avant l'envoi
+    calculateDuration();
+    calculateTotalBudget();
+    
+    // Validation côté client
+    const requiredFields = ['titre', 'directionId', 'fondsId', 'lieuPrevu', 'datePrevueDebut', 'datePrevueFin'];
+    for (let field of requiredFields) {
+        const element = document.getElementById(field);
+        if (!element || !element.value) {
+            showToast(`Le champ "${field}" est requis`, 'error');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+            return;
+        }
+    }
+    
+    // Vérifier qu'au moins une dépense est définie
+    const validDepenses = Object.values(depenses).filter(d => d.categorieId && d.montant > 0);
+    if (validDepenses.length === 0) {
+        showToast('Veuillez ajouter au moins une dépense valide', 'error');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+        return;
+    }
+    
     // Préparer les données
     const formData = new FormData();
     
@@ -905,8 +749,7 @@ document.getElementById('missionCreateForm').addEventListener('submit', function
         budgetPrevu: document.getElementById('budgetPrevu').value,
         description: document.getElementById('description').value,
         notes: document.getElementById('notes').value,
-        participants: selectedParticipants,
-        depenses: Object.values(depenses).filter(d => d.categorieId && d.montant > 0)
+        depenses: validDepenses
     };
     
     formData.append('data', JSON.stringify(jsonData));
@@ -924,7 +767,19 @@ document.getElementById('missionCreateForm').addEventListener('submit', function
         method: 'POST',
         body: formData
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.text().then(text => {
+            try {
+                return JSON.parse(text);
+            } catch (e) {
+                console.error('Réponse non-JSON reçue:', text);
+                throw new Error('Réponse serveur invalide');
+            }
+        });
+    })
     .then(data => {
         if (data.success) {
             showToast(data.message, 'success');
@@ -937,7 +792,7 @@ document.getElementById('missionCreateForm').addEventListener('submit', function
     })
     .catch(error => {
         console.error('Erreur:', error);
-        showToast('Erreur lors de la création de la mission', 'error');
+        showToast('Erreur lors de la création de la mission: ' + error.message, 'error');
     })
     .finally(() => {
         // Réactiver le bouton

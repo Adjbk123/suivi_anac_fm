@@ -11,6 +11,7 @@ use App\Repository\StatutActiviteRepository;
 use App\Repository\UserRepository;
 use App\Service\PdfService;
 use App\Service\ExcelExportService;
+use App\Service\PerformanceService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -24,9 +25,15 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 class MissionController extends AbstractController
 {
     #[Route('/', name: 'app_mission_index', methods: ['GET'])]
-    public function index(): Response
+    public function index(PerformanceService $performanceService): Response
     {
-        return $this->render('mission/index.html.twig');
+        $currentYear = date('Y');
+        $performanceData = $performanceService->getMissionPerformance($currentYear);
+        
+        return $this->render('mission/index.html.twig', [
+            'performanceData' => $performanceData,
+            'currentYear' => $currentYear
+        ]);
     }
 
     #[Route('/export-excel', name: 'app_mission_export_excel', methods: ['GET'])]
@@ -226,29 +233,52 @@ class MissionController extends AbstractController
     #[IsGranted('ROLE_EDITEUR')]
     public function new(Request $request, EntityManagerInterface $entityManager): JsonResponse
     {
-        // Récupérer les données JSON
-        $data = json_decode($request->get('data'), true);
-        
-        $mission = new Mission();
-        $mission->setTitre($data['titre']);
-        $mission->setDescription($data['description'] ?? null);
-        $mission->setLieuPrevu($data['lieuPrevu']);
-        $mission->setDatePrevueDebut(new \DateTime($data['datePrevueDebut']));
-        $mission->setDatePrevueFin(new \DateTime($data['datePrevueFin']));
-        $mission->setDureePrevue($data['dureePrevue']);
-        $mission->setBudgetPrevu($data['budgetPrevu']);
-        // Récupérer le statut par défaut (prévue non exécutée)
-        $statutActivite = $entityManager->getRepository(\App\Entity\StatutActivite::class)->findOneBy(['code' => 'prevue_non_executee']);
-        $mission->setStatutActivite($statutActivite);
-        $mission->setNotes($data['notes'] ?? null);
-        
-        // Récupérer la direction
-        $direction = $entityManager->getRepository(\App\Entity\Direction::class)->find($data['directionId']);
-        $mission->setDirection($direction);
-        
-        // Récupérer le type de fonds
-        $fonds = $entityManager->getRepository(\App\Entity\TypeFonds::class)->find($data['fondsId']);
-        $mission->setFonds($fonds);
+        try {
+            // Récupérer les données JSON
+            $data = json_decode($request->get('data'), true);
+            
+            if (!$data) {
+                return $this->json(['success' => false, 'message' => 'Données JSON invalides'], 400);
+            }
+            
+            // Validation des champs requis
+            $requiredFields = ['titre', 'directionId', 'fondsId', 'lieuPrevu', 'datePrevueDebut', 'datePrevueFin', 'dureePrevue', 'budgetPrevu'];
+            foreach ($requiredFields as $field) {
+                if (!isset($data[$field]) || empty($data[$field])) {
+                    return $this->json(['success' => false, 'message' => "Le champ {$field} est requis"], 400);
+                }
+            }
+            
+            $mission = new Mission();
+            $mission->setTitre($data['titre']);
+            $mission->setDescription($data['description'] ?? null);
+            $mission->setLieuPrevu($data['lieuPrevu']);
+            $mission->setDatePrevueDebut(new \DateTime($data['datePrevueDebut']));
+            $mission->setDatePrevueFin(new \DateTime($data['datePrevueFin']));
+            $mission->setDureePrevue($data['dureePrevue']);
+            $mission->setBudgetPrevu($data['budgetPrevu']);
+            
+            // Récupérer le statut par défaut (prévue non exécutée)
+            $statutActivite = $entityManager->getRepository(\App\Entity\StatutActivite::class)->findOneBy(['code' => 'prevue_non_executee']);
+            if (!$statutActivite) {
+                return $this->json(['success' => false, 'message' => 'Statut d\'activité par défaut introuvable'], 500);
+            }
+            $mission->setStatutActivite($statutActivite);
+            $mission->setNotes($data['notes'] ?? null);
+            
+            // Récupérer la direction
+            $direction = $entityManager->getRepository(\App\Entity\Direction::class)->find($data['directionId']);
+            if (!$direction) {
+                return $this->json(['success' => false, 'message' => 'Direction introuvable'], 404);
+            }
+            $mission->setDirection($direction);
+            
+            // Récupérer le type de fonds
+            $fonds = $entityManager->getRepository(\App\Entity\TypeFonds::class)->find($data['fondsId']);
+            if (!$fonds) {
+                return $this->json(['success' => false, 'message' => 'Type de fonds introuvable'], 404);
+            }
+            $mission->setFonds($fonds);
         
         $entityManager->persist($mission);
         $entityManager->flush();
@@ -322,13 +352,20 @@ class MissionController extends AbstractController
             $index++;
         }
         
-        $entityManager->flush();
-        
-        return $this->json([
-            'success' => true,
-            'message' => 'Mission créée avec succès',
-            'missionId' => $mission->getId()
-        ]);
+            $entityManager->flush();
+            
+            return $this->json([
+                'success' => true,
+                'message' => 'Mission créée avec succès',
+                'missionId' => $mission->getId()
+            ]);
+            
+        } catch (\Exception $e) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Erreur lors de la création de la mission: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     #[Route('/{id}', name: 'app_mission_show', methods: ['GET'])]
@@ -699,9 +736,14 @@ class MissionController extends AbstractController
                 $mission->setDureeReelle($dureeReelle);
             }
             
-            // 2. Mettre à jour le statut de l'activité
-            $statutExecutee = $entityManager->getRepository(\App\Entity\StatutActivite::class)->findOneBy(['code' => 'prevue_executee']);
-            $mission->setStatutActivite($statutExecutee);
+            // 2. Mettre à jour le statut de l'activité selon la nature
+            $natureCode = $data['natureMission'] ?? 'prevue_executee';
+            $statutActivite = $entityManager->getRepository(\App\Entity\StatutActivite::class)->findOneBy(['code' => $natureCode]);
+            if (!$statutActivite) {
+                // Fallback vers le statut par défaut si le code n'existe pas
+                $statutActivite = $entityManager->getRepository(\App\Entity\StatutActivite::class)->findOneBy(['code' => 'prevue_executee']);
+            }
+            $mission->setStatutActivite($statutActivite);
             
             // 3. Mettre à jour les statuts des participants
             if (isset($data['participants'])) {

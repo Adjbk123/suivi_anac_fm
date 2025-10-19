@@ -95,6 +95,10 @@ class UserController extends AbstractController
         $user->setDomaine($domaine);
         $user->setPoste($poste);
         
+        // Gérer les rôles
+        $roles = $data['roles'] ?? 'ROLE_USER';
+        $user->setRoles([$roles]);
+        
         $entityManager->persist($user);
         $entityManager->flush();
         
@@ -120,7 +124,8 @@ class UserController extends AbstractController
             'matricule' => $user->getMatricule(),
             'service_id' => $user->getService() ? $user->getService()->getId() : null,
             'domaine_id' => $user->getDomaine() ? $user->getDomaine()->getId() : null,
-            'poste_id' => $user->getPoste() ? $user->getPoste()->getId() : null
+            'poste_id' => $user->getPoste() ? $user->getPoste()->getId() : null,
+            'roles' => $user->getRoles()[0] ?? 'ROLE_USER' // Retourner le rôle principal
         ]);
     }
 
@@ -167,6 +172,11 @@ class UserController extends AbstractController
         $user->setService($service);
         $user->setDomaine($domaine);
         $user->setPoste($poste);
+        
+        // Mettre à jour les rôles si fournis
+        if (isset($data['roles']) && $data['roles']) {
+            $user->setRoles([$data['roles']]);
+        }
         
         // Mettre à jour la date de modification
         $user->setUpdatedAt(new \DateTimeImmutable());

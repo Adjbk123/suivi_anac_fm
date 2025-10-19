@@ -8,6 +8,7 @@ use App\Entity\UserFormation;
 use App\Repository\FormationRepository;
 use App\Service\RoleService;
 use App\Service\ExcelExportService;
+use App\Service\PerformanceService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -25,9 +26,15 @@ use App\Service\PdfService;
 class FormationController extends AbstractController
 {
     #[Route('/', name: 'app_formation_index', methods: ['GET'])]
-    public function index(): Response
+    public function index(PerformanceService $performanceService): Response
     {
-        return $this->render('formation/index.html.twig');
+        $currentYear = date('Y');
+        $performanceData = $performanceService->getFormationPerformance($currentYear);
+        
+        return $this->render('formation/index.html.twig', [
+            'performanceData' => $performanceData,
+            'currentYear' => $currentYear
+        ]);
     }
 
     #[Route('/export-excel', name: 'app_formation_export_excel', methods: ['GET'])]
@@ -696,9 +703,14 @@ class FormationController extends AbstractController
                 $formation->setDureeReelle($dureeReelle);
             }
             
-            // 2. Mettre à jour le statut de l'activité
-            $statutExecutee = $entityManager->getRepository(\App\Entity\StatutActivite::class)->findOneBy(['code' => 'prevue_executee']);
-            $formation->setStatutActivite($statutExecutee);
+            // 2. Mettre à jour le statut de l'activité selon la nature
+            $natureCode = $data['natureFormation'] ?? 'prevue_executee';
+            $statutActivite = $entityManager->getRepository(\App\Entity\StatutActivite::class)->findOneBy(['code' => $natureCode]);
+            if (!$statutActivite) {
+                // Fallback vers le statut par défaut si le code n'existe pas
+                $statutActivite = $entityManager->getRepository(\App\Entity\StatutActivite::class)->findOneBy(['code' => 'prevue_executee']);
+            }
+            $formation->setStatutActivite($statutActivite);
             
             // 3. Mettre à jour les statuts des participants
             if (isset($data['participants'])) {

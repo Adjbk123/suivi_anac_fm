@@ -1,0 +1,19 @@
+{# Widget de carte de performance réutilisable #}
+<div class="card bg-{{ color }} text-white mb-3">
+    <div class="card-body">
+        <div class="d-flex justify-content-between">
+            <div>
+                <h4 class="mb-0 text-white">
+                    <i class="fa {{ icon }}"></i> {{ taux }}%
+                </h4>
+                <p class="mb-0 text-white">{{ label }}</p>
+                {% if detail is defined %}
+                    <small class="text-white-50">{{ detail }}</small>
+                {% endif %}
+            </div>
+            <div class="align-self-center">
+                <i class="fa {{ icon }} fa-2x text-white"></i>
+            </div>
+        </div>
+    </div>
+</div>

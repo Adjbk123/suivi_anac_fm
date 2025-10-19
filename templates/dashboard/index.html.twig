@@ -11,7 +11,17 @@
 
 {% block page_title %}
 <h1 class="page-header">
-	Dashboard <small>Vue d'ensemble de votre application</small>
+	Dashboard <small>
+		{% if isAdmin %}
+			Vue d'ensemble complète - Administrateur
+		{% elseif isDirecteur %}
+			Tableau de bord directionnel - Directeur
+		{% elseif isEditeur %}
+			Vue d'ensemble éditoriale - Éditeur
+		{% else %}
+			Vue d'ensemble - Utilisateur
+		{% endif %}
+	</small>
 </h1>
 {% endblock %}
 
@@ -19,6 +29,57 @@
 <!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
+    /* Styles pour les widgets de performance */
+    .performance-card {
+        transition: transform 0.2s ease-in-out;
+    }
+    
+    .performance-card:hover {
+        transform: translateY(-2px);
+    }
+    
+    .performance-badge {
+        font-size: 1.1rem;
+        padding: 0.5rem 1rem;
+        border-radius: 0.5rem;
+    }
+    
+    .performance-progress {
+        height: 8px;
+        border-radius: 4px;
+    }
+    
+    .bg-gradient-primary {
+        background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+    }
+    
+    .bg-gradient-success {
+        background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+    }
+    
+    .bg-gradient-warning {
+        background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+    }
+    
+    .bg-gradient-danger {
+        background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    }
+    
+    .performance-summary {
+        border-left: 4px solid var(--bs-primary);
+    }
+    
+    .performance-summary.success {
+        border-left-color: var(--bs-success);
+    }
+    
+    .performance-summary.warning {
+        border-left-color: var(--bs-warning);
+    }
+    
+    .performance-summary.danger {
+        border-left-color: var(--bs-danger);
+    }
 .stats-card {
     color: white !important;
 }
@@ -89,7 +150,8 @@
                 </div>
             </div>
 
-            <!-- Total Utilisateurs -->
+            {% if isAdmin %}
+            <!-- Total Utilisateurs (Admin seulement) -->
             <div class="col-xl-3 col-md-6">
                 <div class="card bg-info text-white mb-3 stats-card">
                     <div class="card-body">
@@ -106,7 +168,7 @@
                 </div>
             </div>
 
-            <!-- Total Services -->
+            <!-- Total Services (Admin seulement) -->
             <div class="col-xl-3 col-md-6">
                 <div class="card bg-warning text-white mb-3 stats-card">
                     <div class="card-body">
@@ -117,6 +179,164 @@
                             </div>
                             <div class="align-self-center">
                                 <i class="fa fa-building fa-2x text-white"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <!-- Taux d'exécution des formations (Non-admin) -->
+            <div class="col-xl-3 col-md-6">
+                <div class="card bg-info text-white mb-3 stats-card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h4 class="mb-0 text-white">
+                                    {% set totalFormations = stats.formations_executees + stats.formations_prevues %}
+                                    {% set tauxExecution = totalFormations > 0 ? (stats.formations_executees / totalFormations * 100) : 0 %}
+                                    {{ tauxExecution|round(1) }}%
+                                </h4>
+                                <p class="mb-0 text-white">Taux exécution formations</p>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fa fa-chart-pie fa-2x text-white"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Taux d'exécution des missions (Non-admin) -->
+            <div class="col-xl-3 col-md-6">
+                <div class="card bg-warning text-white mb-3 stats-card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h4 class="mb-0 text-white">
+                                    {% set totalMissions = stats.missions_executees + stats.missions_prevues %}
+                                    {% set tauxExecution = totalMissions > 0 ? (stats.missions_executees / totalMissions * 100) : 0 %}
+                                    {{ tauxExecution|round(1) }}%
+                                </h4>
+                                <p class="mb-0 text-white">Taux exécution missions</p>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fa fa-chart-pie fa-2x text-white"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Widgets de Performance -->
+    <div class="row mb-4">
+        <div class="col-xl-12">
+            <div class="card performance-card shadow">
+                <div class="card-header bg-info text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="fa fa-chart-line text-white"></i> Performance Globale {{ currentYear }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <!-- Performance Formations -->
+                        <div class="col-md-6">
+                            {% include 'widgets/performance_summary.html.twig' with {
+                                'title': 'Formations',
+                                'header_color': 'primary',
+                                'header_icon': 'fa-graduation-cap',
+                                'physique_taux': performanceData.formations.taux_physique,
+                                'physique_color': performanceData.formations.couleur_physique,
+                                'physique_icon': performanceData.formations.icon_physique,
+                                'financier_taux': performanceData.formations.taux_financier,
+                                'financier_color': performanceData.formations.couleur_financier,
+                                'financier_icon': performanceData.formations.icon_financier,
+                                'realisees': performanceData.formations.formations_realisees,
+                                'prevues': performanceData.formations.formations_prevues,
+                                'budget_reel': performanceData.formations.depenses_reelles,
+                                'budget_prevu': performanceData.formations.budget_prevu,
+                                'en_cours': performanceData.formations.formations_en_cours
+                            } %}
+                        </div>
+                        
+                        <!-- Performance Missions -->
+                        <div class="col-md-6">
+                            {% include 'widgets/performance_summary.html.twig' with {
+                                'title': 'Missions',
+                                'header_color': 'success',
+                                'header_icon': 'fa-plane',
+                                'physique_taux': performanceData.missions.taux_physique,
+                                'physique_color': performanceData.missions.couleur_physique,
+                                'physique_icon': performanceData.missions.icon_physique,
+                                'financier_taux': performanceData.missions.taux_financier,
+                                'financier_color': performanceData.missions.couleur_financier,
+                                'financier_icon': performanceData.missions.icon_financier,
+                                'realisees': performanceData.missions.missions_realisees,
+                                'prevues': performanceData.missions.missions_prevues,
+                                'budget_reel': performanceData.missions.depenses_reelles,
+                                'budget_prevu': performanceData.missions.budget_prevu,
+                                'en_cours': performanceData.missions.missions_en_cours
+                            } %}
+                        </div>
+                    </div>
+                    
+                    <!-- Performance Globale -->
+                    <div class="row mt-3">
+                        <div class="col-md-12">
+                            <div class="card bg-gradient-{{ performanceData.global.taux_physique >= 80 ? 'success' : (performanceData.global.taux_physique >= 60 ? 'warning' : 'danger') }} text-white">
+                                <div class="card-body text-center">
+                                    <h5 class="card-title mb-3">
+                                        <i class="fa fa-chart-line me-2"></i>Performance Globale {{ currentYear }}
+                                    </h5>
+                                    
+                                    <!-- Indicateurs principaux -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <div class="d-flex flex-column align-items-center">
+                                                <span class="badge bg-white text-dark fs-4 px-4 py-2 mb-2 shadow">
+                                                    <i class="fa {{ performanceData.global.icon_physique }} me-2 text-{{ performanceData.global.couleur_physique }}"></i> 
+                                                    {{ performanceData.global.taux_physique }}%
+                                                </span>
+                                                <h6 class="mb-0">Taux Physique</h6>
+                                                <small class="opacity-75">
+                                                    {{ performanceData.global.total_realisees }}/{{ performanceData.global.total_prevues }} activités
+                                                </small>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="d-flex flex-column align-items-center">
+                                                <span class="badge bg-white text-dark fs-4 px-4 py-2 mb-2 shadow">
+                                                    <i class="fa {{ performanceData.global.icon_financier }} me-2 text-{{ performanceData.global.couleur_financier }}"></i> 
+                                                    {{ performanceData.global.taux_financier }}%
+                                                </span>
+                                                <h6 class="mb-0">Taux Financier</h6>
+                                                <small class="opacity-75">
+                                                    {{ (performanceData.global.total_depenses_reelles)|number_format(0, ',', ' ') }} / 
+                                                    {{ (performanceData.global.total_budget_prevu)|number_format(0, ',', ' ') }} FCFA
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Barre de progression globale -->
+                                    <div class="row">
+                                        <div class="col-12">
+                                            <div class="progress bg-white bg-opacity-25" style="height: 12px;">
+                                                <div class="progress-bar bg-white" role="progressbar" 
+                                                     style="width: {{ performanceData.global.taux_physique }}%" 
+                                                     aria-valuenow="{{ performanceData.global.taux_physique }}" 
+                                                     aria-valuemin="0" 
+                                                     aria-valuemax="100">
+                                                </div>
+                                            </div>
+                                            <small class="opacity-75 mt-2 d-block">
+                                                Progression globale: {{ performanceData.global.taux_physique }}% des activités réalisées
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -417,6 +637,195 @@
             </div>
         </div>
     </div>
+
+    <!-- Section spécifique pour les directeurs -->
+    {% if isDirecteur or isAdmin %}
+    <div class="col-xl-12">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card mb-3">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="card-title mb-0">
+                            <i class="fa fa-chart-bar text-white"></i> Analyse budgétaire détaillée
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <h6>Formations</h6>
+                            <div class="d-flex justify-content-between">
+                                <span>Budget prévu:</span>
+                                <strong class="text-primary">{{ stats.budget_total_formations|number_format(0, ',', ' ') }} FCFA</strong>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span>Dépenses réelles:</span>
+                                <strong class="text-{{ stats.depenses_reelles_formations > stats.budget_total_formations ? 'danger' : 'success' }}">
+                                    {{ stats.depenses_reelles_formations|number_format(0, ',', ' ') }} FCFA
+                                </strong>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span>Écart:</span>
+                                <strong class="text-{{ (stats.depenses_reelles_formations - stats.budget_total_formations) > 0 ? 'danger' : 'success' }}">
+                                    {{ (stats.depenses_reelles_formations - stats.budget_total_formations)|number_format(0, ',', ' ') }} FCFA
+                                </strong>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <h6>Missions</h6>
+                            <div class="d-flex justify-content-between">
+                                <span>Budget prévu:</span>
+                                <strong class="text-primary">{{ stats.budget_total_missions|number_format(0, ',', ' ') }} FCFA</strong>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span>Dépenses réelles:</span>
+                                <strong class="text-{{ stats.depenses_reelles_missions > stats.budget_total_missions ? 'danger' : 'success' }}">
+                                    {{ stats.depenses_reelles_missions|number_format(0, ',', ' ') }} FCFA
+                                </strong>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span>Écart:</span>
+                                <strong class="text-{{ (stats.depenses_reelles_missions - stats.budget_total_missions) > 0 ? 'danger' : 'success' }}">
+                                    {{ (stats.depenses_reelles_missions - stats.budget_total_missions)|number_format(0, ',', ' ') }} FCFA
+                                </strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card mb-3">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="card-title mb-0">
+                            <i class="fa fa-trending-up text-white"></i> Indicateurs de performance
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <h6>Efficacité d'exécution</h6>
+                            <div class="d-flex justify-content-between">
+                                <span>Formations:</span>
+                                <strong class="text-success">
+                                    {% set totalFormations = stats.formations_executees + stats.formations_prevues %}
+                                    {% set tauxExecution = totalFormations > 0 ? (stats.formations_executees / totalFormations * 100) : 0 %}
+                                    {{ tauxExecution|round(1) }}%
+                                </strong>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span>Missions:</span>
+                                <strong class="text-success">
+                                    {% set totalMissions = stats.missions_executees + stats.missions_prevues %}
+                                    {% set tauxExecution = totalMissions > 0 ? (stats.missions_executees / totalMissions * 100) : 0 %}
+                                    {{ tauxExecution|round(1) }}%
+                                </strong>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <h6>Budget total</h6>
+                            <div class="d-flex justify-content-between">
+                                <span>Prévu:</span>
+                                <strong class="text-primary">
+                                    {{ (stats.budget_total_formations + stats.budget_total_missions)|number_format(0, ',', ' ') }} FCFA
+                                </strong>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span>Dépensé:</span>
+                                <strong class="text-info">
+                                    {{ (stats.depenses_reelles_formations + stats.depenses_reelles_missions)|number_format(0, ',', ' ') }} FCFA
+                                </strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Section spécifique pour les éditeurs -->
+    {% if isEditeur or isAdmin %}
+    <div class="col-xl-12">
+        <div class="card mb-3">
+            <div class="card-header bg-info text-white">
+                <h5 class="card-title mb-0">
+                    <i class="fa fa-plus-circle text-white"></i> Actions rapides - Éditeur
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="d-grid">
+                            <a href="{{ path('app_formation_create') }}" class="btn btn-primary btn-lg">
+                                <i class="fa fa-graduation-cap"></i><br>
+                                <small>Nouvelle Formation</small>
+                            </a>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="d-grid">
+                            <a href="{{ path('app_mission_create') }}" class="btn btn-success btn-lg">
+                                <i class="fa fa-plane"></i><br>
+                                <small>Nouvelle Mission</small>
+                            </a>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="d-grid">
+                            <a href="{{ path('app_formation_index') }}" class="btn btn-warning btn-lg">
+                                <i class="fa fa-list"></i><br>
+                                <small>Gérer Formations</small>
+                            </a>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="d-grid">
+                            <a href="{{ path('app_mission_index') }}" class="btn btn-info btn-lg">
+                                <i class="fa fa-list"></i><br>
+                                <small>Gérer Missions</small>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Section spécifique pour les utilisateurs de base -->
+    {% if not isEditeur and not isDirecteur and not isAdmin %}
+    <div class="col-xl-12">
+        <div class="card mb-3">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="card-title mb-0">
+                    <i class="fa fa-info-circle text-white"></i> Informations pour utilisateur
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <h6><i class="fa fa-lightbulb"></i> Votre rôle actuel : Utilisateur</h6>
+                    <p class="mb-0">
+                        En tant qu'utilisateur, vous avez accès en lecture seule aux formations et missions. 
+                        Pour créer ou modifier du contenu, contactez votre administrateur pour obtenir les permissions appropriées.
+                    </p>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="d-grid">
+                            <a href="{{ path('app_formation_index') }}" class="btn btn-outline-primary">
+                                <i class="fa fa-graduation-cap"></i> Consulter les formations
+                            </a>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="d-grid">
+                            <a href="{{ path('app_mission_index') }}" class="btn btn-outline-success">
+                                <i class="fa fa-plane"></i> Consulter les missions
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}
 

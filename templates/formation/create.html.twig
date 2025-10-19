@@ -35,10 +35,9 @@
 					</div>
 					<div class="d-flex justify-content-between mt-2">
 						<span class="step-indicator active" data-step="1">1. Informations générales</span>
-						<span class="step-indicator" data-step="2">2. Participants</span>
-						<span class="step-indicator" data-step="3">3. Budget</span>
-						<span class="step-indicator" data-step="4">4. Documents</span>
-						<span class="step-indicator" data-step="5">5. Récapitulatif</span>
+						<span class="step-indicator" data-step="2">2. Budget</span>
+						<span class="step-indicator" data-step="3">3. Documents</span>
+						<span class="step-indicator" data-step="4">4. Récapitulatif</span>
 					</div>
 				</div>
 
@@ -105,40 +104,9 @@
 						</div>
 					</div>
 
-					<!-- Étape 2: Participants -->
+
+					<!-- Étape 2: Budget -->
 					<div class="step-content d-none" id="step2">
-						<h4 class="mb-3"><i class="fa fa-users text-primary"></i> Participants prévus</h4>
-						
-						<div class="alert alert-info">
-							<i class="fa fa-info-circle"></i> Sélectionnez les participants du service responsable de la formation.
-						</div>
-
-						<div class="table-responsive">
-							<table class="table table-hover" id="participantsTable">
-								<thead class="table-secondary">
-									<tr>
-										<th width="50">
-											<input type="checkbox" id="selectAll" class="form-check-input">
-										</th>
-										<th>Matricule</th>
-										<th>Nom</th>
-										<th>Prénom</th>
-										<th>Email</th>
-									</tr>
-								</thead>
-								<tbody>
-									<tr>
-										<td colspan="5" class="text-center text-muted">
-											Veuillez d'abord sélectionner un service à l'étape 1
-										</td>
-									</tr>
-								</tbody>
-							</table>
-						</div>
-					</div>
-
-					<!-- Étape 3: Budget -->
-					<div class="step-content d-none" id="step3">
 						<h4 class="mb-3"><i class="fa fa-money-bill text-primary"></i> Budget prévisionnel</h4>
 						
 						<div class="alert alert-info mb-3">
@@ -171,8 +139,8 @@
 						</button>
 					</div>
 
-					<!-- Étape 4: Documents -->
-					<div class="step-content d-none" id="step4">
+					<!-- Étape 3: Documents -->
+					<div class="step-content d-none" id="step3">
 						<h4 class="mb-3"><i class="fa fa-file-alt text-primary"></i> Documents et Notes</h4>
 						
 						<!-- Notes en haut -->
@@ -204,8 +172,8 @@
 						</div>
 					</div>
 
-					<!-- Étape 5: Récapitulatif -->
-					<div class="step-content d-none" id="step5">
+					<!-- Étape 4: Récapitulatif -->
+					<div class="step-content d-none" id="step4">
 						<h4 class="mb-3"><i class="fa fa-check-circle text-primary"></i> Récapitulatif</h4>
 						
 						<div id="recapContent">
@@ -237,12 +205,10 @@
 {% block javascripts %}
 <script>
 let currentStep = 1;
-let totalSteps = 5;
+let totalSteps = 4;
 let services = [];
 let fonds = [];
 let categories = [];
-let participants = [];
-let selectedParticipants = [];
 let depenses = [];
 let documents = [];
 
@@ -252,8 +218,6 @@ document.addEventListener('DOMContentLoaded', function() {
     services = [];
     fonds = [];
     categories = [];
-    participants = [];
-    selectedParticipants = [];
     depenses = {};
     documents = {};
     
@@ -332,28 +296,7 @@ function setupEventListeners() {
     if (dateDebut) dateDebut.addEventListener('change', calculateDuration);
     if (dateFin) dateFin.addEventListener('change', calculateDuration);
     
-    // Chargement des participants quand le service change
-    const serviceSelect = document.getElementById('serviceId');
-    if (serviceSelect) serviceSelect.addEventListener('change', loadParticipants);
     
-    // Gestion du "sélectionner tout"
-    const selectAll = document.getElementById('selectAll');
-    if (selectAll) {
-        selectAll.addEventListener('change', function() {
-            const checkboxes = document.querySelectorAll('#participantsTable tbody input[type="checkbox"]');
-            checkboxes.forEach(checkbox => {
-                checkbox.checked = this.checked;
-                if (this.checked) {
-                    if (!selectedParticipants.includes(parseInt(checkbox.value))) {
-                        selectedParticipants.push(parseInt(checkbox.value));
-                    }
-                } else {
-                    selectedParticipants = [];
-                }
-            });
-            console.log('Participants sélectionnés mis à jour:', selectedParticipants);
-        });
-    }
 }
 
 // Fonction debounce pour éviter trop de sauvegardes
@@ -394,96 +337,7 @@ function calculateDuration() {
     }
 }
 
-// Charger les participants du service sélectionné
-function loadParticipants() {
-    const serviceSelect = document.getElementById('serviceId');
-    const participantsTable = document.getElementById('participantsTable');
-    
-    if (!serviceSelect || !participantsTable) {
-        console.error('Éléments de participants non trouvés');
-        return;
-    }
-    
-    const serviceId = serviceSelect.value;
-    if (!serviceId) {
-        const tbody = participantsTable.querySelector('tbody');
-        if (tbody) {
-            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Veuillez d\'abord sélectionner un service</td></tr>';
-        }
-        return;
-    }
-    
-    fetch(`/api/users-by-service/${serviceId}`)
-        .then(response => response.json())
-        .then(data => {
-            participants = data;
-            // Ne pas réinitialiser selectedParticipants ici
-            renderParticipantsTable();
-        })
-        .catch(error => {
-            console.error('Erreur lors du chargement des participants:', error);
-            const tbody = participantsTable.querySelector('tbody');
-            if (tbody) {
-                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Erreur lors du chargement des participants</td></tr>';
-            }
-        });
-}
 
-// Afficher le tableau des participants
-function renderParticipantsTable() {
-    const participantsTable = document.getElementById('participantsTable');
-    if (!participantsTable) {
-        console.error('Tableau des participants non trouvé');
-        return;
-    }
-    
-    const tbody = participantsTable.querySelector('tbody');
-    if (!tbody) {
-        console.error('Tbody du tableau des participants non trouvé');
-        return;
-    }
-    
-    tbody.innerHTML = '';
-    
-    if (participants.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Aucun participant trouvé</td></tr>';
-        return;
-    }
-    
-    participants.forEach(participant => {
-        const row = document.createElement('tr');
-        row.style.cursor = 'pointer';
-        row.innerHTML = `
-            <td>
-                <input type="checkbox" class="form-check-input" value="${participant.id}" onchange="handleParticipantSelection(this)">
-            </td>
-            <td>${participant.matricule || '-'}</td>
-            <td>${participant.nom}</td>
-            <td>${participant.prenom}</td>
-            <td>${participant.email}</td>
-        `;
-        tbody.appendChild(row);
-        
-        // Permettre de cliquer sur la ligne pour cocher
-        row.addEventListener('click', function(e) {
-            if (e.target.type !== 'checkbox') {
-                const checkbox = row.querySelector('input[type="checkbox"]');
-                if (checkbox) {
-                    checkbox.checked = !checkbox.checked;
-                    handleParticipantSelection(checkbox);
-                }
-            }
-        });
-    });
-    
-    // Appliquer les sélections sauvegardées si on est en mode restauration
-    if (selectedParticipants.length > 0) {
-        console.log('Application des sélections sauvegardées:', selectedParticipants);
-        document.querySelectorAll('#participantsTable tbody input[type="checkbox"]').forEach(checkbox => {
-            checkbox.checked = selectedParticipants.includes(parseInt(checkbox.value));
-        });
-    }
-}
 
 // Permettre la navigation directe vers une étape en cliquant sur les indicateurs
 document.addEventListener('click', function(e) {
@@ -497,32 +351,6 @@ document.addEventListener('click', function(e) {
     }
 });
 
-// Gérer la sélection d'un participant
-function handleParticipantSelection(checkbox) {
-    const userId = parseInt(checkbox.value);
-    if (checkbox.checked) {
-        if (!selectedParticipants.includes(userId)) {
-            selectedParticipants.push(userId);
-        }
-    } else {
-        selectedParticipants = selectedParticipants.filter(id => id !== userId);
-    }
-    console.log('Participants sélectionnés mis à jour:', selectedParticipants);
-}
-
-// Mettre à jour la liste des participants sélectionnés
-function updateSelectedParticipants() {
-    selectedParticipants = [];
-    document.querySelectorAll('#participantsTable tbody input[type="checkbox"]:checked').forEach(checkbox => {
-        selectedParticipants.push(parseInt(checkbox.value));
-    });
-    console.log('Participants sélectionnés mis à jour:', selectedParticipants);
-    
-    // Mettre à jour le récapitulatif si on est à la dernière étape
-    if (currentStep === totalSteps) {
-        generateRecap();
-    }
-}
 
 
 
@@ -711,9 +539,7 @@ function nextStep() {
             updateStepDisplay();
             
             // Actions spécifiques à chaque étape
-            if (currentStep === 2) {
-                loadParticipants();
-            } else if (currentStep === 5) {
+            if (currentStep === 4) {
                 generateRecap();
             }
         }
@@ -737,8 +563,6 @@ function validateCurrentStep() {
             return validateStep2();
         case 3:
             return validateStep3();
-        case 4:
-            return validateStep4();
         default:
             return true;
     }
@@ -768,17 +592,8 @@ function validateStep1() {
     return true;
 }
 
-// Valider l'étape 2
+// Valider l'étape 2 (Budget)
 function validateStep2() {
-    if (selectedParticipants.length === 0) {
-        showToast('Veuillez sélectionner au moins un participant', 'error');
-        return false;
-    }
-    return true;
-}
-
-// Valider l'étape 3
-function validateStep3() {
     const validDepenses = Object.values(depenses).filter(d => d.categorieId && d.montant > 0);
     if (validDepenses.length === 0) {
         showToast('Veuillez ajouter au moins une dépense valide.', 'error');
@@ -787,8 +602,8 @@ function validateStep3() {
     return true;
 }
 
-// Valider l'étape 4
-function validateStep4() {
+// Valider l'étape 3 (Documents)
+function validateStep3() {
     // Les documents et notes sont optionnels
     return true;
 }
@@ -835,8 +650,8 @@ function updateStepDisplay() {
     if (nextBtn) nextBtn.style.display = currentStep === totalSteps ? 'none' : 'block';
     if (submitBtn) submitBtn.style.display = currentStep === totalSteps ? 'block' : 'none';
     
-    // Initialiser le tableau des dépenses si on arrive à l'étape 3 et qu'il est vide
-    if (currentStep === 3) {
+    // Initialiser le tableau des dépenses si on arrive à l'étape 2 et qu'il est vide
+    if (currentStep === 2) {
         setTimeout(() => {
             const tbody = document.getElementById('depensesTable').querySelector('tbody');
             if (tbody && tbody.children.length === 0) {
@@ -845,8 +660,8 @@ function updateStepDisplay() {
         }, 100);
     }
     
-    // Initialiser le tableau des documents si on arrive à l'étape 4 et qu'il est vide
-    if (currentStep === 4) {
+    // Initialiser le tableau des documents si on arrive à l'étape 3 et qu'il est vide
+    if (currentStep === 3) {
         setTimeout(() => {
             const tbody = document.getElementById('documentsTable').querySelector('tbody');
             if (tbody && tbody.children.length === 0) {
@@ -864,13 +679,6 @@ function generateRecap() {
         return;
     }
     
-    // Recalculer le nombre de participants sélectionnés
-    const selectedParticipantsCount = document.querySelectorAll('#participantsTable tbody input[type="checkbox"]:checked').length;
-    let finalParticipantsCount = selectedParticipantsCount;
-    if (selectedParticipantsCount === 0) {
-        // Utiliser la variable si le calcul direct est vide
-        finalParticipantsCount = selectedParticipants.length;
-    }
     
     // Recalculer le nombre de documents
     const documentsCount = Object.keys(documents).filter(key => documents[key] && (documents[key].nom || documents[key].file)).length;
@@ -896,7 +704,6 @@ function generateRecap() {
         duree: dureeField ? dureeField.value : '',
         budget: budgetField ? budgetField.value : '0',
         description: descField ? descField.value : '',
-        participants: finalParticipantsCount,
         notes: notesField ? notesField.value : ''
     };
     
@@ -915,9 +722,6 @@ function generateRecap() {
                 </table>
             </div>
             <div class="col-md-6">
-                <h5>Participants</h5>
-                <p><strong>Nombre de participants:</strong> ${formationData.participants}</p>
-                
                 <h5>Description</h5>
                 <p>${formationData.description || 'Aucune description'}</p>
                 
@@ -980,7 +784,6 @@ document.getElementById('formationForm').addEventListener('submit', function(e) 
         dureePrevue: getFieldValue('dureePrevue'),
         budgetPrevu: getFieldValue('budgetPrevu') || '0',
         description: getFieldValue('description'),
-        participants: selectedParticipants || [],
         depenses: [],
         notes: getFieldValue('notes')
     };

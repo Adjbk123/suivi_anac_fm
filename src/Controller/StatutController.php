@@ -77,73 +77,76 @@ class StatutController extends AbstractController
         return $this->json($data);
     }
 
-    #[Route('/activite/new', name: 'app_statut_activite_new', methods: ['POST'])]
-    public function newActivite(Request $request, EntityManagerInterface $entityManager): JsonResponse
-    {
-        $data = json_decode($request->getContent(), true);
-        
-        $statut = new StatutActivite();
-        $statut->setCode($data['code']);
-        $statut->setLibelle($data['libelle']);
-        $statut->setDescription($data['description'] ?? null);
-        $statut->setCouleur($data['couleur']);
-        
-        $entityManager->persist($statut);
-        $entityManager->flush();
-        
-        return $this->json([
-            'success' => true,
-            'message' => 'Statut d\'activité créé avec succès',
-            'statut' => [
-                'id' => $statut->getId(),
-                'code' => $statut->getCode(),
-                'libelle' => $statut->getLibelle()
-            ]
-        ]);
-    }
+    // DÉSACTIVÉ : Les statuts d'activité sont configurés une fois pour toutes
+    // #[Route('/activite/new', name: 'app_statut_activite_new', methods: ['POST'])]
+    // public function newActivite(Request $request, EntityManagerInterface $entityManager): JsonResponse
+    // {
+    //     $data = json_decode($request->getContent(), true);
+    //     
+    //     $statut = new StatutActivite();
+    //     $statut->setCode($data['code']);
+    //     $statut->setLibelle($data['libelle']);
+    //     $statut->setDescription($data['description'] ?? null);
+    //     $statut->setCouleur($data['couleur']);
+    //     
+    //     $entityManager->persist($statut);
+    //     $entityManager->flush();
+    //     
+    //     return $this->json([
+    //         'success' => true,
+    //         'message' => 'Statut d\'activité créé avec succès',
+    //         'statut' => [
+    //             'id' => $statut->getId(),
+    //             'code' => $statut->getCode(),
+    //             'libelle' => $statut->getLibelle()
+    //         ]
+    //     ]);
+    // }
 
-    #[Route('/participation/new', name: 'app_statut_participation_new', methods: ['POST'])]
-    public function newParticipation(Request $request, EntityManagerInterface $entityManager): JsonResponse
-    {
-        $data = json_decode($request->getContent(), true);
-        
-        $statut = new StatutParticipation();
-        $statut->setCode($data['code']);
-        $statut->setLibelle($data['libelle']);
-        $statut->setDescription($data['description'] ?? null);
-        $statut->setCouleur($data['couleur']);
-        
-        $entityManager->persist($statut);
-        $entityManager->flush();
-        
-        return $this->json([
-            'success' => true,
-            'message' => 'Statut de participation créé avec succès',
-            'statut' => [
-                'id' => $statut->getId(),
-                'code' => $statut->getCode(),
-                'libelle' => $statut->getLibelle()
-            ]
-        ]);
-    }
+    // DÉSACTIVÉ : Les statuts de participation sont configurés une fois pour toutes
+    // #[Route('/participation/new', name: 'app_statut_participation_new', methods: ['POST'])]
+    // public function newParticipation(Request $request, EntityManagerInterface $entityManager): JsonResponse
+    // {
+    //     $data = json_decode($request->getContent(), true);
+    //     
+    //     $statut = new StatutParticipation();
+    //     $statut->setCode($data['code']);
+    //     $statut->setLibelle($data['libelle']);
+    //     $statut->setDescription($data['description'] ?? null);
+    //     $statut->setCouleur($data['couleur']);
+    //     
+    //     $entityManager->persist($statut);
+    //     $entityManager->flush();
+    //     
+    //     return $this->json([
+    //         'success' => true,
+    //         'message' => 'Statut de participation créé avec succès',
+    //         'statut' => [
+    //             'id' => $statut->getId(),
+    //             'code' => $statut->getCode(),
+    //             'libelle' => $statut->getLibelle()
+    //         ]
+    //     ]);
+    // }
 
-    #[Route('/activite/{id}', name: 'app_statut_activite_delete', methods: ['DELETE'])]
-    public function deleteActivite(StatutActivite $statut, EntityManagerInterface $entityManager): JsonResponse
-    {
-        // Vérifier si le statut d'activité est utilisé
-        if ($statut->isUsed()) {
-            return $this->json([
-                'success' => false,
-                'message' => 'Impossible de supprimer ce statut d\'activité car il est utilisé dans des missions ou formations'
-            ], 400);
-        }
-        
-        $entityManager->remove($statut);
-        $entityManager->flush();
-        
-        return $this->json([
-            'success' => true,
-            'message' => 'Statut d\'activité supprimé avec succès'
-        ]);
-    }
+    // DÉSACTIVÉ : Les statuts d'activité ne peuvent pas être supprimés car ils sont configurés une fois pour toutes
+    // #[Route('/activite/{id}', name: 'app_statut_activite_delete', methods: ['DELETE'])]
+    // public function deleteActivite(StatutActivite $statut, EntityManagerInterface $entityManager): JsonResponse
+    // {
+    //     // Vérifier si le statut d'activité est utilisé
+    //     if ($statut->isUsed()) {
+    //         return $this->json([
+    //             'success' => false,
+    //             'message' => 'Impossible de supprimer ce statut d\'activité car il est utilisé dans des missions ou formations'
+    //         ], 400);
+    //     }
+    //     
+    //     $entityManager->remove($statut);
+    //     $entityManager->flush();
+    //     
+    //     return $this->json([
+    //         'success' => true,
+    //         'message' => 'Statut d\'activité supprimé avec succès'
+    //     ]);
+    // }
 }

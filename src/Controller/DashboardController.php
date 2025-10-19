@@ -8,6 +8,8 @@ use App\Repository\UserRepository;
 use App\Repository\ServiceRepository;
 use App\Repository\StatutActiviteRepository;
 use App\Repository\StatutParticipationRepository;
+use App\Service\RoleService;
+use App\Service\PerformanceService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
@@ -23,16 +25,17 @@ class DashboardController extends AbstractController
         ServiceRepository $serviceRepository,
         StatutActiviteRepository $statutActiviteRepository,
         StatutParticipationRepository $statutParticipationRepository,
-        EntityManagerInterface $entityManager
+        EntityManagerInterface $entityManager,
+        RoleService $roleService,
+        PerformanceService $performanceService
     ): Response {
         $currentYear = date('Y');
+        $user = $this->getUser();
         
         // Statistiques générales pour l'année en cours
         $stats = [
             'total_formations' => $formationRepository->countByYear($currentYear),
             'total_missions' => $missionRepository->countByYear($currentYear),
-            'total_users' => $userRepository->count([]),
-            'total_services' => $serviceRepository->count([]),
             'formations_executees' => $formationRepository->countExecutedByYear($currentYear),
             'missions_executees' => $missionRepository->countExecutedByYear($currentYear),
             'formations_prevues' => $formationRepository->countPlannedByYear($currentYear),
@@ -42,6 +45,12 @@ class DashboardController extends AbstractController
             'depenses_reelles_formations' => $formationRepository->getTotalRealExpensesByYear($currentYear),
             'depenses_reelles_missions' => $missionRepository->getTotalRealExpensesByYear($currentYear),
         ];
+        
+        // Ajouter des statistiques spécifiques selon le rôle
+        if ($roleService->isAdmin()) {
+            $stats['total_users'] = $userRepository->count([]);
+            $stats['total_services'] = $serviceRepository->count([]);
+        }
         
         // Données pour les graphiques mensuels
         $monthlyData = [
@@ -70,6 +79,9 @@ class DashboardController extends AbstractController
         $userParticipationFormations = $formationRepository->getUserParticipationStats($currentYear);
         $userParticipationMissions = $missionRepository->getUserParticipationStats($currentYear);
         
+        // Récupérer les données de performance
+        $performanceData = $performanceService->getGlobalPerformance($currentYear);
+        
         return $this->render('dashboard/index.html.twig', [
             'stats' => $stats,
             'monthlyData' => $monthlyData,
@@ -84,6 +96,11 @@ class DashboardController extends AbstractController
             'executionRateMissions' => $executionRateMissions,
             'userParticipationFormations' => $userParticipationFormations,
             'userParticipationMissions' => $userParticipationMissions,
+            'userRole' => $user->getRoles()[0] ?? 'ROLE_USER',
+            'isAdmin' => $roleService->isAdmin(),
+            'isDirecteur' => $roleService->isDirecteur(),
+            'isEditeur' => $roleService->isEditeur(),
+            'performanceData' => $performanceData,
         ]);
     }
 }

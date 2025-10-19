@@ -27,46 +27,84 @@ class ServiceController extends AbstractController
     #[Route('/list', name: 'app_service_list', methods: ['GET'])]
     public function list(ServiceRepository $serviceRepository): JsonResponse
     {
-        $services = $serviceRepository->findAllWithDirection();
-        
-        $data = [];
-        foreach ($services as $service) {
-            $data[] = [
-                'id' => $service->getId(),
-                'libelle' => $service->getLibelle(),
-                'description' => $service->getDescription(),
-                'direction' => $service->getDirection() ? $service->getDirection()->getLibelle() : '-',
-                'direction_id' => $service->getDirection() ? $service->getDirection()->getId() : null,
-                'isUsed' => $service->isUsed()
-            ];
+        try {
+            $services = $serviceRepository->findAllWithDirection();
+            
+            $data = [];
+            foreach ($services as $service) {
+                // Vérifier si le service est utilisé de manière sécurisée
+                $isUsed = false;
+                try {
+                    $isUsed = $service->isUsed();
+                } catch (\Exception $e) {
+                    // En cas d'erreur, considérer comme non utilisé
+                    $isUsed = false;
+                }
+                
+                $data[] = [
+                    'id' => $service->getId(),
+                    'libelle' => $service->getLibelle(),
+                    'description' => $service->getDescription(),
+                    'direction' => $service->getDirection() ? $service->getDirection()->getLibelle() : '-',
+                    'direction_id' => $service->getDirection() ? $service->getDirection()->getId() : null,
+                    'isUsed' => $isUsed
+                ];
+            }
+            
+            return $this->json($data);
+            
+        } catch (\Exception $e) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Erreur lors du chargement des services: ' . $e->getMessage()
+            ], 500);
         }
-        
-        return $this->json($data);
     }
 
     #[Route('/new', name: 'app_service_new', methods: ['POST'])]
     public function new(Request $request, EntityManagerInterface $entityManager, DirectionRepository $directionRepository): JsonResponse
     {
-        $data = json_decode($request->getContent(), true);
-        
-        if (!$data || !isset($data['libelle']) || !isset($data['direction_id'])) {
-            return $this->json(['success' => false, 'message' => 'Données manquantes'], 400);
+        try {
+            $data = json_decode($request->getContent(), true);
+            
+            if (!$data) {
+                return $this->json(['success' => false, 'message' => 'Données JSON invalides'], 400);
+            }
+            
+            // Validation des champs requis
+            if (!isset($data['libelle']) || empty(trim($data['libelle']))) {
+                return $this->json(['success' => false, 'message' => 'Le libellé est requis'], 400);
+            }
+            
+            if (!isset($data['direction_id']) || empty($data['direction_id'])) {
+                return $this->json(['success' => false, 'message' => 'La direction est requise'], 400);
+            }
+            
+            $direction = $directionRepository->find($data['direction_id']);
+            if (!$direction) {
+                return $this->json(['success' => false, 'message' => 'Direction introuvable'], 404);
+            }
+            
+            $service = new Service();
+            $service->setLibelle(trim($data['libelle']));
+            $service->setDescription(isset($data['description']) ? trim($data['description']) : '');
+            $service->setDirection($direction);
+            
+            $entityManager->persist($service);
+            $entityManager->flush();
+            
+            return $this->json([
+                'success' => true, 
+                'message' => 'Service créé avec succès',
+                'serviceId' => $service->getId()
+            ]);
+            
+        } catch (\Exception $e) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Erreur lors de la création du service: ' . $e->getMessage()
+            ], 500);
         }
-        
-        $direction = $directionRepository->find($data['direction_id']);
-        if (!$direction) {
-            return $this->json(['success' => false, 'message' => 'Direction introuvable'], 404);
-        }
-        
-        $service = new Service();
-        $service->setLibelle($data['libelle']);
-        $service->setDescription($data['description'] ?? '');
-        $service->setDirection($direction);
-        
-        $entityManager->persist($service);
-        $entityManager->flush();
-        
-        return $this->json(['success' => true, 'message' => 'Service créé avec succès']);
     }
 
     #[Route('/{id}', name: 'app_service_show', methods: ['GET'])]
@@ -83,41 +121,74 @@ class ServiceController extends AbstractController
     #[Route('/{id}', name: 'app_service_edit', methods: ['PUT'])]
     public function edit(Request $request, Service $service, EntityManagerInterface $entityManager, DirectionRepository $directionRepository): JsonResponse
     {
-        $data = json_decode($request->getContent(), true);
-        
-        if (!$data || !isset($data['libelle']) || !isset($data['direction_id'])) {
-            return $this->json(['success' => false, 'message' => 'Données manquantes'], 400);
+        try {
+            $data = json_decode($request->getContent(), true);
+            
+            if (!$data) {
+                return $this->json(['success' => false, 'message' => 'Données JSON invalides'], 400);
+            }
+            
+            // Validation des champs requis
+            if (!isset($data['libelle']) || empty(trim($data['libelle']))) {
+                return $this->json(['success' => false, 'message' => 'Le libellé est requis'], 400);
+            }
+            
+            if (!isset($data['direction_id']) || empty($data['direction_id'])) {
+                return $this->json(['success' => false, 'message' => 'La direction est requise'], 400);
+            }
+            
+            $direction = $directionRepository->find($data['direction_id']);
+            if (!$direction) {
+                return $this->json(['success' => false, 'message' => 'Direction introuvable'], 404);
+            }
+            
+            $service->setLibelle(trim($data['libelle']));
+            $service->setDescription(isset($data['description']) ? trim($data['description']) : '');
+            $service->setDirection($direction);
+            
+            $entityManager->flush();
+            
+            return $this->json(['success' => true, 'message' => 'Service modifié avec succès']);
+            
+        } catch (\Exception $e) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Erreur lors de la modification du service: ' . $e->getMessage()
+            ], 500);
         }
-        
-        $direction = $directionRepository->find($data['direction_id']);
-        if (!$direction) {
-            return $this->json(['success' => false, 'message' => 'Direction introuvable'], 404);
-        }
-        
-        $service->setLibelle($data['libelle']);
-        $service->setDescription($data['description'] ?? '');
-        $service->setDirection($direction);
-        
-        $entityManager->flush();
-        
-        return $this->json(['success' => true, 'message' => 'Service modifié avec succès']);
     }
 
     #[Route('/{id}', name: 'app_service_delete', methods: ['DELETE'])]
     public function delete(Service $service, EntityManagerInterface $entityManager): JsonResponse
     {
-        // Vérifier si le service est utilisé
-        if ($service->isUsed()) {
+        try {
+            // Vérifier si le service est utilisé de manière sécurisée
+            $isUsed = false;
+            try {
+                $isUsed = $service->isUsed();
+            } catch (\Exception $e) {
+                // En cas d'erreur, considérer comme non utilisé pour permettre la suppression
+                $isUsed = false;
+            }
+            
+            if ($isUsed) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Impossible de supprimer ce service car il est utilisé dans des missions ou formations'
+                ], 400);
+            }
+            
+            $entityManager->remove($service);
+            $entityManager->flush();
+            
+            return $this->json(['success' => true, 'message' => 'Service supprimé avec succès']);
+            
+        } catch (\Exception $e) {
             return $this->json([
                 'success' => false,
-                'message' => 'Impossible de supprimer ce service car il est utilisé dans des missions ou formations'
-            ], 400);
+                'message' => 'Erreur lors de la suppression du service: ' . $e->getMessage()
+            ], 500);
         }
-        
-        $entityManager->remove($service);
-        $entityManager->flush();
-        
-        return $this->json(['success' => true, 'message' => 'Service supprimé avec succès']);
     }
 
     #[Route('/directions/list', name: 'app_service_directions_list', methods: ['GET'])]
