@@ -24,13 +24,17 @@ class Direction
     #[ORM\OneToMany(mappedBy: 'direction', targetEntity: Service::class)]
     private Collection $services;
 
-    #[ORM\OneToMany(mappedBy: 'direction', targetEntity: Mission::class)]
+    #[ORM\OneToMany(mappedBy: 'direction', targetEntity: MissionSession::class)]
     private Collection $missions;
+
+    #[ORM\OneToMany(mappedBy: 'direction', targetEntity: FormationSession::class)]
+    private Collection $formationSessions;
 
     public function __construct()
     {
         $this->services = new ArrayCollection();
         $this->missions = new ArrayCollection();
+        $this->formationSessions = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -93,14 +97,14 @@ class Direction
     }
 
     /**
-     * @return Collection<int, Mission>
+     * @return Collection<int, MissionSession>
      */
     public function getMissions(): Collection
     {
         return $this->missions;
     }
 
-    public function addMission(Mission $mission): static
+    public function addMission(MissionSession $mission): static
     {
         if (!$this->missions->contains($mission)) {
             $this->missions->add($mission);
@@ -110,7 +114,7 @@ class Direction
         return $this;
     }
 
-    public function removeMission(Mission $mission): static
+    public function removeMission(MissionSession $mission): static
     {
         if ($this->missions->removeElement($mission)) {
             // set the owning side to null (unless already changed)
@@ -123,10 +127,40 @@ class Direction
     }
 
     /**
+     * @return Collection<int, FormationSession>
+     */
+    public function getFormationSessions(): Collection
+    {
+        return $this->formationSessions;
+    }
+
+    public function addFormationSession(FormationSession $formationSession): static
+    {
+        if (!$this->formationSessions->contains($formationSession)) {
+            $this->formationSessions->add($formationSession);
+            $formationSession->setDirection($this);
+        }
+
+        return $this;
+    }
+
+    public function removeFormationSession(FormationSession $formationSession): static
+    {
+        if ($this->formationSessions->removeElement($formationSession)) {
+            // set the owning side to null (unless already changed)
+            if ($formationSession->getDirection() === $this) {
+                $formationSession->setDirection(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
      * Vérifie si cette direction est utilisée
      */
     public function isUsed(): bool
     {
-        return !$this->services->isEmpty() || !$this->missions->isEmpty();
+        return !$this->services->isEmpty() || !$this->missions->isEmpty() || !$this->formationSessions->isEmpty();
     }
 }

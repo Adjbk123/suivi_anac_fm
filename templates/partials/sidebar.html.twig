@@ -93,25 +93,25 @@
 				</a>
 				<div class="menu-submenu">
 					{% if can_create_formation() %}
+					<div class="menu-item {% if app.current_route=="app_formation_modele_create" %}active{% endif %}">
+						<a href="{{ path('app_formation_modele_create') }}" class="menu-link">
+							<span class="menu-text">Ajouter une formation</span>
+						</a>
+					</div>
 					<div class="menu-item {% if app.current_route=="app_formation_create" %}active{% endif %}">
 						<a href="{{ path('app_formation_create') }}" class="menu-link">
-							<span class="menu-text">Ajouter</span>
+							<span class="menu-text">Ajouter une session de formation</span>
 						</a>
 					</div>
 					{% endif %}
+					<div class="menu-item {% if app.current_route=="app_formation_modele_index" %}active{% endif %}">
+						<a href="{{ path('app_formation_modele_index') }}" class="menu-link">
+							<span class="menu-text">Liste des formations</span>
+						</a>
+					</div>
 					<div class="menu-item {% if app.current_route=="app_formation_index" %}active{% endif %}">
 						<a href="{{ path('app_formation_index') }}" class="menu-link">
-							<span class="menu-text">Toutes les formations</span>
-						</a>
-					</div>
-					<div class="menu-item {% if app.current_route=="app_formation_planned" %}active{% endif %}">
-						<a href="{{ path('app_formation_planned') }}" class="menu-link">
-							<span class="menu-text">Formations prévues</span>
-						</a>
-					</div>
-					<div class="menu-item {% if app.current_route=="app_formation_executed" %}active{% endif %}">
-						<a href="{{ path('app_formation_executed') }}" class="menu-link">
-							<span class="menu-text">Formations exécutées</span>
+							<span class="menu-text">Liste des sessions de formation</span>
 						</a>
 					</div>
 				</div>
@@ -125,16 +125,26 @@
 					<span class="menu-caret"><b class="caret"></b></span>
 				</a>
 				<div class="menu-submenu">
-					{% if can_create_formation() %}
+					{% if can_create_mission() %}
+					<div class="menu-item {% if app.current_route=="app_mission_modele_create" %}active{% endif %}">
+						<a href="{{ path('app_mission_modele_create') }}" class="menu-link">
+							<span class="menu-text">Ajouter une mission</span>
+						</a>
+					</div>
 					<div class="menu-item {% if app.current_route=="app_mission_create" %}active{% endif %}">
 						<a href="{{ path('app_mission_create') }}" class="menu-link">
-							<span class="menu-text">Ajouter</span>
+							<span class="menu-text">Ajouter une session de mission</span>
 						</a>
 					</div>
 					{% endif %}
+					<div class="menu-item {% if app.current_route=="app_mission_modele_index" %}active{% endif %}">
+						<a href="{{ path('app_mission_modele_index') }}" class="menu-link">
+							<span class="menu-text">Liste des missions</span>
+						</a>
+					</div>
 					<div class="menu-item {% if app.current_route=="app_mission_index" %}active{% endif %}">
 						<a href="{{ path('app_mission_index') }}" class="menu-link">
-							<span class="menu-text">Toutes les missions</span>
+							<span class="menu-text">Liste des sessions de mission</span>
 						</a>
 					</div>
 					<div class="menu-item {% if app.current_route=="app_mission_planned" %}active{% endif %}">
@@ -160,6 +170,19 @@
 			</div>
 			{% endif %}
 
+			<div class="menu-header">Mon compte</div>
+			<div class="menu-item {% if app.current_route == 'app_profile' %}active{% endif %}">
+				<a href="{{ path('app_profile') }}" class="menu-link">
+					<span class="menu-icon"><i class="fa fa-user-circle"></i></span>
+					<span class="menu-text">Mon profil</span>
+				</a>
+			</div>
+			<div class="menu-item">
+				<a href="{{ path('app_logout') }}" class="menu-link" id="logout-link">
+					<span class="menu-icon"><i class="fa fa-sign-out-alt"></i></span>
+					<span class="menu-text">Déconnexion</span>
+				</a>
+			</div>
 			
 		</div>
 		<!-- END menu -->
@@ -260,3 +283,39 @@
     }
 }
 </style>
+
+<!-- SweetAlert2 CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+
+<!-- SweetAlert2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const logoutLink = document.getElementById('logout-link');
+    
+    if (logoutLink) {
+        logoutLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            const logoutUrl = this.getAttribute('href');
+            
+            Swal.fire({
+                title: 'Déconnexion',
+                text: 'Êtes-vous sûr de vouloir vous déconnecter ?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#14517E',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Oui, me déconnecter',
+                cancelButtonText: 'Annuler',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = logoutUrl;
+                }
+            });
+        });
+    }
+});
+</script>

@@ -11,14 +11,14 @@
 
 {% block page_title %}
 <h1 class="page-header">
-	Nouvelle Mission <small>Création d'une nouvelle mission</small>
+	Créer une Mission <small>Planification d'une nouvelle mission</small>
 </h1>
 {% endblock %}
 
 {% block buttons %}
 <div class="d-flex gap-2">
-	<a href="{{ path('app_mission_index') }}" class="btn btn-secondary btn-sm">
-		<i class="fa fa-arrow-left"></i> Retour
+	<a href="{{ path('app_mission_index') }}" class="btn btn-outline-secondary btn-sm">
+		<i class="fa fa-arrow-left"></i> Retour à la liste
 	</a>
 </div>
 {% endblock %}
@@ -28,37 +28,52 @@
 	<div class="col-xl-12">
 		<div class="card">
 			<div class="card-body">
-				<!-- Étapes de progression -->
 				<div class="mb-4">
 					<div class="progress" style="height: 4px;">
 						<div class="progress-bar" id="progressBar" role="progressbar" style="width: 20%;" aria-valuenow="20" aria-valuemin="0" aria-valuemax="100"></div>
 					</div>
 					<div class="d-flex justify-content-between mt-2">
 						<span class="step-indicator active" data-step="1">1. Informations générales</span>
-						<span class="step-indicator" data-step="2">2. Budget</span>
-						<span class="step-indicator" data-step="3">3. Documents</span>
-						<span class="step-indicator" data-step="4">4. Récapitulatif</span>
+						<span class="step-indicator" data-step="2">2. Participants</span>
+						<span class="step-indicator" data-step="3">3. Budget</span>
+						<span class="step-indicator" data-step="4">4. Documents & notes</span>
+						<span class="step-indicator" data-step="5">5. Récapitulatif</span>
 					</div>
 				</div>
 
-				<form id="missionCreateForm">
-					<!-- Étape 1: Informations générales -->
-					<div id="step1" class="step-content">
-						<h4 class="mb-3"><i class="fa fa-info-circle text-primary"></i> Informations générales</h4>
-						
+				<div class="alert alert-secondary d-flex align-items-center gap-2 mb-4" role="alert">
+					<i class="fa fa-lightbulb text-warning"></i>
+					<div>
+						Sélectionnez d’abord un modèle de mission, puis complétez les informations propres à cette session. Vous pourrez enrichir le budget, les participants et les documents après la création depuis la fiche mission.
+					</div>
+				</div>
+
+				<form id="missionForm" novalidate>
+					<input type="hidden" id="missionId" name="missionId">
+					<input type="hidden" id="dureePrevue" name="dureePrevue" value="">
+					<input type="hidden" id="budgetPrevu" name="budgetPrevu" value="0">
+
+					<div class="step-content" id="step1">
+						<h4 class="mb-3"><i class="fa fa-info-circle text-primary"></i> Informations générales de la mission</h4>
+
 						<div class="row">
 							<div class="col-md-6">
 								<div class="mb-3">
-									<label for="titre" class="form-label">Titre de la mission *</label>
-									<input type="text" class="form-control" id="titre" name="titre" required placeholder="Ex: Mission d'audit sécurité">
+									<label for="missionModeleId" class="form-label">Mission concernée <span class="text-danger">*</span></label>
+									<select class="form-select" id="missionModeleId" required>
+										<option value="">Sélectionner un modèle</option>
+									</select>
+									<div class="form-text text-muted">Les missions modèles existantes sont proposées. Créez un modèle si nécessaire avant de planifier la session.</div>
+									<div class="invalid-feedback">Veuillez sélectionner un modèle de mission.</div>
 								</div>
 							</div>
 							<div class="col-md-6">
 								<div class="mb-3">
-									<label for="directionId" class="form-label">Direction responsable *</label>
-									<select class="form-select" id="directionId" name="directionId" required>
+									<label for="directionId" class="form-label">Direction responsable <span class="text-danger">*</span></label>
+									<select class="form-select" id="directionId" required>
 										<option value="">Choisir une direction</option>
 									</select>
+									<div class="invalid-feedback">Veuillez sélectionner une direction.</div>
 								</div>
 							</div>
 						</div>
@@ -66,16 +81,18 @@
 						<div class="row">
 							<div class="col-md-6">
 								<div class="mb-3">
-									<label for="fondsId" class="form-label">Fonds *</label>
-									<select class="form-select" id="fondsId" name="fondsId" required>
+									<label for="fondsId" class="form-label">Type de fonds <span class="text-danger">*</span></label>
+									<select class="form-select" id="fondsId" required>
 										<option value="">Choisir le type de fonds</option>
 									</select>
+									<div class="invalid-feedback">Veuillez sélectionner le type de fonds.</div>
 								</div>
 							</div>
 							<div class="col-md-6">
 								<div class="mb-3">
-									<label for="lieuPrevu" class="form-label">Lieu prévu *</label>
-									<input type="text" class="form-control" id="lieuPrevu" name="lieuPrevu" required placeholder="Ex: Cotonou, Bénin">
+									<label for="lieuPrevu" class="form-label">Lieu prévu <span class="text-danger">*</span></label>
+									<input type="text" class="form-control" id="lieuPrevu" placeholder="Ex.: Cotonou, Bénin" required>
+									<div class="invalid-feedback">Le lieu prévu est requis.</div>
 								</div>
 							</div>
 						</div>
@@ -83,33 +100,65 @@
 						<div class="row">
 							<div class="col-md-6">
 								<div class="mb-3">
-									<label for="datePrevueDebut" class="form-label">Date de début *</label>
-									<input type="date" class="form-control" id="datePrevueDebut" name="datePrevueDebut" required>
+									<label for="datePrevueDebut" class="form-label">Date de début <span class="text-danger">*</span></label>
+									<input type="date" class="form-control" id="datePrevueDebut" required>
+									<div class="invalid-feedback">Veuillez choisir une date de début.</div>
 								</div>
 							</div>
 							<div class="col-md-6">
 								<div class="mb-3">
-									<label for="datePrevueFin" class="form-label">Date de fin *</label>
-									<input type="date" class="form-control" id="datePrevueFin" name="datePrevueFin" required>
+									<label for="datePrevueFin" class="form-label">Date de fin <span class="text-danger">*</span></label>
+									<input type="date" class="form-control" id="datePrevueFin" required>
+									<div class="invalid-feedback">Veuillez choisir une date de fin postérieure.</div>
 								</div>
 							</div>
 						</div>
 
-						<input type="hidden" id="dureePrevue" name="dureePrevue">
-						<input type="hidden" id="budgetPrevu" name="budgetPrevu">
-
 						<div class="mb-3">
-							<label for="description" class="form-label">Description</label>
-							<textarea class="form-control" id="description" name="description" rows="4" placeholder="Détails de la mission..."></textarea>
+							<label for="description" class="form-label">Description / objectifs</label>
+							<textarea class="form-control" id="description" rows="3" placeholder="Objectifs spécifiques de cette mission..."></textarea>
 						</div>
 					</div>
 
+					<div class="step-content d-none" id="step2">
+						<h4 class="mb-3"><i class="fa fa-users text-primary"></i> Participants prévus</h4>
 
-					<!-- Étape 2: Budget prévisionnel -->
-					<div id="step2" class="step-content" style="display: none;">
+						<div class="alert alert-info mb-3">
+							<i class="fa fa-info-circle me-2"></i>
+							Sélectionnez les collaborateurs de la direction responsable qui participeront à cette mission. Vous pourrez ajouter d’autres participants plus tard.
+						</div>
+
+						<div class="table-responsive">
+							<table class="table table-hover align-middle" id="participantsTable">
+								<thead class="table-secondary">
+									<tr>
+										<th width="60">Sélection</th>
+										<th>Nom &amp; prénom</th>
+										<th>Email</th>
+										<th>Service</th>
+									</tr>
+								</thead>
+								<tbody>
+									<tr>
+										<td colspan="4" class="text-center text-muted">Sélectionnez une direction à l'étape précédente.</td>
+									</tr>
+								</tbody>
+							</table>
+						</div>
+
+						<div class="mt-3">
+							<span class="badge bg-secondary" id="participantsCount">0 participant(s) sélectionné(s)</span>
+						</div>
+					</div>
+
+					<div class="step-content d-none" id="step3">
 						<h4 class="mb-3"><i class="fa fa-money-bill text-primary"></i> Budget prévisionnel</h4>
-						<p class="text-muted mb-3">Définissez les dépenses prévues par catégorie</p>
-						
+
+						<div class="alert alert-info mb-3">
+							<i class="fa fa-info-circle me-2"></i>
+							Saisissez les dépenses prévues par catégorie. Le budget total se met à jour automatiquement.
+						</div>
+
 						<div class="table-responsive">
 							<table class="table table-hover" id="depensesTable">
 								<thead class="table-secondary">
@@ -119,82 +168,66 @@
 										<th width="100"><i class="fa fa-cogs"></i></th>
 									</tr>
 								</thead>
-								<tbody id="depensesTableBody">
-									<!-- Les lignes seront ajoutées dynamiquement -->
-								</tbody>
+								<tbody></tbody>
 								<tfoot>
 									<tr class="table-info">
 										<td><strong>Total</strong></td>
-										<td><strong id="totalBudget">0 FCFA</strong></td>
+										<td><strong id="totalDepenses">0 FCFA</strong></td>
 										<td></td>
 									</tr>
 								</tfoot>
 							</table>
 						</div>
-						
-						<div class="mt-3">
-							<button type="button" class="btn btn-outline-primary btn-sm" onclick="addDepenseRow()">
-								<i class="fa fa-plus"></i> Ajouter une ligne
+						<button type="button" class="btn btn-outline-primary btn-sm" onclick="addDepenseRow()">
+							<i class="fa fa-plus"></i> Ajouter une dépense
+						</button>
+					</div>
+
+					<div class="step-content d-none" id="step4">
+						<h4 class="mb-3"><i class="fa fa-file-alt text-primary"></i> Documents et notes</h4>
+
+						<div class="mb-4">
+							<label for="notes" class="form-label">Notes internes</label>
+							<textarea class="form-control" id="notes" rows="3" placeholder="Observations, informations complémentaires..."></textarea>
+						</div>
+
+						<div class="mb-3">
+							<h5 class="mb-3">Documents</h5>
+							<div class="table-responsive">
+								<table class="table table-hover" id="documentsTable">
+									<thead class="table-secondary">
+										<tr>
+											<th>Nom du document</th>
+											<th>Fichier</th>
+											<th width="100"><i class="fa fa-cogs"></i></th>
+										</tr>
+									</thead>
+									<tbody></tbody>
+								</table>
+							</div>
+							<button type="button" class="btn btn-outline-primary btn-sm" onclick="addDocumentRow()">
+								<i class="fa fa-plus"></i> Ajouter un document
 							</button>
 						</div>
 					</div>
 
-					<!-- Étape 3: Documents/Notes -->
-					<div id="step3" class="step-content" style="display: none;">
-						<h4 class="mb-3"><i class="fa fa-file-alt text-primary"></i> Documents et Notes</h4>
-						
-						<!-- Notes -->
-						<div class="mb-4">
-							<label for="notes" class="form-label">Notes internes</label>
-							<textarea class="form-control" id="notes" name="notes" rows="4" placeholder="Notes internes sur la mission..."></textarea>
-						</div>
-
-						<!-- Documents -->
-						<div class="mb-3">
-							<label class="form-label">Documents</label>
-							<div class="table-responsive">
-								<table class="table table-hover" id="documentsTable">
-									<thead class="table-secondary">
-																			<tr>
-										<th>Nom du document</th>
-										<th>Fichier</th>
-										<th width="100"><i class="fa fa-cogs"></i></th>
-									</tr>
-									</thead>
-									<tbody id="documentsTableBody">
-										<!-- Les lignes seront ajoutées dynamiquement -->
-									</tbody>
-								</table>
-							</div>
-							
-							<div class="mt-3">
-								<button type="button" class="btn btn-outline-primary btn-sm" onclick="addDocumentRow()">
-									<i class="fa fa-plus"></i> Ajouter un document
-								</button>
-							</div>
-						</div>
-					</div>
-
-					<!-- Étape 4: Récapitulatif -->
-					<div id="step4" class="step-content" style="display: none;">
+					<div class="step-content d-none" id="step5">
 						<h4 class="mb-3"><i class="fa fa-check-circle text-primary"></i> Récapitulatif</h4>
-						
-						<div id="recapContent">
-							<!-- Le contenu sera généré dynamiquement -->
-						</div>
+						<div id="recapContent" class="bg-light rounded p-3"></div>
 					</div>
 
-					<!-- Navigation des étapes -->
 					<div class="d-flex justify-content-between mt-4">
-						<button type="button" class="btn btn-secondary" id="prevBtn" onclick="previousStep()" style="display: none;">
+						<button type="button" class="btn btn-outline-secondary" id="prevBtn" onclick="previousStep()" style="display:none;">
 							<i class="fa fa-arrow-left"></i> Précédent
 						</button>
-						<button type="button" class="btn btn-primary" id="nextBtn" onclick="nextStep()">
-							Suivant <i class="fa fa-arrow-right"></i>
-						</button>
-						<button type="submit" class="btn btn-success" id="submitBtn" style="display: none;">
-							<i class="fa fa-save"></i> Créer la Mission
-						</button>
+						<div class="ms-auto">
+							<button type="button" class="btn btn-primary" id="nextBtn" onclick="nextStep()">
+								Suivant <i class="fa fa-arrow-right"></i>
+							</button>
+							<button type="submit" class="btn btn-success" id="submitBtn" style="display:none;">
+								<i class="fa fa-save"></i> Créer la mission
+							</button>
+						</div>
 					</div>
 				</form>
 			</div>
@@ -206,308 +239,382 @@
 {% block javascripts %}
 <script>
 let currentStep = 1;
-let totalSteps = 4;
-let depenses = [];
-let documents = [];
+const totalSteps = 5;
+let missionModeles = [];
+let selectedMissionModele = null;
+let directions = [];
+let fonds = [];
+let categories = [];
+let depenses = {};
+let documents = {};
+let descriptionManuallyEdited = false;
+let participantsDisponibles = [];
+let selectedParticipants = new Map();
 
-// Initialisation au chargement de la page
-document.addEventListener('DOMContentLoaded', function() {
-    // Charger les données de base
-    Promise.all([
-        loadDirections(),
-        loadFonds(),
-        loadCategoriesDepenses()
-    ]).then(() => {
-        // Configurer les événements après le chargement des données
-        setupEventListeners();
-        
-        // Mettre à jour l'affichage
-        updateStepDisplay();
-    }).catch(error => {
-        console.error('Erreur lors du chargement des données:', error);
-        // Continuer quand même avec la configuration des événements
-        setupEventListeners();
-        updateStepDisplay();
-    });
+document.addEventListener('DOMContentLoaded', async function () {
+    try {
+        await Promise.all([
+            loadMissionModeles(),
+            loadDirections(),
+            loadFonds(),
+            loadCategories()
+        ]);
+    } catch (error) {
+        console.error('Erreur lors du chargement des données de base :', error);
+        showToast('Impossible de charger certaines données initiales.', 'error');
+    }
+
+    setupEventListeners();
+    renderParticipantsTable();
+    updateStepDisplay();
 });
 
-// Charger les services (pour référence uniquement)
-function loadServices() {
-    return fetch('/api/services')
+function loadMissionModeles() {
+    return fetch('/api/missions')
         .then(response => response.json())
         .then(data => {
-            // Cette fonction n'est plus utilisée car les missions utilisent maintenant les directions
-            console.log('Services chargés:', data);
-        })
-        .catch(error => {
-            console.error('Erreur lors du chargement des services:', error);
-            throw error;
-        });
-}
+            missionModeles = data || [];
+            const select = document.getElementById('missionModeleId');
+            if (!select) return;
 
-// Charger les types de fonds
-function loadFonds() {
-    return fetch('/api/fonds')
-        .then(response => response.json())
-        .then(data => {
-            const select = document.getElementById('fondsId');
-            if (select) {
-                select.innerHTML = '<option value="">Choisir le type de fonds</option>';
-                data.forEach(fond => {
-                    select.innerHTML += `<option value="${fond.id}">${fond.libelle}</option>`;
+            select.innerHTML = '<option value="">Sélectionner un modèle</option>';
+            if (missionModeles.length === 0) {
+                select.innerHTML += '<option value="" disabled>Aucun modèle disponible — créez un modèle.</option>';
+            } else {
+                missionModeles.forEach(modele => {
+                    select.innerHTML += `<option value="${modele.id}">${modele.titre}</option>`;
                 });
             }
         })
         .catch(error => {
-            console.error('Erreur lors du chargement des fonds:', error);
+            console.error('Erreur lors du chargement des missions modèles :', error);
             throw error;
         });
 }
 
-// Charger les catégories de dépenses
-function loadCategoriesDepenses() {
-    return fetch('/api/categories-depenses')
-        .then(response => response.json())
-        .then(data => {
-            window.categoriesDepenses = data;
-        })
-        .catch(error => {
-            console.error('Erreur lors du chargement des catégories:', error);
-            throw error;
-        });
-}
-
-// Charger les directions
 function loadDirections() {
     return fetch('/api/directions')
         .then(response => response.json())
         .then(data => {
+            directions = data || [];
             const select = document.getElementById('directionId');
-            if (select) {
-                select.innerHTML = '<option value="">Choisir une direction</option>';
-                data.forEach(direction => {
-                    select.innerHTML += `<option value="${direction.id}">${direction.libelle}</option>`;
-                });
-            }
-        })
-        .catch(error => {
-            console.error('Erreur lors du chargement des directions:', error);
-            throw error;
+            if (!select) return;
+            select.innerHTML = '<option value="">Choisir une direction</option>';
+            directions.forEach(direction => {
+                select.innerHTML += `<option value="${direction.id}">${direction.libelle}</option>`;
+            });
         });
 }
 
-// Configuration des événements
+function loadFonds() {
+    return fetch('/api/fonds')
+        .then(response => response.json())
+        .then(data => {
+            fonds = data || [];
+            const select = document.getElementById('fondsId');
+            if (!select) return;
+            select.innerHTML = '<option value="">Choisir le type de fonds</option>';
+            fonds.forEach(fond => {
+                select.innerHTML += `<option value="${fond.id}">${fond.libelle}</option>`;
+            });
+        });
+}
+
+function loadCategories() {
+    return fetch('/api/categories-depenses')
+        .then(response => response.json())
+        .then(data => {
+            categories = data || [];
+        });
+}
+
 function setupEventListeners() {
-    // Calcul automatique de la durée
+    const modeleSelect = document.getElementById('missionModeleId');
+    if (modeleSelect) {
+        modeleSelect.addEventListener('change', handleModeleChange);
+    }
+
+    const directionSelect = document.getElementById('directionId');
+    if (directionSelect) {
+        directionSelect.addEventListener('change', handleDirectionChange);
+    }
+
+    const descriptionField = document.getElementById('description');
+    if (descriptionField) {
+        descriptionField.addEventListener('input', () => descriptionManuallyEdited = true);
+    }
+
     const dateDebut = document.getElementById('datePrevueDebut');
     const dateFin = document.getElementById('datePrevueFin');
     if (dateDebut) dateDebut.addEventListener('change', calculateDuration);
     if (dateFin) dateFin.addEventListener('change', calculateDuration);
-    
+
+    document.querySelectorAll('.step-indicator').forEach(indicator => {
+        indicator.addEventListener('click', () => {
+            const target = parseInt(indicator.getAttribute('data-step'), 10);
+            if (!isNaN(target)) {
+                currentStep = target;
+                updateStepDisplay();
+            }
+        });
+    });
+
+    const form = document.getElementById('missionForm');
+    if (form) {
+        form.addEventListener('submit', handleSubmit);
+    }
 }
 
-// Fonction debounce pour éviter trop de sauvegardes
-function debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-        const later = () => {
-            clearTimeout(timeout);
-            func(...args);
-        };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-    };
+function handleModeleChange(event) {
+    const selectedId = event.target.value;
+    const hiddenField = document.getElementById('missionId');
+    const descriptionField = document.getElementById('description');
+
+    selectedMissionModele = missionModeles.find(m => String(m.id) === String(selectedId)) || null;
+    if (hiddenField) {
+        hiddenField.value = selectedMissionModele ? selectedMissionModele.id : '';
+    }
+
+    if (selectedMissionModele && descriptionField && !descriptionManuallyEdited) {
+        descriptionField.value = selectedMissionModele.description || '';
+    }
 }
 
-// Calculer la durée automatiquement
+function handleDirectionChange(event) {
+    const directionId = event.target.value;
+    selectedParticipants.clear();
+    updateParticipantsCount();
+
+    if (!directionId) {
+        participantsDisponibles = [];
+        renderParticipantsTable();
+        return;
+    }
+
+    renderParticipantsTable('loading');
+    loadParticipantsForDirection(directionId);
+}
+
+function loadParticipantsForDirection(directionId) {
+    return fetch(`/api/users-by-direction/${directionId}?pageSize=200`)
+        .then(response => response.json())
+        .then(data => {
+            participantsDisponibles = Array.isArray(data.users) ? data.users : [];
+            renderParticipantsTable();
+        })
+        .catch(error => {
+            console.error('Erreur lors du chargement des participants :', error);
+            participantsDisponibles = [];
+            renderParticipantsTable('error');
+            showToast('Impossible de charger les participants pour cette direction.', 'error');
+        });
+}
+
+function renderParticipantsTable(state = null) {
+    const tbody = document.querySelector('#participantsTable tbody');
+    if (!tbody) {
+        return;
+    }
+
+    if (state === 'loading') {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="4" class="text-center text-muted">
+                    <i class="fa fa-spinner fa-spin me-2"></i>Chargement des participants...
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    const directionSelect = document.getElementById('directionId');
+    const directionId = directionSelect ? directionSelect.value : '';
+
+    if (!directionId) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="4" class="text-center text-muted">
+                    Sélectionnez une direction à l’étape 1 pour afficher les participants disponibles.
+                </td>
+            </tr>
+        `;
+        updateParticipantsCount();
+        return;
+    }
+
+    if (state === 'error') {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="4" class="text-center text-danger">
+                    Une erreur est survenue lors du chargement des participants.
+                </td>
+            </tr>
+        `;
+        updateParticipantsCount();
+        return;
+    }
+
+    if (!participantsDisponibles.length) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="4" class="text-center text-muted">
+                    Aucun collaborateur disponible pour cette direction.
+                </td>
+            </tr>
+        `;
+        updateParticipantsCount();
+        return;
+    }
+
+    const rows = participantsDisponibles.map(user => {
+        const userId = Number(user.id);
+        const checkboxId = Number.isNaN(userId) ? `participant-${user.id}` : `participant-${userId}`;
+        const nom = [user.nom, user.prenom].filter(Boolean).join(' ') || '-';
+        const email = user.email || '-';
+        const service = user.service || '-';
+        const isChecked = !Number.isNaN(userId) && selectedParticipants.has(userId);
+
+        return `
+            <tr>
+                <td>
+                    <div class="form-check">
+                        <input class="form-check-input participant-checkbox" type="checkbox" value="${Number.isNaN(userId) ? '' : userId}" id="${checkboxId}" ${isChecked ? 'checked' : ''} ${Number.isNaN(userId) ? 'disabled' : ''}>
+                    </div>
+                </td>
+                <td>
+                    <label class="form-check-label" for="${checkboxId}">
+                        ${nom}
+                    </label>
+                </td>
+                <td>${email}</td>
+                <td>${service}</td>
+            </tr>
+        `;
+    }).join('');
+
+    tbody.innerHTML = rows;
+
+    tbody.querySelectorAll('.participant-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', onParticipantCheckboxChange);
+    });
+
+    updateParticipantsCount();
+}
+
+function onParticipantCheckboxChange(event) {
+    const userId = event.target.value;
+    const user = participantsDisponibles.find(u => String(u.id) === String(userId));
+    const numericId = user ? Number(user.id) : Number(userId);
+
+    if (event.target.checked && user && !Number.isNaN(numericId)) {
+        selectedParticipants.set(numericId, user);
+    } else if (!event.target.checked && !Number.isNaN(numericId)) {
+        selectedParticipants.delete(numericId);
+    }
+
+    updateParticipantsCount();
+}
+
+function updateParticipantsCount() {
+    const badge = document.getElementById('participantsCount');
+    if (!badge) {
+        return;
+    }
+
+    const count = selectedParticipants.size;
+    badge.textContent = `${count} participant(s) sélectionné(s)`;
+    badge.classList.toggle('bg-secondary', count === 0);
+    badge.classList.toggle('bg-primary', count > 0);
+}
+
 function calculateDuration() {
     const debutField = document.getElementById('datePrevueDebut');
     const finField = document.getElementById('datePrevueFin');
     const dureeField = document.getElementById('dureePrevue');
-    
+
     if (!debutField || !finField || !dureeField) {
-        console.error('Champs de date non trouvés');
         return;
     }
-    
+
     const debut = debutField.value;
     const fin = finField.value;
-    
+
+    debutField.classList.remove('is-invalid');
+    finField.classList.remove('is-invalid');
+
     if (debut && fin) {
-        const dateDebut = new Date(debut);
-        const dateFin = new Date(fin);
-        const diffTime = Math.abs(dateFin - dateDebut);
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-        dureeField.value = diffDays;
+        const start = new Date(debut);
+        const end = new Date(fin);
+        const diffTime = end - start;
+
+        if (diffTime < 0) {
+            dureeField.value = '';
+            debutField.classList.add('is-invalid');
+            finField.classList.add('is-invalid');
+        } else {
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+            dureeField.value = diffDays;
+        }
     } else {
         dureeField.value = '';
     }
 }
 
+function updateStepDisplay() {
+    document.querySelectorAll('.step-content').forEach(step => step.classList.add('d-none'));
+    const currentStepElement = document.getElementById(`step${currentStep}`);
+    if (currentStepElement) currentStepElement.classList.remove('d-none');
 
+    document.querySelectorAll('.step-indicator').forEach((indicator, index) => {
+        indicator.classList.remove('active', 'completed');
+        if (index + 1 < currentStep) indicator.classList.add('completed');
+        if (index + 1 === currentStep) indicator.classList.add('active');
+    });
 
-// Ajouter une ligne de dépense
-function addDepenseRow() {
-    const tbody = document.getElementById('depensesTableBody');
-    const rowId = Date.now();
-    
-    // Sélectionner la première catégorie par défaut si disponible
-    const defaultCategory = window.categoriesDepenses && window.categoriesDepenses.length > 0 ? window.categoriesDepenses[0].id : '';
-    
-    const row = document.createElement('tr');
-    row.id = `depense_${rowId}`;
-    row.innerHTML = `
-        <td>
-            <select class="form-select form-select-sm" name="depenses[][categorieId]" onchange="updateDepense(${rowId}, 'categorieId', this.value)" required>
-                <option value="">Choisir une catégorie</option>
-                ${window.categoriesDepenses ? window.categoriesDepenses.map(cat => 
-                    `<option value="${cat.id}" ${cat.id == defaultCategory ? 'selected' : ''}>${cat.libelle}</option>`
-                ).join('') : ''}
-            </select>
-        </td>
-        <td>
-            <input type="number" class="form-control form-control-sm" name="depenses[][montant]" min="0" step="1" 
-                   placeholder="0" onchange="updateDepense(${rowId}, 'montant', this.value)" 
-                   oninput="updateDepenseRealtime(${rowId}, 'montant', this.value)" required>
-        </td>
-        <td>
-            <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeDepenseRow(${rowId})">
-                <i class="fa fa-trash"></i>
-            </button>
-        </td>
-    `;
-    
-    tbody.appendChild(row);
-    depenses[rowId] = { categorieId: defaultCategory, montant: 0 };
-}
-
-// Mettre à jour une dépense
-function updateDepense(rowId, field, value) {
-    if (!depenses[rowId]) {
-        depenses[rowId] = {};
+    const progressBar = document.getElementById('progressBar');
+    if (progressBar) {
+        const progress = (currentStep / totalSteps) * 100;
+        progressBar.style.width = `${progress}%`;
+        progressBar.setAttribute('aria-valuenow', progress);
     }
-    depenses[rowId][field] = field === 'montant' ? parseFloat(value) || 0 : value;
-    calculateTotalBudget();
-}
 
-// Mettre à jour une dépense en temps réel (pour les montants)
-function updateDepenseRealtime(rowId, field, value) {
-    if (!depenses[rowId]) {
-        depenses[rowId] = {};
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const submitBtn = document.getElementById('submitBtn');
+
+    if (prevBtn) prevBtn.style.display = currentStep === 1 ? 'none' : 'block';
+    if (nextBtn) nextBtn.style.display = currentStep === totalSteps ? 'none' : 'block';
+    if (submitBtn) submitBtn.style.display = currentStep === totalSteps ? 'block' : 'none';
+
+    if (currentStep === 3 && Object.keys(depenses).length === 0) {
+        addDepenseRow();
     }
-    depenses[rowId][field] = field === 'montant' ? parseFloat(value) || 0 : value;
-    calculateTotalBudgetRealtime();
-}
 
-// Supprimer une ligne de dépense
-function removeDepenseRow(rowId) {
-    const row = document.getElementById(`depense_${rowId}`);
-    if (row) {
-                row.remove();
-                delete depenses[rowId];
-                calculateTotalBudget();
-            }
-}
-
-// Calculer le budget total
-function calculateTotalBudget() {
-    const total = Object.values(depenses).reduce((sum, depense) => {
-        return sum + (depense.montant || 0);
-    }, 0);
-    
-    document.getElementById('totalBudget').textContent = total.toLocaleString('fr-FR') + ' FCFA';
-    document.getElementById('budgetPrevu').value = total;
-}
-
-// Calculer le budget total en temps réel
-function calculateTotalBudgetRealtime() {
-    const total = Object.values(depenses).reduce((sum, depense) => {
-        return sum + (depense.montant || 0);
-    }, 0);
-    
-    const totalElement = document.getElementById('totalBudget');
-    if (totalElement) {
-        totalElement.textContent = total.toLocaleString('fr-FR') + ' FCFA';
+    if (currentStep === 4 && Object.keys(documents).length === 0) {
+        addDocumentRow();
     }
-    
-    const budgetInput = document.getElementById('budgetPrevu');
-    if (budgetInput) {
-        budgetInput.value = total;
-        // Déclencher l'événement input pour mettre à jour les autres éléments qui écoutent
-        budgetInput.dispatchEvent(new Event('input', { bubbles: true }));
+
+    if (currentStep === 5) {
+        generateRecap();
     }
 }
 
-// Ajouter une ligne de document
-function addDocumentRow() {
-    const tbody = document.getElementById('documentsTableBody');
-    const rowId = Date.now();
-    
-    const row = document.createElement('tr');
-    row.id = `document_${rowId}`;
-    row.innerHTML = `
-        <td>
-            <input type="text" class="form-control form-control-sm" placeholder="Nom du document" 
-                   onchange="updateDocument(${rowId}, 'nom', this.value)">
-        </td>
-        <td>
-            <input type="file" class="form-control form-control-sm" 
-                   onchange="updateDocument(${rowId}, 'file', this.files[0])">
-        </td>
-        <td>
-            <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeDocumentRow(${rowId})">
-                <i class="fa fa-trash"></i>
-            </button>
-        </td>
-    `;
-    
-    tbody.appendChild(row);
-    documents[rowId] = { nom: '', file: null };
-}
-
-// Mettre à jour un document
-function updateDocument(rowId, field, value) {
-    if (!documents[rowId]) {
-        documents[rowId] = {};
-    }
-    documents[rowId][field] = value;
-}
-
-// Supprimer une ligne de document
-function removeDocumentRow(rowId) {
-    const row = document.getElementById(`document_${rowId}`);
-    if (row) {
-        row.remove();
-        delete documents[rowId];
-    }
-}
-
-// Navigation vers l'étape suivante
 function nextStep() {
     if (validateCurrentStep()) {
         if (currentStep < totalSteps) {
-            currentStep++;
+            currentStep += 1;
             updateStepDisplay();
-            
-            // Actions spécifiques à chaque étape
-            if (currentStep === 4) {
-                generateRecap();
-            }
         }
     }
 }
 
-// Navigation vers l'étape précédente
 function previousStep() {
     if (currentStep > 1) {
-        currentStep--;
+        currentStep -= 1;
         updateStepDisplay();
     }
 }
 
-
-
-// Valider l'étape actuelle
 function validateCurrentStep() {
     switch (currentStep) {
         case 1:
@@ -515,39 +622,50 @@ function validateCurrentStep() {
         case 2:
             return validateStep2();
         case 3:
-            return true; // Étape optionnelle
+            return validateStep3();
+        case 4:
+            return validateStep4();
         default:
             return true;
     }
 }
 
-// Valider l'étape 1
 function validateStep1() {
-    const required = ['titre', 'directionId', 'fondsId', 'lieuPrevu', 'datePrevueDebut', 'datePrevueFin'];
-    
-    for (let field of required) {
-        const element = document.getElementById(field);
+    let isValid = true;
+
+    const requiredFields = ['missionModeleId', 'directionId', 'fondsId', 'lieuPrevu', 'datePrevueDebut', 'datePrevueFin'];
+    requiredFields.forEach(id => {
+        const element = document.getElementById(id);
+        if (!element) return;
+
         if (!element.value) {
-            showToast(`Le champ "${element.previousElementSibling.textContent.replace(' *', '')}" est requis.`, 'error');
-            element.focus();
-            return false;
+            element.classList.add('is-invalid');
+            isValid = false;
+        } else {
+            element.classList.remove('is-invalid');
         }
+    });
+
+    const dureeField = document.getElementById('dureePrevue');
+    if (dureeField && !dureeField.value) {
+        showToast('Veuillez vérifier les dates : la durée calculée est vide.', 'error');
+        isValid = false;
     }
-    
-    const debut = new Date(document.getElementById('datePrevueDebut').value);
-    const fin = new Date(document.getElementById('datePrevueFin').value);
-    
-    if (fin <= debut) {
-        showToast('La date de fin doit être postérieure à la date de début.', 'error');
-        return false;
+
+    if (!selectedMissionModele) {
+        showToast('Veuillez sélectionner un modèle de mission.', 'error');
+        isValid = false;
     }
-    
+
+    return isValid;
+}
+
+function validateStep2() {
     return true;
 }
 
-// Valider l'étape 2 (Budget)
-function validateStep2() {
-    const validDepenses = Object.values(depenses).filter(d => d.categorieId && d.montant > 0);
+function validateStep3() {
+    const validDepenses = Object.values(depenses).filter(dep => dep && dep.categorieId && dep.montant > 0);
     if (validDepenses.length === 0) {
         showToast('Veuillez ajouter au moins une dépense valide.', 'error');
         return false;
@@ -555,251 +673,316 @@ function validateStep2() {
     return true;
 }
 
-// Générer le récapitulatif
+function validateStep4() {
+    return true;
+}
+
+function addDepenseRow() {
+    const tbody = document.querySelector('#depensesTable tbody');
+    if (!tbody) return;
+
+    const rowId = Date.now();
+    const options = categories.map(cat => `<option value="${cat.id}">${cat.libelle}</option>`).join('');
+    const defaultCategory = categories.length ? categories[0].id : '';
+
+    const tr = document.createElement('tr');
+    tr.id = `depense_${rowId}`;
+    tr.innerHTML = `
+        <td>
+            <select class="form-select form-select-sm" onchange="updateDepense(${rowId}, 'categorieId', this.value)">
+                <option value="">Choisir une catégorie</option>
+                ${options}
+            </select>
+        </td>
+        <td>
+            <input type="number" class="form-control form-control-sm" min="0" step="1" placeholder="0"
+                onchange="updateDepense(${rowId}, 'montant', this.value)"
+                oninput="updateDepense(${rowId}, 'montant', this.value)" required>
+        </td>
+        <td class="text-center">
+            <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeDepenseRow(${rowId})">
+                <i class="fa fa-trash"></i>
+            </button>
+        </td>
+    `;
+
+    tbody.appendChild(tr);
+    depenses[rowId] = { categorieId: defaultCategory, montant: 0 };
+    calculateTotalBudget();
+}
+
+function updateDepense(rowId, field, value) {
+    if (!depenses[rowId]) depenses[rowId] = {};
+    depenses[rowId][field] = field === 'montant' ? parseFloat(value) || 0 : value;
+    calculateTotalBudget();
+}
+
+function removeDepenseRow(rowId) {
+    const row = document.getElementById(`depense_${rowId}`);
+    if (row) row.remove();
+    if (depenses[rowId]) delete depenses[rowId];
+    calculateTotalBudget();
+}
+
+function calculateTotalBudget() {
+    const total = Object.values(depenses).reduce((sum, dep) => sum + (dep && dep.montant ? parseFloat(dep.montant) : 0), 0);
+    const totalElement = document.getElementById('totalDepenses');
+    if (totalElement) totalElement.textContent = `${total.toLocaleString('fr-FR')} FCFA`;
+
+    const budgetInput = document.getElementById('budgetPrevu');
+    if (budgetInput) budgetInput.value = total;
+}
+
+function addDocumentRow() {
+    const tbody = document.querySelector('#documentsTable tbody');
+    if (!tbody) return;
+
+    const rowId = Date.now();
+    const tr = document.createElement('tr');
+    tr.id = `document_${rowId}`;
+    tr.innerHTML = `
+        <td>
+            <input type="text" class="form-control form-control-sm" placeholder="Nom du document"
+                   onchange="updateDocument(${rowId}, 'nom', this.value)">
+        </td>
+        <td>
+            <input type="file" class="form-control form-control-sm"
+                   onchange="updateDocument(${rowId}, 'file', this.files[0])">
+        </td>
+        <td class="text-center">
+            <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeDocumentRow(${rowId})">
+                <i class="fa fa-trash"></i>
+            </button>
+        </td>
+    `;
+
+    tbody.appendChild(tr);
+    documents[rowId] = { nom: '', file: null };
+}
+
+function updateDocument(rowId, field, value) {
+    if (!documents[rowId]) documents[rowId] = {};
+    documents[rowId][field] = value;
+}
+
+function removeDocumentRow(rowId) {
+    const row = document.getElementById(`document_${rowId}`);
+    if (row) row.remove();
+    if (documents[rowId]) delete documents[rowId];
+}
+
+function updateDocumentsArray() {
+    const list = [];
+    Object.keys(documents).forEach(key => {
+        const doc = documents[key];
+        if (doc && (doc.nom || doc.file)) {
+            list.push({ nom: doc.nom || '', fichier: doc.file || null });
+        }
+    });
+    return list;
+}
+
 function generateRecap() {
     const recapContent = document.getElementById('recapContent');
-    if (!recapContent) {
-        console.error('Élément récapitulatif non trouvé');
-        return;
-    }
-    
-    
-    // Recalculer le nombre de documents
-    const documentsCount = Object.keys(documents).filter(key => documents[key] && (documents[key].nom || documents[key].file)).length;
-    
-    const titreField = document.getElementById('titre');
-    const directionField = document.getElementById('directionId');
-    const fondsField = document.getElementById('fondsId');
+    if (!recapContent) return;
+
+    const directionSelect = document.getElementById('directionId');
+    const fondsSelect = document.getElementById('fondsId');
     const lieuField = document.getElementById('lieuPrevu');
     const debutField = document.getElementById('datePrevueDebut');
     const finField = document.getElementById('datePrevueFin');
     const dureeField = document.getElementById('dureePrevue');
-    const budgetField = document.getElementById('budgetPrevu');
-    const descField = document.getElementById('description');
+    const descriptionField = document.getElementById('description');
     const notesField = document.getElementById('notes');
-    
-    const missionData = {
-        titre: titreField ? titreField.value : '',
-        direction: directionField && directionField.selectedIndex > 0 ? directionField.options[directionField.selectedIndex].text : '',
-        fonds: fondsField && fondsField.selectedIndex > 0 ? fondsField.options[fondsField.selectedIndex].text : '',
-        lieu: lieuField ? lieuField.value : '',
-        debut: debutField ? debutField.value : '',
-        fin: finField ? finField.value : '',
-        duree: dureeField ? dureeField.value : '',
-        budget: budgetField ? budgetField.value : '0',
-        description: descField ? descField.value : '',
-        notes: notesField ? notesField.value : ''
-    };
-    
+    const budgetField = document.getElementById('budgetPrevu');
+    const participantsArray = Array.from(selectedParticipants.values());
+
+    const missionLabel = selectedMissionModele ? selectedMissionModele.titre : '';
+    const directionLabel = directionSelect && directionSelect.selectedIndex > 0 ? directionSelect.options[directionSelect.selectedIndex].text : '';
+    const fondsLabel = fondsSelect && fondsSelect.selectedIndex > 0 ? fondsSelect.options[fondsSelect.selectedIndex].text : '';
+
+    const depensesList = Object.values(depenses).filter(dep => dep && dep.categorieId && dep.montant > 0)
+        .map(dep => {
+            const cat = categories.find(cat => cat.id == dep.categorieId);
+            return `<li>${cat ? cat.libelle : 'Catégorie'} : <strong>${parseFloat(dep.montant).toLocaleString('fr-FR')} FCFA</strong></li>`;
+        }).join('');
+
+    const documentsCount = Object.values(documents).filter(doc => doc && (doc.nom || doc.file)).length;
+
+    const participantsDetails = participantsArray.length
+        ? `<ul class="mb-0">${participantsArray.map(user => {
+            const nom = [user.nom, user.prenom].filter(Boolean).join(' ') || '-';
+            const email = user.email || '-';
+            const service = user.service || '-';
+            return `<li>${nom} — <span class="text-muted">${email}</span> (${service})</li>`;
+        }).join('')}</ul>`
+        : '<p class="text-muted mb-0">Aucun participant sélectionné.</p>';
+
     recapContent.innerHTML = `
-        <div class="row">
+        <div class="row g-4">
             <div class="col-md-6">
-                <h5>Informations générales</h5>
-                <table class="table table-sm">
-                    <tr><td><strong>Titre:</strong></td><td>${missionData.titre}</td></tr>
-                    <tr><td><strong>Direction:</strong></td><td>${missionData.direction}</td></tr>
-                    <tr><td><strong>Fonds:</strong></td><td>${missionData.fonds}</td></tr>
-                    <tr><td><strong>Lieu:</strong></td><td>${missionData.lieu}</td></tr>
-                    <tr><td><strong>Dates:</strong></td><td>${missionData.debut} au ${missionData.fin}</td></tr>
-                    <tr><td><strong>Durée:</strong></td><td>${missionData.duree} jours</td></tr>
-                    <tr><td><strong>Budget:</strong></td><td>${parseInt(missionData.budget || 0).toLocaleString()} FCFA</td></tr>
-                </table>
+                <div class="bg-white border rounded p-3 h-100">
+                    <h5 class="text-primary mb-3">Informations principales</h5>
+                    <table class="table table-sm mb-0">
+                        <tr><td><strong>Mission :</strong></td><td>${missionLabel}</td></tr>
+                        <tr><td><strong>Direction :</strong></td><td>${directionLabel}</td></tr>
+                        <tr><td><strong>Fonds :</strong></td><td>${fondsLabel}</td></tr>
+                        <tr><td><strong>Lieu :</strong></td><td>${lieuField.value || '-'}</td></tr>
+                        <tr><td><strong>Dates :</strong></td><td>${debutField.value || '-'} au ${finField.value || '-'}</td></tr>
+                        <tr><td><strong>Durée :</strong></td><td>${dureeField.value || '0'} jour(s)</td></tr>
+                        <tr><td><strong>Budget prévu :</strong></td><td>${parseFloat(budgetField.value || 0).toLocaleString('fr-FR')} FCFA</td></tr>
+                    </table>
+                </div>
             </div>
             <div class="col-md-6">
-                <h5>Description</h5>
-                <p>${missionData.description || 'Aucune description'}</p>
-                
-                <h5>Notes</h5>
-                <p>${missionData.notes || 'Aucune note'}</p>
-                
-                <h5>Documents</h5>
-                <p><strong>Nombre de documents:</strong> ${documentsCount}</p>
-                ${documentsCount > 0 ? '<ul class="list-unstyled">' + Object.values(documents).filter(doc => doc && (doc.nom || doc.file)).map(doc => `<li>• ${doc.nom || 'Document sans nom'}</li>`).join('') + '</ul>' : '<p class="text-muted">Aucun document ajouté</p>'}
+                <div class="bg-white border rounded p-3 h-100">
+                    <h5 class="text-primary mb-3">Synthèse qualitative</h5>
+                    <p class="mb-2"><strong>Description :</strong></p>
+                    <p>${(descriptionField.value || 'Aucune description.').replace(/\n/g, '<br>')}</p>
+                    <p class="mb-2"><strong>Notes internes :</strong></p>
+                    <p>${(notesField.value || 'Aucune note.').replace(/\n/g, '<br>')}</p>
+                    <p class="mb-2"><strong>Documents :</strong> ${documentsCount} document(s) ajouté(s)</p>
+                </div>
+            </div>
+        </div>
+        <div class="row g-4 mt-0">
+            <div class="col-md-12">
+                <div class="bg-white border rounded p-3">
+                    <h5 class="text-primary mb-3">Budget prévisionnel détaillé</h5>
+                    ${depensesList ? `<ul class="mb-0">${depensesList}</ul>` : '<p class="text-muted mb-0">Aucune dépense renseignée.</p>'}
+                </div>
+            </div>
+        </div>
+        <div class="row g-4 mt-0">
+            <div class="col-md-12">
+                <div class="bg-white border rounded p-3">
+                    <h5 class="text-primary mb-3">Participants sélectionnés</h5>
+                    ${participantsDetails}
+                </div>
             </div>
         </div>
     `;
 }
 
-// Permettre la navigation directe vers une étape en cliquant sur les indicateurs
-document.addEventListener('click', function(e) {
-    if (e.target.classList.contains('step-indicator')) {
-        const targetStep = parseInt(e.target.getAttribute('data-step'));
-        if (targetStep && targetStep !== currentStep) {
-            // Aller à l'étape cible
-            currentStep = targetStep;
-            updateStepDisplay();
-        }
-    }
-});
-
-// Mettre à jour l'affichage des étapes
-function updateStepDisplay() {
-    // Masquer toutes les étapes
-    for (let i = 1; i <= totalSteps; i++) {
-        const stepElement = document.getElementById(`step${i}`);
-        if (stepElement) {
-            stepElement.style.display = 'none';
-        }
-    }
-    
-    // Afficher l'étape actuelle
-    const currentStepElement = document.getElementById(`step${currentStep}`);
-    if (currentStepElement) {
-        currentStepElement.style.display = 'block';
-    }
-    
-    // Mettre à jour les indicateurs d'étapes
-    document.querySelectorAll('.step-indicator').forEach((indicator, index) => {
-        const stepNumber = index + 1;
-        indicator.classList.remove('active', 'completed');
-        
-        if (stepNumber === currentStep) {
-            indicator.classList.add('active');
-        } else if (stepNumber < currentStep) {
-            indicator.classList.add('completed');
-        }
-    });
-    
-    // Mettre à jour la barre de progression
-    const progressBar = document.getElementById('progressBar');
-    if (progressBar) {
-        const progress = (currentStep / totalSteps) * 100;
-        progressBar.style.width = progress + '%';
-    }
-    
-    // Gérer les boutons de navigation
-    const prevBtn = document.getElementById('prevBtn');
-    const nextBtn = document.getElementById('nextBtn');
-    const submitBtn = document.getElementById('submitBtn');
-    
-    if (prevBtn) prevBtn.style.display = currentStep > 1 ? 'block' : 'none';
-    if (nextBtn) nextBtn.style.display = currentStep < totalSteps ? 'block' : 'none';
-    if (submitBtn) submitBtn.style.display = currentStep === totalSteps ? 'block' : 'none';
-    
-    // Initialiser le tableau des dépenses si on arrive à l'étape 2
-    if (currentStep === 2) {
-        setTimeout(() => {
-            addDepenseRow(); // Ajouter une ligne par défaut
-        }, 100);
-    }
-    
-    // Initialiser le tableau des documents si on arrive à l'étape 3
-    if (currentStep === 3) {
-        setTimeout(() => {
-            addDocumentRow();
-        }, 50);
-    }
-    
-    // Générer le récapitulatif si c'est la dernière étape
-    if (currentStep === totalSteps) {
-        setTimeout(() => {
-            generateRecap();
-        }, 50);
-    }
-}
-
-// Gestion de la soumission du formulaire
-document.getElementById('missionCreateForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    
-    const submitBtn = document.getElementById('submitBtn');
-    const originalText = submitBtn.innerHTML;
-    
-    // Désactiver le bouton et afficher le spinner
-    submitBtn.disabled = true;
-    submitBtn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Création...';
-    
-    // Recalculer la durée et le budget avant l'envoi
-    calculateDuration();
-    calculateTotalBudget();
-    
-    // Validation côté client
-    const requiredFields = ['titre', 'directionId', 'fondsId', 'lieuPrevu', 'datePrevueDebut', 'datePrevueFin'];
-    for (let field of requiredFields) {
-        const element = document.getElementById(field);
-        if (!element || !element.value) {
-            showToast(`Le champ "${field}" est requis`, 'error');
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = originalText;
-            return;
-        }
-    }
-    
-    // Vérifier qu'au moins une dépense est définie
-    const validDepenses = Object.values(depenses).filter(d => d.categorieId && d.montant > 0);
-    if (validDepenses.length === 0) {
-        showToast('Veuillez ajouter au moins une dépense valide', 'error');
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = originalText;
+function handleSubmit(event) {
+    event.preventDefault();
+    if (!validateStep1()) {
+        currentStep = 1;
+        updateStepDisplay();
         return;
     }
-    
-    // Préparer les données
-    const formData = new FormData();
-    
-    // Données JSON
-    const jsonData = {
-        titre: document.getElementById('titre').value,
-        directionId: document.getElementById('directionId').value,
-        fondsId: document.getElementById('fondsId').value,
-        lieuPrevu: document.getElementById('lieuPrevu').value,
-        datePrevueDebut: document.getElementById('datePrevueDebut').value,
-        datePrevueFin: document.getElementById('datePrevueFin').value,
-        dureePrevue: document.getElementById('dureePrevue').value,
-        budgetPrevu: document.getElementById('budgetPrevu').value,
-        description: document.getElementById('description').value,
-        notes: document.getElementById('notes').value,
-        depenses: validDepenses
+
+    if (!validateStep2()) {
+        currentStep = 2;
+        updateStepDisplay();
+        return;
+    }
+
+    if (!validateStep3()) {
+        currentStep = 3;
+        updateStepDisplay();
+        return;
+    }
+
+    if (!validateStep4()) {
+        currentStep = 4;
+        updateStepDisplay();
+        return;
+    }
+
+    const submitBtn = document.getElementById('submitBtn');
+    if (!submitBtn) return;
+
+    const originalText = submitBtn.innerHTML;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Création en cours...';
+
+    const directionId = document.getElementById('directionId').value;
+    const fondsId = document.getElementById('fondsId').value;
+    const lieuPrevu = document.getElementById('lieuPrevu').value;
+    const datePrevueDebut = document.getElementById('datePrevueDebut').value;
+    const datePrevueFin = document.getElementById('datePrevueFin').value;
+    const dureePrevue = document.getElementById('dureePrevue').value;
+    const budgetPrevu = document.getElementById('budgetPrevu').value || '0';
+    const description = document.getElementById('description').value;
+    const notes = document.getElementById('notes').value;
+
+    const depensesArray = Object.values(depenses)
+        .filter(dep => dep && dep.categorieId && dep.montant > 0)
+        .map(dep => ({
+            categorieId: parseInt(dep.categorieId, 10),
+            montant: parseFloat(dep.montant)
+        }));
+
+    const documentsArray = updateDocumentsArray();
+
+    const formData = {
+        missionId: selectedMissionModele ? selectedMissionModele.id : null,
+        titre: selectedMissionModele ? selectedMissionModele.titre : '',
+        directionId,
+        fondsId,
+        lieuPrevu,
+        datePrevueDebut,
+        datePrevueFin,
+        dureePrevue,
+        budgetPrevu,
+        description,
+        notes,
+        participants: Array.from(selectedParticipants.keys()),
+        depenses: depensesArray,
+        documents: []
     };
-    
-    formData.append('data', JSON.stringify(jsonData));
-    
-    // Ajouter les fichiers
-    Object.values(documents).forEach((doc, index) => {
-        if (doc.nom && doc.file) {
-            formData.append(`document_nom_${index}`, doc.nom);
-            formData.append(`document_${index}`, doc.file);
-        }
-    });
-    
-    // Envoyer les données
+
+    const payload = new FormData();
+    payload.append('data', JSON.stringify(formData));
+
+    if (documentsArray.length > 0) {
+        documentsArray.forEach((doc, index) => {
+            if (doc.fichier) {
+                payload.append(`document_${index}`, doc.fichier);
+            }
+            payload.append(`document_nom_${index}`, doc.nom || '');
+        });
+    }
+
     fetch('{{ path('app_mission_new') }}', {
         method: 'POST',
-        body: formData
+        body: payload
     })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return response.text().then(text => {
-            try {
-                return JSON.parse(text);
-            } catch (e) {
-                console.error('Réponse non-JSON reçue:', text);
-                throw new Error('Réponse serveur invalide');
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast(data.message || 'Mission créée avec succès.', 'success');
+                setTimeout(() => {
+                    window.location.href = '{{ path('app_mission_index') }}';
+                }, 1200);
+            } else {
+                showToast(data.message || 'Une erreur est survenue lors de la création.', 'error');
             }
+        })
+        .catch(error => {
+            console.error('Erreur lors de la création :', error);
+            showToast('Erreur lors de la création de la mission.', 'error');
+        })
+        .finally(() => {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
         });
-    })
-    .then(data => {
-        if (data.success) {
-            showToast(data.message, 'success');
-            setTimeout(() => {
-                window.location.href = '{{ path('app_mission_index') }}';
-            }, 1500);
-        } else {
-            showToast(data.message || 'Erreur lors de la création', 'error');
-        }
-    })
-    .catch(error => {
-        console.error('Erreur:', error);
-        showToast('Erreur lors de la création de la mission: ' + error.message, 'error');
-    })
-    .finally(() => {
-        // Réactiver le bouton
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = originalText;
-    });
-});
+}
+
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    const variant = type === 'error' ? 'danger' : type === 'success' ? 'success' : 'info';
+    toast.className = `alert alert-${variant} alert-dismissible fade show position-fixed shadow`;
+    toast.style.cssText = 'top: 20px; right: 20px; z-index: 1055; min-width: 280px;';
+    toast.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
+    `;
+
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 5000);
+}
 </script>
 
 <style>
@@ -813,17 +996,25 @@ document.getElementById('missionCreateForm').addEventListener('submit', function
 }
 
 .step-indicator.active {
-    background-color: #007bff;
-    color: white;
+    background-color: #0d6efd;
+    color: #fff;
 }
 
 .step-indicator.completed {
-    background-color: #28a745;
-    color: white;
+    background-color: #198754;
+    color: #fff;
 }
 
 .step-content {
-    min-height: 400px;
+    min-height: 360px;
+}
+
+#missionForm .form-label {
+    font-weight: 600;
+}
+
+#missionForm .is-invalid {
+    border-color: #dc3545;
 }
 </style>
 {% endblock %}

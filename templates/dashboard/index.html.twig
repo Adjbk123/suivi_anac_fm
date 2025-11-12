@@ -80,34 +80,39 @@
     .performance-summary.danger {
         border-left-color: var(--bs-danger);
     }
-.stats-card {
-    color: white !important;
-}
 
-.stats-card .card-body {
-    color: white !important;
-}
+    .dashboard-card .card-body canvas {
+        max-height: 300px;
+    }
 
-.stats-card .card-body h4,
-.stats-card .card-body p,
-.stats-card .card-body i {
-    color: white !important;
-}
+    .expense-item {
+        border-left: 3px solid #007bff;
+        padding-left: 10px;
+        margin-bottom: 10px;
+    }
 
-.dashboard-card .card-body canvas {
-    max-height: 300px;
-}
+    .execution-rate {
+        font-size: 1.2em;
+        font-weight: bold;
+    }
 
-.expense-item {
-    border-left: 3px solid #007bff;
-    padding-left: 10px;
-    margin-bottom: 10px;
-}
+    .card.stats-card {
+        background: linear-gradient(135deg, #14517E 0%, #0F3B5A 100%);
+        border: none;
+        box-shadow: 0 8px 20px rgba(20, 81, 126, 0.15);
+    }
 
-.execution-rate {
-    font-size: 1.2em;
-    font-weight: bold;
-}
+    .card.stats-card .card-body {
+        background: transparent;
+    }
+
+    .stats-card,
+    .stats-card .card-body,
+    .stats-card .card-body h4,
+    .stats-card .card-body p,
+    .stats-card .card-body i {
+        color: white !important;
+    }
 </style>
 {% endblock %}
 
@@ -118,7 +123,7 @@
         <div class="row">
             <!-- Total Formations -->
             <div class="col-xl-3 col-md-6">
-                <div class="card bg-primary text-white mb-3 stats-card">
+                <div class="card stats-card mb-3">
                     <div class="card-body">
                         <div class="d-flex justify-content-between">
                             <div>
@@ -135,7 +140,7 @@
 
             <!-- Total Missions -->
             <div class="col-xl-3 col-md-6">
-                <div class="card bg-success text-white mb-3 stats-card">
+                <div class="card stats-card mb-3">
                     <div class="card-body">
                         <div class="d-flex justify-content-between">
                             <div>
@@ -153,7 +158,7 @@
             {% if isAdmin %}
             <!-- Total Utilisateurs (Admin seulement) -->
             <div class="col-xl-3 col-md-6">
-                <div class="card bg-info text-white mb-3 stats-card">
+                <div class="card stats-card mb-3">
                     <div class="card-body">
                         <div class="d-flex justify-content-between">
                             <div>
@@ -170,7 +175,7 @@
 
             <!-- Total Services (Admin seulement) -->
             <div class="col-xl-3 col-md-6">
-                <div class="card bg-warning text-white mb-3 stats-card">
+                <div class="card stats-card mb-3">
                     <div class="card-body">
                         <div class="d-flex justify-content-between">
                             <div>
@@ -187,7 +192,7 @@
             {% else %}
             <!-- Taux d'exécution des formations (Non-admin) -->
             <div class="col-xl-3 col-md-6">
-                <div class="card bg-info text-white mb-3 stats-card">
+                <div class="card stats-card mb-3">
                     <div class="card-body">
                         <div class="d-flex justify-content-between">
                             <div>
@@ -208,7 +213,7 @@
 
             <!-- Taux d'exécution des missions (Non-admin) -->
             <div class="col-xl-3 col-md-6">
-                <div class="card bg-warning text-white mb-3 stats-card">
+                <div class="card stats-card mb-3">
                     <div class="card-body">
                         <div class="d-flex justify-content-between">
                             <div>
@@ -234,7 +239,7 @@
     <div class="row mb-4">
         <div class="col-xl-12">
             <div class="card performance-card shadow">
-                <div class="card-header bg-info text-white">
+                <div class="card-header bg-secondary text-white">
                     <h5 class="card-title mb-0">
                         <i class="fa fa-chart-line text-white"></i> Performance Globale {{ currentYear }}
                     </h5>
@@ -245,7 +250,7 @@
                         <div class="col-md-6">
                             {% include 'widgets/performance_summary.html.twig' with {
                                 'title': 'Formations',
-                                'header_color': 'primary',
+                                'header_color': 'secondary',
                                 'header_icon': 'fa-graduation-cap',
                                 'physique_taux': performanceData.formations.taux_physique,
                                 'physique_color': performanceData.formations.couleur_physique,
@@ -265,7 +270,7 @@
                         <div class="col-md-6">
                             {% include 'widgets/performance_summary.html.twig' with {
                                 'title': 'Missions',
-                                'header_color': 'success',
+                                'header_color': 'secondary',
                                 'header_icon': 'fa-plane',
                                 'physique_taux': performanceData.missions.taux_physique,
                                 'physique_color': performanceData.missions.couleur_physique,
@@ -285,7 +290,7 @@
                     <!-- Performance Globale -->
                     <div class="row mt-3">
                         <div class="col-md-12">
-                            <div class="card bg-gradient-{{ performanceData.global.taux_physique >= 80 ? 'success' : (performanceData.global.taux_physique >= 60 ? 'warning' : 'danger') }} text-white">
+                            <div class="card bg-secondary text-white">
                                 <div class="card-body text-center">
                                     <h5 class="card-title mb-3">
                                         <i class="fa fa-chart-line me-2"></i>Performance Globale {{ currentYear }}
@@ -528,7 +533,7 @@
                                     <div>
                                         <strong>{{ formation.titre }}</strong>
                                         <br>
-                                        <small class="text-muted">{{ formation.service_name }}</small>
+                                        <small class="text-muted">{{ formation.direction_name }}</small>
                                     </div>
                                     <div class="text-end">
                                         <div class="text-danger fw-bold">
@@ -643,8 +648,8 @@
     <div class="col-xl-12">
         <div class="row">
             <div class="col-md-6">
-                <div class="card mb-3">
-                    <div class="card-header bg-primary text-white">
+                <div class="card mb-3 h-100">
+                    <div class="card-header bg-secondary text-white">
                         <h5 class="card-title mb-0">
                             <i class="fa fa-chart-bar text-white"></i> Analyse budgétaire détaillée
                         </h5>
@@ -692,8 +697,8 @@
                 </div>
             </div>
             <div class="col-md-6">
-                <div class="card mb-3">
-                    <div class="card-header bg-success text-white">
+                <div class="card mb-3 h-100">
+                    <div class="card-header bg-secondary text-white">
                         <h5 class="card-title mb-0">
                             <i class="fa fa-trending-up text-white"></i> Indicateurs de performance
                         </h5>
@@ -740,54 +745,6 @@
     </div>
     {% endif %}
 
-    <!-- Section spécifique pour les éditeurs -->
-    {% if isEditeur or isAdmin %}
-    <div class="col-xl-12">
-        <div class="card mb-3">
-            <div class="card-header bg-info text-white">
-                <h5 class="card-title mb-0">
-                    <i class="fa fa-plus-circle text-white"></i> Actions rapides - Éditeur
-                </h5>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-3">
-                        <div class="d-grid">
-                            <a href="{{ path('app_formation_create') }}" class="btn btn-primary btn-lg">
-                                <i class="fa fa-graduation-cap"></i><br>
-                                <small>Nouvelle Formation</small>
-                            </a>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="d-grid">
-                            <a href="{{ path('app_mission_create') }}" class="btn btn-success btn-lg">
-                                <i class="fa fa-plane"></i><br>
-                                <small>Nouvelle Mission</small>
-                            </a>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="d-grid">
-                            <a href="{{ path('app_formation_index') }}" class="btn btn-warning btn-lg">
-                                <i class="fa fa-list"></i><br>
-                                <small>Gérer Formations</small>
-                            </a>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="d-grid">
-                            <a href="{{ path('app_mission_index') }}" class="btn btn-info btn-lg">
-                                <i class="fa fa-list"></i><br>
-                                <small>Gérer Missions</small>
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    {% endif %}
 
     <!-- Section spécifique pour les utilisateurs de base -->
     {% if not isEditeur and not isDirecteur and not isAdmin %}

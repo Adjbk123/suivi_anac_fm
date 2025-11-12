@@ -22,65 +22,16 @@ class Mission
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $description = null;
 
-    #[ORM\ManyToOne(inversedBy: 'missions')]
-    #[ORM\JoinColumn(nullable: false)]
-    private ?Direction $direction = null;
+    #[ORM\Column(type: Types::DATETIME_MUTABLE)]
+    private ?\DateTimeInterface $createdAt = null;
 
-    #[ORM\ManyToOne(inversedBy: 'missions')]
-    #[ORM\JoinColumn(nullable: false)]
-    private ?TypeFonds $fonds = null;
-
-    #[ORM\Column(length: 255)]
-    private ?string $lieuPrevu = null;
-
-    #[ORM\Column(length: 255, nullable: true)]
-    private ?string $lieuReel = null;
-
-    #[ORM\Column(type: Types::DATE_MUTABLE)]
-    private ?\DateTimeInterface $datePrevueDebut = null;
-
-    #[ORM\Column(type: Types::DATE_MUTABLE)]
-    private ?\DateTimeInterface $datePrevueFin = null;
-
-    #[ORM\Column(type: Types::DATE_MUTABLE, nullable: true)]
-    private ?\DateTimeInterface $dateReelleDebut = null;
-
-    #[ORM\Column(type: Types::DATE_MUTABLE, nullable: true)]
-    private ?\DateTimeInterface $dateReelleFin = null;
-
-    #[ORM\ManyToOne(inversedBy: 'missions')]
-    #[ORM\JoinColumn(nullable: false)]
-    private ?StatutActivite $statutActivite = null;
-
-    #[ORM\Column]
-    private ?int $dureePrevue = null;
-
-    #[ORM\Column(nullable: true)]
-    private ?int $dureeReelle = null;
-
-    #[ORM\Column]
-    private ?float $budgetPrevu = null;
-
-    #[ORM\Column(nullable: true)]
-    private ?float $budgetReel = null;
-
-    #[ORM\Column(type: Types::TEXT, nullable: true)]
-    private ?string $notes = null;
-
-    #[ORM\OneToMany(mappedBy: 'mission', targetEntity: DepenseMission::class, orphanRemoval: true)]
-    private Collection $depenseMissions;
-
-    #[ORM\OneToMany(mappedBy: 'mission', targetEntity: UserMission::class, orphanRemoval: true)]
-    private Collection $userMissions;
-
-    #[ORM\OneToMany(mappedBy: 'mission', targetEntity: DocumentMission::class, orphanRemoval: true)]
-    private Collection $documentMissions;
+    #[ORM\OneToMany(mappedBy: 'mission', targetEntity: MissionSession::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
+    private Collection $sessions;
 
     public function __construct()
     {
-        $this->depenseMissions = new ArrayCollection();
-        $this->userMissions = new ArrayCollection();
-        $this->documentMissions = new ArrayCollection();
+        $this->createdAt = new \DateTime();
+        $this->sessions = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -111,118 +62,241 @@ class Mission
 
         return $this;
     }
+    public function getCreatedAt(): ?\DateTimeInterface
+    {
+        return $this->createdAt;
+    }
+
+    public function setCreatedAt(\DateTimeInterface $createdAt): static
+    {
+        $this->createdAt = $createdAt;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, MissionSession>
+     */
+    public function getSessions(): Collection
+    {
+        return $this->sessions;
+    }
+
+    public function addSession(MissionSession $session): static
+    {
+        if (!$this->sessions->contains($session)) {
+            $this->sessions->add($session);
+            $session->setMission($this);
+        }
+
+        return $this;
+    }
+
+    public function removeSession(MissionSession $session): static
+    {
+        if ($this->sessions->removeElement($session)) {
+            if ($session->getMission() === $this) {
+                $session->setMission(null);
+            }
+        }
+
+        return $this;
+    }
+
+    public function getPrimarySession(): ?MissionSession
+    {
+        if ($this->sessions->isEmpty()) {
+            return null;
+        }
+
+        return $this->sessions->first() ?: null;
+    }
+
+    public function getOrCreateSession(): MissionSession
+    {
+        $session = $this->getPrimarySession();
+        if (!$session) {
+            $session = new MissionSession();
+            $session->setMission($this);
+            $this->sessions->add($session);
+        }
+
+        return $session;
+    }
 
     public function getDirection(): ?Direction
     {
-        return $this->direction;
+        return $this->getPrimarySession()?->getDirection();
     }
 
     public function setDirection(?Direction $direction): static
     {
-        $this->direction = $direction;
+        $this->getOrCreateSession()->setDirection($direction);
 
         return $this;
     }
 
     public function getFonds(): ?TypeFonds
     {
-        return $this->fonds;
+        return $this->getPrimarySession()?->getFonds();
     }
 
     public function setFonds(?TypeFonds $fonds): static
     {
-        $this->fonds = $fonds;
+        $this->getOrCreateSession()->setFonds($fonds);
 
         return $this;
     }
 
     public function getLieuPrevu(): ?string
     {
-        return $this->lieuPrevu;
+        return $this->getPrimarySession()?->getLieuPrevu();
     }
 
     public function setLieuPrevu(string $lieuPrevu): static
     {
-        $this->lieuPrevu = $lieuPrevu;
+        $this->getOrCreateSession()->setLieuPrevu($lieuPrevu);
 
         return $this;
     }
 
     public function getLieuReel(): ?string
     {
-        return $this->lieuReel;
+        return $this->getPrimarySession()?->getLieuReel();
     }
 
     public function setLieuReel(?string $lieuReel): static
     {
-        $this->lieuReel = $lieuReel;
+        $this->getOrCreateSession()->setLieuReel($lieuReel);
 
         return $this;
     }
 
     public function getDatePrevueDebut(): ?\DateTimeInterface
     {
-        return $this->datePrevueDebut;
+        return $this->getPrimarySession()?->getDatePrevueDebut();
     }
 
     public function setDatePrevueDebut(\DateTimeInterface $datePrevueDebut): static
     {
-        $this->datePrevueDebut = $datePrevueDebut;
+        $this->getOrCreateSession()->setDatePrevueDebut($datePrevueDebut);
 
         return $this;
     }
 
     public function getDatePrevueFin(): ?\DateTimeInterface
     {
-        return $this->datePrevueFin;
+        return $this->getPrimarySession()?->getDatePrevueFin();
     }
 
     public function setDatePrevueFin(\DateTimeInterface $datePrevueFin): static
     {
-        $this->datePrevueFin = $datePrevueFin;
+        $this->getOrCreateSession()->setDatePrevueFin($datePrevueFin);
 
         return $this;
     }
 
     public function getDateReelleDebut(): ?\DateTimeInterface
     {
-        return $this->dateReelleDebut;
+        return $this->getPrimarySession()?->getDateReelleDebut();
     }
 
     public function setDateReelleDebut(?\DateTimeInterface $dateReelleDebut): static
     {
-        $this->dateReelleDebut = $dateReelleDebut;
+        $this->getOrCreateSession()->setDateReelleDebut($dateReelleDebut);
 
         return $this;
     }
 
     public function getDateReelleFin(): ?\DateTimeInterface
     {
-        return $this->dateReelleFin;
+        return $this->getPrimarySession()?->getDateReelleFin();
     }
 
     public function setDateReelleFin(?\DateTimeInterface $dateReelleFin): static
     {
-        $this->dateReelleFin = $dateReelleFin;
+        $this->getOrCreateSession()->setDateReelleFin($dateReelleFin);
 
         return $this;
     }
 
     public function getStatutActivite(): ?StatutActivite
     {
-        return $this->statutActivite;
+        return $this->getPrimarySession()?->getStatutActivite();
     }
 
     public function setStatutActivite(?StatutActivite $statutActivite): static
     {
-        $this->statutActivite = $statutActivite;
+        $this->getOrCreateSession()->setStatutActivite($statutActivite);
 
         return $this;
     }
 
     public function getStatut(): ?string
     {
-        return $this->statutActivite?->getCode();
+        return $this->getStatutActivite()?->getCode();
+    }
+
+    public function getDureePrevue(): ?int
+    {
+        return $this->getPrimarySession()?->getDureePrevue();
+    }
+
+    public function setDureePrevue(int $dureePrevue): static
+    {
+        $this->getOrCreateSession()->setDureePrevue($dureePrevue);
+
+        return $this;
+    }
+
+    public function getDureeReelle(): ?int
+    {
+        return $this->getPrimarySession()?->getDureeReelle();
+    }
+
+    public function setDureeReelle(?int $dureeReelle): static
+    {
+        $this->getOrCreateSession()->setDureeReelle($dureeReelle);
+
+        return $this;
+    }
+
+    public function getBudgetPrevu(): ?float
+    {
+        $budget = $this->getPrimarySession()?->getBudgetPrevu();
+        return $budget !== null ? (float) $budget : null;
+    }
+
+    public function setBudgetPrevu(float $budgetPrevu): static
+    {
+        $this->getOrCreateSession()->setBudgetPrevu((string) $budgetPrevu);
+
+        return $this;
+    }
+
+    public function getBudgetReel(): ?float
+    {
+        $budget = $this->getPrimarySession()?->getBudgetReel();
+        return $budget !== null ? (float) $budget : null;
+    }
+
+    public function setBudgetReel(?float $budgetReel): static
+    {
+        $this->getOrCreateSession()->setBudgetReel($budgetReel !== null ? (string) $budgetReel : null);
+
+        return $this;
+    }
+
+    public function getNotes(): ?string
+    {
+        return $this->getPrimarySession()?->getNotes();
+    }
+
+    public function setNotes(?string $notes): static
+    {
+        $this->getOrCreateSession()->setNotes($notes);
+
+        return $this;
     }
 
     /**
@@ -230,27 +304,19 @@ class Mission
      */
     public function getDepenseMissions(): Collection
     {
-        return $this->depenseMissions;
+        return $this->getOrCreateSession()->getDepenseMissions();
     }
 
     public function addDepenseMission(DepenseMission $depenseMission): static
     {
-        if (!$this->depenseMissions->contains($depenseMission)) {
-            $this->depenseMissions->add($depenseMission);
-            $depenseMission->setMission($this);
-        }
+        $this->getOrCreateSession()->addDepenseMission($depenseMission);
 
         return $this;
     }
 
     public function removeDepenseMission(DepenseMission $depenseMission): static
     {
-        if ($this->depenseMissions->removeElement($depenseMission)) {
-            // set the owning side to null (unless already changed)
-            if ($depenseMission->getMission() === $this) {
-                $depenseMission->setMission(null);
-            }
-        }
+        $this->getOrCreateSession()->removeDepenseMission($depenseMission);
 
         return $this;
     }
@@ -260,87 +326,19 @@ class Mission
      */
     public function getUserMissions(): Collection
     {
-        return $this->userMissions;
+        return $this->getOrCreateSession()->getUserMissions();
     }
 
     public function addUserMission(UserMission $userMission): static
     {
-        if (!$this->userMissions->contains($userMission)) {
-            $this->userMissions->add($userMission);
-            $userMission->setMission($this);
-        }
+        $this->getOrCreateSession()->addUserMission($userMission);
 
         return $this;
     }
 
     public function removeUserMission(UserMission $userMission): static
     {
-        if ($this->userMissions->removeElement($userMission)) {
-            // set the owning side to null (unless already changed)
-            if ($userMission->getMission() === $this) {
-                $userMission->setMission(null);
-            }
-        }
-
-        return $this;
-    }
-
-    public function getDureePrevue(): ?int
-    {
-        return $this->dureePrevue;
-    }
-
-    public function setDureePrevue(int $dureePrevue): static
-    {
-        $this->dureePrevue = $dureePrevue;
-
-        return $this;
-    }
-
-    public function getDureeReelle(): ?int
-    {
-        return $this->dureeReelle;
-    }
-
-    public function setDureeReelle(?int $dureeReelle): static
-    {
-        $this->dureeReelle = $dureeReelle;
-
-        return $this;
-    }
-
-    public function getBudgetPrevu(): ?float
-    {
-        return $this->budgetPrevu;
-    }
-
-    public function setBudgetPrevu(float $budgetPrevu): static
-    {
-        $this->budgetPrevu = $budgetPrevu;
-
-        return $this;
-    }
-
-    public function getBudgetReel(): ?float
-    {
-        return $this->budgetReel;
-    }
-
-    public function setBudgetReel(?float $budgetReel): static
-    {
-        $this->budgetReel = $budgetReel;
-
-        return $this;
-    }
-
-    public function getNotes(): ?string
-    {
-        return $this->notes;
-    }
-
-    public function setNotes(?string $notes): static
-    {
-        $this->notes = $notes;
+        $this->getOrCreateSession()->removeUserMission($userMission);
 
         return $this;
     }
@@ -350,27 +348,19 @@ class Mission
      */
     public function getDocumentMissions(): Collection
     {
-        return $this->documentMissions;
+        return $this->getOrCreateSession()->getDocumentMissions();
     }
 
     public function addDocumentMission(DocumentMission $documentMission): static
     {
-        if (!$this->documentMissions->contains($documentMission)) {
-            $this->documentMissions->add($documentMission);
-            $documentMission->setMission($this);
-        }
+        $this->getOrCreateSession()->addDocumentMission($documentMission);
 
         return $this;
     }
 
     public function removeDocumentMission(DocumentMission $documentMission): static
     {
-        if ($this->documentMissions->removeElement($documentMission)) {
-            // set the owning side to null (unless already changed)
-            if ($documentMission->getMission() === $this) {
-                $documentMission->setMission(null);
-            }
-        }
+        $this->getOrCreateSession()->removeDocumentMission($documentMission);
 
         return $this;
     }

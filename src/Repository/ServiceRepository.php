@@ -59,14 +59,16 @@ class ServiceRepository extends ServiceEntityRepository
         $emConfig->addCustomDatetimeFunction('YEAR', 'DoctrineExtensions\Query\Mysql\Year');
         
         $qb = $this->createQueryBuilder('s')
-            ->select('s.libelle as service_name, 
-                     COUNT(DISTINCT f.id) as formations_count,
-                     0 as missions_count,
-                     COUNT(DISTINCT f.id) as total_activities')
-            ->leftJoin('s.formations', 'f', 'WITH', 'YEAR(f.datePrevueDebut) = :year')
+            ->select('s.libelle as service_name,
+                     COUNT(DISTINCT fs.id) as formations_count,
+                     COUNT(DISTINCT m.id) as missions_count,
+                     (COUNT(DISTINCT fs.id) + COUNT(DISTINCT m.id)) as total_activities')
+            ->leftJoin('s.direction', 'd')
+            ->leftJoin('d.formationSessions', 'fs', 'WITH', 'YEAR(fs.datePrevueDebut) = :year')
+            ->leftJoin('d.missions', 'm', 'WITH', 'YEAR(m.datePrevueDebut) = :year')
             ->setParameter('year', $year)
             ->groupBy('s.id', 's.libelle')
-            ->having('total_activities > 0')
+            ->having('(COUNT(DISTINCT fs.id) + COUNT(DISTINCT m.id)) > 0')
             ->orderBy('total_activities', 'DESC')
             ->setMaxResults(5);
 

@@ -16,7 +16,7 @@ class DepenseFormation
 
     #[ORM\ManyToOne(inversedBy: 'depenseFormations')]
     #[ORM\JoinColumn(nullable: false)]
-    private ?Formation $formation = null;
+    private ?FormationSession $formationSession = null;
 
     #[ORM\ManyToOne(inversedBy: 'depenseFormations')]
     #[ORM\JoinColumn(nullable: false)]
@@ -33,14 +33,14 @@ class DepenseFormation
         return $this->id;
     }
 
-    public function getFormation(): ?Formation
+    public function getFormationSession(): ?FormationSession
     {
-        return $this->formation;
+        return $this->formationSession;
     }
 
-    public function setFormation(?Formation $formation): static
+    public function setFormationSession(?FormationSession $formationSession): static
     {
-        $this->formation = $formation;
+        $this->formationSession = $formationSession;
 
         return $this;
     }

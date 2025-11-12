@@ -21,7 +21,7 @@ class ExcelExportService
         $headers = [
             'A1' => 'ID',
             'B1' => 'Titre',
-            'C1' => 'Service',
+            'C1' => 'Direction',
             'D1' => 'Date de début',
             'E1' => 'Date de fin',
             'F1' => 'Durée prévue (jours)',
@@ -52,37 +52,34 @@ class ExcelExportService
 
         // Données
         $row = 2;
-        foreach ($formations as $formation) {
+        foreach ($formations as $session) {
+            // $formations contient maintenant des FormationSession
+            $formation = $session->getFormation();
+            
             // Calculer les totaux
-            $totalParticipants = $formation->getUserFormations()->count();
-            $participantsPresents = $formation->getUserFormations()->filter(function($uf) {
+            $totalParticipants = $session->getUserFormations()->count();
+            $participantsPresents = $session->getUserFormations()->filter(function($uf) {
                 return $uf->getStatutParticipation() && $uf->getStatutParticipation()->getCode() === 'participe';
             })->count();
 
-            $budgetPrevu = 0;
-            $budgetReel = 0;
-            foreach ($formation->getDepenseFormations() as $depense) {
-                $budgetPrevu += $depense->getMontantPrevu();
-                if ($depense->getMontantReel()) {
-                    $budgetReel += $depense->getMontantReel();
-                }
-            }
+            $budgetPrevu = (float)$session->getBudgetPrevu();
+            $budgetReel = $session->getBudgetReel() ? (float)$session->getBudgetReel() : 0;
 
-            $sheet->setCellValue('A' . $row, $formation->getId());
-            $sheet->setCellValue('B' . $row, $formation->getTitre());
-            $sheet->setCellValue('C' . $row, $formation->getService() ? $formation->getService()->getLibelle() : '');
-            $sheet->setCellValue('D' . $row, $formation->getDatePrevueDebut() ? $formation->getDatePrevueDebut()->format('d/m/Y') : '');
-            $sheet->setCellValue('E' . $row, $formation->getDatePrevueFin() ? $formation->getDatePrevueFin()->format('d/m/Y') : '');
-            $sheet->setCellValue('F' . $row, $formation->getDureePrevue());
-            $sheet->setCellValue('G' . $row, $formation->getDureeReelle() ?: '');
-            $sheet->setCellValue('H' . $row, $formation->getLieuPrevu());
-            $sheet->setCellValue('I' . $row, $formation->getLieuReel() ?: '');
+            $sheet->setCellValue('A' . $row, $session->getId());
+            $sheet->setCellValue('B' . $row, $formation ? $formation->getTitre() : '');
+            $sheet->setCellValue('C' . $row, $session->getDirection() ? $session->getDirection()->getLibelle() : '');
+            $sheet->setCellValue('D' . $row, $session->getDatePrevueDebut() ? $session->getDatePrevueDebut()->format('d/m/Y') : '');
+            $sheet->setCellValue('E' . $row, $session->getDatePrevueFin() ? $session->getDatePrevueFin()->format('d/m/Y') : '');
+            $sheet->setCellValue('F' . $row, $session->getDureePrevue());
+            $sheet->setCellValue('G' . $row, $session->getDureeReelle() ?: '');
+            $sheet->setCellValue('H' . $row, $session->getLieuPrevu());
+            $sheet->setCellValue('I' . $row, $session->getLieuReel() ?: '');
             $sheet->setCellValue('J' . $row, number_format($budgetPrevu, 0, ',', ' '));
             $sheet->setCellValue('K' . $row, $budgetReel > 0 ? number_format($budgetReel, 0, ',', ' ') : '');
-            $sheet->setCellValue('L' . $row, $formation->getStatutActivite() ? $formation->getStatutActivite()->getLibelle() : '');
+            $sheet->setCellValue('L' . $row, $session->getStatutActivite() ? $session->getStatutActivite()->getLibelle() : '');
             $sheet->setCellValue('M' . $row, $totalParticipants);
             $sheet->setCellValue('N' . $row, $participantsPresents);
-            $sheet->setCellValue('O' . $row, $formation->getDatePrevueDebut() ? $formation->getDatePrevueDebut()->format('d/m/Y H:i') : '');
+            $sheet->setCellValue('O' . $row, $session->getDatePrevueDebut() ? $session->getDatePrevueDebut()->format('d/m/Y H:i') : '');
 
             $row++;
         }
@@ -111,7 +108,7 @@ class ExcelExportService
         return $response;
     }
 
-    public function exportMissionsToExcel(array $missions, array $filters = []): Response
+    public function exportMissionsToExcel(array $missionSessions, array $filters = []): Response
     {
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
@@ -152,37 +149,32 @@ class ExcelExportService
 
         // Données
         $row = 2;
-        foreach ($missions as $mission) {
-            // Calculer les totaux
-            $totalParticipants = $mission->getUserMissions()->count();
-            $participantsPresents = $mission->getUserMissions()->filter(function($um) {
+        foreach ($missionSessions as $session) {
+            $mission = $session->getMission();
+
+            $totalParticipants = $session->getUserMissions()->count();
+            $participantsPresents = $session->getUserMissions()->filter(static function ($um) {
                 return $um->getStatutParticipation() && $um->getStatutParticipation()->getCode() === 'participe';
             })->count();
 
-            $budgetPrevu = 0;
-            $budgetReel = 0;
-            foreach ($mission->getDepenseMissions() as $depense) {
-                $budgetPrevu += $depense->getMontantPrevu();
-                if ($depense->getMontantReel()) {
-                    $budgetReel += $depense->getMontantReel();
-                }
-            }
+            $budgetPrevu = (float) $session->getBudgetPrevu();
+            $budgetReel = $session->getBudgetReel() ? (float) $session->getBudgetReel() : 0;
 
-            $sheet->setCellValue('A' . $row, $mission->getId());
-            $sheet->setCellValue('B' . $row, $mission->getTitre());
-            $sheet->setCellValue('C' . $row, $mission->getDirection() ? $mission->getDirection()->getLibelle() : '');
-            $sheet->setCellValue('D' . $row, $mission->getDatePrevueDebut() ? $mission->getDatePrevueDebut()->format('d/m/Y') : '');
-            $sheet->setCellValue('E' . $row, $mission->getDatePrevueFin() ? $mission->getDatePrevueFin()->format('d/m/Y') : '');
-            $sheet->setCellValue('F' . $row, $mission->getDureePrevue());
-            $sheet->setCellValue('G' . $row, $mission->getDureeReelle() ?: '');
-            $sheet->setCellValue('H' . $row, $mission->getLieuPrevu());
-            $sheet->setCellValue('I' . $row, $mission->getLieuReel() ?: '');
+            $sheet->setCellValue('A' . $row, $session->getId());
+            $sheet->setCellValue('B' . $row, $mission?->getTitre() ?? '');
+            $sheet->setCellValue('C' . $row, $session->getDirection() ? $session->getDirection()->getLibelle() : '');
+            $sheet->setCellValue('D' . $row, $session->getDatePrevueDebut() ? $session->getDatePrevueDebut()->format('d/m/Y') : '');
+            $sheet->setCellValue('E' . $row, $session->getDatePrevueFin() ? $session->getDatePrevueFin()->format('d/m/Y') : '');
+            $sheet->setCellValue('F' . $row, $session->getDureePrevue());
+            $sheet->setCellValue('G' . $row, $session->getDureeReelle() ?: '');
+            $sheet->setCellValue('H' . $row, $session->getLieuPrevu());
+            $sheet->setCellValue('I' . $row, $session->getLieuReel() ?: '');
             $sheet->setCellValue('J' . $row, number_format($budgetPrevu, 0, ',', ' '));
             $sheet->setCellValue('K' . $row, $budgetReel > 0 ? number_format($budgetReel, 0, ',', ' ') : '');
-            $sheet->setCellValue('L' . $row, $mission->getStatutActivite() ? $mission->getStatutActivite()->getLibelle() : '');
+            $sheet->setCellValue('L' . $row, $session->getStatutActivite() ? $session->getStatutActivite()->getLibelle() : '');
             $sheet->setCellValue('M' . $row, $totalParticipants);
             $sheet->setCellValue('N' . $row, $participantsPresents);
-            $sheet->setCellValue('O' . $row, $mission->getDatePrevueDebut() ? $mission->getDatePrevueDebut()->format('d/m/Y H:i') : '');
+            $sheet->setCellValue('O' . $row, $mission?->getCreatedAt()?->format('d/m/Y H:i') ?? '');
 
             $row++;
         }
@@ -211,7 +203,7 @@ class ExcelExportService
         return $response;
     }
 
-    public function exportMissionBudgetReport(array $missions, array $filters = []): Response
+    public function exportMissionBudgetReport(array $missionSessions, array $filters = []): Response
     {
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
@@ -279,10 +271,11 @@ class ExcelExportService
         $totalBudgetAnac = 0;
         $totalBudgetExterieur = 0;
 
-        foreach ($missions as $index => $mission) {
+        foreach ($missionSessions as $index => $session) {
+            $mission = $session->getMission();
             // Récupérer les bénéficiaires
             $beneficiaires = [];
-            foreach ($mission->getUserMissions() as $userMission) {
+            foreach ($session->getUserMissions() as $userMission) {
                 $user = $userMission->getUser();
                 $beneficiaires[] = $user->getNom() . ' ' . $user->getPrenom();
             }
@@ -290,12 +283,12 @@ class ExcelExportService
 
             // Période
             $periodeMission = '';
-            if ($mission->getDatePrevueDebut() && $mission->getDatePrevueFin()) {
-                $periodeMission = $mission->getDatePrevueDebut()->format('d/m/Y') . ' - ' . $mission->getDatePrevueFin()->format('d/m/Y');
+            if ($session->getDatePrevueDebut() && $session->getDatePrevueFin()) {
+                $periodeMission = $session->getDatePrevueDebut()->format('d/m/Y') . ' - ' . $session->getDatePrevueFin()->format('d/m/Y');
             }
 
             // Statut d'exécution
-            $statutCode = $mission->getStatutActivite() ? $mission->getStatutActivite()->getCode() : '';
+            $statutCode = $session->getStatutActivite() ? $session->getStatutActivite()->getCode() : '';
             $prevueEtExecutee = in_array($statutCode, ['prevue_executee', 'executee']) ? 'OUI' : 'NON';
             $nonPrevueEtExecutee = in_array($statutCode, ['non_prevue_executee']) ? 'OUI' : 'NON';
 
@@ -305,7 +298,7 @@ class ExcelExportService
             $budgetExterieur = 0;
             $depensesDetails = [];
 
-            foreach ($mission->getDepenseMissions() as $depense) {
+            foreach ($session->getDepenseMissions() as $depense) {
                 $montant = (float) $depense->getMontantReel() ?: (float) $depense->getMontantPrevu();
                 $categorieLibelle = $depense->getCategorie()->getLibelle();
                 
@@ -313,7 +306,7 @@ class ExcelExportService
                 $depensesDetails[] = $categorieLibelle . ': ' . number_format($montant, 0, ',', ' ') . ' F CFA';
 
                 // Déterminer le type de budget
-                if ($mission->getFonds() && strpos(strtolower($mission->getFonds()->getLibelle()), 'anac') !== false) {
+                if ($session->getFonds() && strpos(strtolower($session->getFonds()->getLibelle()), 'anac') !== false) {
                     $budgetAnac += $montant;
                 } else {
                     $budgetExterieur += $montant;
@@ -327,9 +320,9 @@ class ExcelExportService
             // Remplir les données de la mission
             $sheet->setCellValue('A' . $row, $index + 1);
             $sheet->setCellValue('B' . $row, $beneficiairesStr);
-            $sheet->setCellValue('C' . $row, $mission->getDirection() ? $mission->getDirection()->getLibelle() : '');
-            $sheet->setCellValue('D' . $row, $mission->getTitre());
-            $sheet->setCellValue('E' . $row, $mission->getLieuPrevu());
+            $sheet->setCellValue('C' . $row, $session->getDirection() ? $session->getDirection()->getLibelle() : '');
+            $sheet->setCellValue('D' . $row, $mission?->getTitre() ?? '');
+            $sheet->setCellValue('E' . $row, $session->getLieuPrevu());
             $sheet->setCellValue('F' . $row, $periodeMission);
             
             // Colonne DÉPENSES avec bordures Excel pour chaque dépense
@@ -399,7 +392,8 @@ class ExcelExportService
         $categoriesDepensesStats = [];
         $totalBudgetPrevu = 0;
         
-        foreach ($missions as $mission) {
+        foreach ($missionSessions as $session) {
+            $mission = $session->getMission();
             foreach ($mission->getDepenseMissions() as $depense) {
                 $categorieLibelle = $depense->getCategorie()->getLibelle();
                 $montantPrevu = (float) $depense->getMontantPrevu();
@@ -578,10 +572,13 @@ class ExcelExportService
         $totalBudgetAnac = 0;
         $totalBudgetExterieur = 0;
 
-        foreach ($formations as $index => $formation) {
+        foreach ($formations as $index => $session) {
+            // $formations contient maintenant des FormationSession
+            $formation = $session->getFormation();
+            
             // Récupérer les bénéficiaires
             $beneficiaires = [];
-            foreach ($formation->getUserFormations() as $userFormation) {
+            foreach ($session->getUserFormations() as $userFormation) {
                 $user = $userFormation->getUser();
                 $beneficiaires[] = $user->getNom() . ' ' . $user->getPrenom();
             }
@@ -589,22 +586,22 @@ class ExcelExportService
 
             // Période
             $periodeFormation = '';
-            if ($formation->getDatePrevueDebut() && $formation->getDatePrevueFin()) {
-                $periodeFormation = $formation->getDatePrevueDebut()->format('d/m/Y') . ' - ' . $formation->getDatePrevueFin()->format('d/m/Y');
+            if ($session->getDatePrevueDebut() && $session->getDatePrevueFin()) {
+                $periodeFormation = $session->getDatePrevueDebut()->format('d/m/Y') . ' - ' . $session->getDatePrevueFin()->format('d/m/Y');
             }
 
             // Statut d'exécution
-            $statutCode = $formation->getStatutActivite() ? $formation->getStatutActivite()->getCode() : '';
+            $statutCode = $session->getStatutActivite() ? $session->getStatutActivite()->getCode() : '';
             $prevueEtExecutee = in_array($statutCode, ['prevue_executee', 'executee']) ? 'OUI' : 'NON';
             $nonPrevueEtExecutee = in_array($statutCode, ['non_prevue_executee']) ? 'OUI' : 'NON';
 
-            // Calculer les totaux de la formation
+            // Calculer les totaux de la session
             $totalFormation = 0;
             $budgetAnac = 0;
             $budgetExterieur = 0;
             $depensesDetails = [];
 
-            foreach ($formation->getDepenseFormations() as $depense) {
+            foreach ($session->getDepenseFormations() as $depense) {
                 $montant = (float) $depense->getMontantReel() ?: (float) $depense->getMontantPrevu();
                 $categorieLibelle = $depense->getCategorie()->getLibelle();
                 
@@ -612,7 +609,7 @@ class ExcelExportService
                 $depensesDetails[] = $categorieLibelle . ': ' . number_format($montant, 0, ',', ' ') . ' F CFA';
 
                 // Déterminer le type de budget
-                if ($formation->getFonds() && strpos(strtolower($formation->getFonds()->getLibelle()), 'anac') !== false) {
+                if ($session->getFonds() && strpos(strtolower($session->getFonds()->getLibelle()), 'anac') !== false) {
                     $budgetAnac += $montant;
                 } else {
                     $budgetExterieur += $montant;
@@ -623,12 +620,12 @@ class ExcelExportService
             $totalBudgetAnac += $budgetAnac;
             $totalBudgetExterieur += $budgetExterieur;
 
-            // Remplir les données de la formation
+            // Remplir les données de la session
             $sheet->setCellValue('A' . $row, $index + 1);
             $sheet->setCellValue('B' . $row, $beneficiairesStr);
-            $sheet->setCellValue('C' . $row, $formation->getDirection() ? $formation->getDirection()->getLibelle() : '');
-            $sheet->setCellValue('D' . $row, $formation->getTitre());
-            $sheet->setCellValue('E' . $row, $formation->getLieuPrevu());
+            $sheet->setCellValue('C' . $row, $session->getDirection() ? $session->getDirection()->getLibelle() : '');
+            $sheet->setCellValue('D' . $row, $formation ? $formation->getTitre() : '');
+            $sheet->setCellValue('E' . $row, $session->getLieuPrevu());
             $sheet->setCellValue('F' . $row, $periodeFormation);
             
             // Colonne DÉPENSES avec bordures Excel pour chaque dépense
@@ -698,8 +695,9 @@ class ExcelExportService
         $categoriesDepensesStats = [];
         $totalBudgetPrevu = 0;
         
-        foreach ($formations as $formation) {
-            foreach ($formation->getDepenseFormations() as $depense) {
+        foreach ($formations as $session) {
+            // $formations contient maintenant des FormationSession
+            foreach ($session->getDepenseFormations() as $depense) {
                 $categorieLibelle = $depense->getCategorie()->getLibelle();
                 $montantPrevu = (float) $depense->getMontantPrevu();
                 $montantReel = (float) $depense->getMontantReel();

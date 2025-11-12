@@ -2,15 +2,19 @@
 
 namespace App\Controller;
 
+use App\Entity\DepenseMission;
+use App\Entity\DocumentMission;
 use App\Entity\Mission;
+use App\Entity\MissionSession;
 use App\Entity\User;
 use App\Entity\UserMission;
-use App\Repository\MissionRepository;
 use App\Repository\DirectionRepository;
+use App\Repository\MissionRepository;
+use App\Repository\MissionSessionRepository;
 use App\Repository\StatutActiviteRepository;
 use App\Repository\UserRepository;
-use App\Service\PdfService;
 use App\Service\ExcelExportService;
+use App\Service\PdfService;
 use App\Service\PerformanceService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -29,47 +33,43 @@ class MissionController extends AbstractController
     {
         $currentYear = date('Y');
         $performanceData = $performanceService->getMissionPerformance($currentYear);
-        
+
         return $this->render('mission/index.html.twig', [
             'performanceData' => $performanceData,
-            'currentYear' => $currentYear
+            'currentYear' => $currentYear,
         ]);
     }
 
     #[Route('/export-excel', name: 'app_mission_export_excel', methods: ['GET'])]
-    public function exportExcel(Request $request, MissionRepository $missionRepository, ExcelExportService $excelExportService): Response
+    public function exportExcel(Request $request, MissionSessionRepository $missionSessionRepository, ExcelExportService $excelExportService): Response
     {
-        // Récupérer les filtres depuis la requête
         $filters = [
             'direction' => $request->query->get('direction'),
             'statut' => $request->query->get('statut'),
             'date_debut' => $request->query->get('date_debut'),
             'date_fin' => $request->query->get('date_fin'),
-            'search' => $request->query->get('search')
+            'search' => $request->query->get('search'),
         ];
 
-        // Récupérer les missions avec les filtres
-        $missions = $missionRepository->findWithFilters($filters);
+        $missionSessions = $missionSessionRepository->findWithFilters($filters);
 
-        return $excelExportService->exportMissionsToExcel($missions, $filters);
+        return $excelExportService->exportMissionsToExcel($missionSessions, $filters);
     }
 
     #[Route('/export-budget-report', name: 'app_mission_export_budget_report', methods: ['GET'])]
-    public function exportBudgetReport(Request $request, MissionRepository $missionRepository, ExcelExportService $excelExportService): Response
+    public function exportBudgetReport(Request $request, MissionSessionRepository $missionSessionRepository, ExcelExportService $excelExportService): Response
     {
-        // Récupérer les filtres depuis la requête
         $filters = [
             'direction' => $request->query->get('direction'),
             'statut' => $request->query->get('statut'),
             'date_debut' => $request->query->get('date_debut'),
             'date_fin' => $request->query->get('date_fin'),
-            'search' => $request->query->get('search')
+            'search' => $request->query->get('search'),
         ];
 
-        // Récupérer les missions avec les filtres
-        $missions = $missionRepository->findWithFilters($filters);
+        $missionSessions = $missionSessionRepository->findWithFilters($filters);
 
-        return $excelExportService->exportMissionBudgetReport($missions, $filters);
+        return $excelExportService->exportMissionBudgetReport($missionSessions, $filters);
     }
 
     #[Route('/create', name: 'app_mission_create', methods: ['GET'])]
@@ -79,33 +79,134 @@ class MissionController extends AbstractController
         return $this->render('mission/create.html.twig');
     }
 
-    #[Route('/list', name: 'app_mission_list', methods: ['GET'])]
-    public function list(Request $request, MissionRepository $missionRepository): JsonResponse
+    #[Route('/modele/create', name: 'app_mission_modele_create', methods: ['GET'])]
+    #[IsGranted('ROLE_EDITEUR')]
+    public function createModele(): Response
     {
-        // Récupérer les paramètres de filtrage
+        return $this->render('mission/modele_create.html.twig');
+    }
+
+    #[Route('/modele', name: 'app_mission_modele_store', methods: ['POST'])]
+    #[IsGranted('ROLE_EDITEUR')]
+    public function storeModele(Request $request, EntityManagerInterface $entityManager): JsonResponse
+    {
+        $data = json_decode($request->getContent(), true);
+
+        if (!$data || empty(trim((string) ($data['titre'] ?? '')))) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Le titre de la mission est requis.',
+            ], Response::HTTP_BAD_REQUEST);
+        }
+
+        $mission = new Mission();
+        $mission->setTitre(trim($data['titre']));
+        $mission->setDescription($data['description'] ?? null);
+        $mission->setCreatedAt(new \DateTime());
+
+        $entityManager->persist($mission);
+        $entityManager->flush();
+
+        return $this->json([
+            'success' => true,
+            'message' => 'Modèle de mission créé avec succès.',
+            'missionId' => $mission->getId(),
+        ], Response::HTTP_CREATED);
+    }
+
+    #[Route('/modele/{id}/edit', name: 'app_mission_modele_edit', methods: ['GET'])]
+    #[IsGranted('ROLE_EDITEUR')]
+    public function editModele(Mission $mission): Response
+    {
+        return $this->render('mission/modele_edit.html.twig', [
+            'mission' => $mission,
+        ]);
+    }
+
+    #[Route('/modele/{id}', name: 'app_mission_modele_update', methods: ['PUT'])]
+    #[IsGranted('ROLE_EDITEUR')]
+    public function updateModele(Request $request, Mission $mission, EntityManagerInterface $entityManager): JsonResponse
+    {
+        $data = json_decode($request->getContent(), true);
+
+        $titre = trim((string) ($data['titre'] ?? ''));
+        if ($titre === '') {
+            return $this->json([
+                'success' => false,
+                'message' => 'Le titre de la mission est requis.',
+            ], Response::HTTP_BAD_REQUEST);
+        }
+
+        $mission->setTitre($titre);
+        $mission->setDescription($data['description'] ?? null);
+        $entityManager->flush();
+
+        return $this->json([
+            'success' => true,
+            'message' => 'Modèle de mission mis à jour avec succès.',
+        ]);
+    }
+
+    #[Route('/modele/{id}', name: 'app_mission_modele_delete', methods: ['DELETE'])]
+    #[IsGranted('ROLE_EDITEUR')]
+    public function deleteModele(Mission $mission, EntityManagerInterface $entityManager): JsonResponse
+    {
+        if (!$mission->getSessions()->isEmpty()) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Impossible de supprimer ce modèle : des sessions y sont associées.',
+            ], Response::HTTP_BAD_REQUEST);
+        }
+
+        $entityManager->remove($mission);
+        $entityManager->flush();
+
+        return $this->json([
+            'success' => true,
+            'message' => 'Modèle de mission supprimé avec succès.',
+        ]);
+    }
+
+    #[Route('/modeles', name: 'app_mission_modele_index', methods: ['GET'])]
+    public function modelesIndex(MissionRepository $missionRepository): Response
+    {
+        $modeles = $missionRepository->findBy([], ['titre' => 'ASC']);
+
+        return $this->render('mission/modele_index.html.twig', [
+            'modeles' => $modeles,
+        ]);
+    }
+
+    #[Route('/list', name: 'app_mission_list', methods: ['GET'])]
+    public function list(Request $request, MissionSessionRepository $missionSessionRepository): JsonResponse
+    {
         $statutId = $request->query->get('statut');
         $directionId = $request->query->get('direction');
         $periode = $request->query->get('periode');
         $participant = $request->query->get('participant');
-        
-        $missions = $missionRepository->findAllWithFilters($statutId, $directionId, $periode, $participant);
+
+        $missionSessions = $missionSessionRepository->findAllWithFilters($statutId, $directionId, $periode, $participant);
         $data = [];
-        
-        foreach ($missions as $mission) {
+
+        foreach ($missionSessions as $session) {
+            $mission = $session->getMission();
             $data[] = [
-                'id' => $mission->getId(),
-                'titre' => $mission->getTitre(),
-                'direction' => $mission->getDirection() ? $mission->getDirection()->getLibelle() : '-',
-                'fonds' => $mission->getFonds() ? $mission->getFonds()->getLibelle() : '-',
-                'datePrevueDebut' => $mission->getDatePrevueDebut() ? $mission->getDatePrevueDebut()->format('d/m/Y') : '-',
-                'datePrevueFin' => $mission->getDatePrevueFin() ? $mission->getDatePrevueFin()->format('d/m/Y') : '-',
-                'dureePrevue' => $mission->getDureePrevue() . ' jours',
-                'budgetPrevu' => number_format($mission->getBudgetPrevu(), 0, ',', ' ') . ' FCFA',
-                'statut' => $mission->getStatutActivite() ? $mission->getStatutActivite()->getLibelle() : '-',
-                'statut_couleur' => $mission->getStatutActivite() ? $mission->getStatutActivite()->getCouleur() : 'secondary'
+                'id' => $session->getId(),
+                'missionId' => $mission?->getId(),
+                'titre' => $mission?->getTitre() ?? '-',
+                'direction' => $session->getDirection() ? $session->getDirection()->getLibelle() : '-',
+                'fonds' => $session->getFonds() ? $session->getFonds()->getLibelle() : '-',
+                'datePrevueDebut' => $session->getDatePrevueDebut() ? $session->getDatePrevueDebut()->format('d/m/Y') : '-',
+                'datePrevueFin' => $session->getDatePrevueFin() ? $session->getDatePrevueFin()->format('d/m/Y') : '-',
+                'lieuPrevu' => $session->getLieuPrevu() ?? '-',
+                'dureePrevue' => $session->getDureePrevue() ? $session->getDureePrevue() . ' jours' : '-',
+                'budgetPrevu' => number_format((float) $session->getBudgetPrevu(), 0, ',', ' ') . ' FCFA',
+                'statut' => $session->getStatutActivite() ? $session->getStatutActivite()->getLibelle() : '-',
+                'statut_couleur' => $session->getStatutActivite() ? $session->getStatutActivite()->getCouleur() : 'secondary',
+                'statut_code' => $session->getStatutActivite() ? $session->getStatutActivite()->getCode() : null,
             ];
         }
-        
+
         return $this->json($data);
     }
 
@@ -114,47 +215,31 @@ class MissionController extends AbstractController
         DirectionRepository $directionRepository,
         StatutActiviteRepository $statutRepository,
         UserRepository $userRepository
-    ): JsonResponse
-    {
-        $directions = $directionRepository->findAll();
-        $statuts = $statutRepository->findAll();
-        $users = $userRepository->findAll();
-        
-        $directionsData = [];
-        foreach ($directions as $direction) {
-            $directionsData[] = [
-                'id' => $direction->getId(),
-                'libelle' => $direction->getLibelle()
-            ];
-        }
-        
-        $statutsData = [];
-        foreach ($statuts as $statut) {
-            $statutsData[] = [
-                'id' => $statut->getId(),
-                'libelle' => $statut->getLibelle(),
-                'couleur' => $statut->getCouleur()
-            ];
-        }
-        
-        $usersData = [];
-        foreach ($users as $user) {
-            $usersData[] = [
-                'id' => $user->getId(),
-                'nom' => $user->getNom(),
-                'prenom' => $user->getPrenom(),
-                'email' => $user->getEmail()
-            ];
-        }
-        
+    ): JsonResponse {
+        $directions = array_map(static fn ($direction) => [
+            'id' => $direction->getId(),
+            'libelle' => $direction->getLibelle(),
+        ], $directionRepository->findAll());
+
+        $statuts = array_map(static fn ($statut) => [
+            'id' => $statut->getId(),
+            'libelle' => $statut->getLibelle(),
+            'couleur' => $statut->getCouleur(),
+        ], $statutRepository->findAll());
+
+        $users = array_map(static fn ($user) => [
+            'id' => $user->getId(),
+            'nom' => $user->getNom(),
+            'prenom' => $user->getPrenom(),
+            'email' => $user->getEmail(),
+        ], $userRepository->findAll());
+
         return $this->json([
-            'directions' => $directionsData,
-            'statuts' => $statutsData,
-            'users' => $usersData
+            'directions' => $directions,
+            'statuts' => $statuts,
+            'users' => $users,
         ]);
     }
-
-
 
     #[Route('/executed', name: 'app_mission_executed', methods: ['GET'])]
     public function executed(): Response
@@ -163,34 +248,36 @@ class MissionController extends AbstractController
     }
 
     #[Route('/executed/list', name: 'app_mission_executed_list', methods: ['GET'])]
-    public function executedList(MissionRepository $missionRepository): JsonResponse
+    public function executedList(MissionSessionRepository $missionSessionRepository): JsonResponse
     {
-        $missions = $missionRepository->findExecutedMissions();
+        $sessions = $missionSessionRepository->findExecutedSessions();
         $data = [];
-        
-        foreach ($missions as $mission) {
-            // Calculer les dépenses réelles
+
+        foreach ($sessions as $session) {
+            $mission = $session->getMission();
             $depensesReelles = 0;
-            foreach ($mission->getDepenseMissions() as $depense) {
-                $depensesReelles += $depense->getMontantReel() ?? 0;
+            foreach ($session->getDepenseMissions() as $depense) {
+                $depensesReelles += (float) ($depense->getMontantReel() ?? 0);
             }
-            
+
             $data[] = [
-                'id' => $mission->getId(),
-                'titre' => $mission->getTitre(),
-                'direction' => $mission->getDirection() ? $mission->getDirection()->getLibelle() : '-',
-                'fonds' => $mission->getFonds() ? $mission->getFonds()->getLibelle() : '-',
-                'dateReelleDebut' => $mission->getDateReelleDebut() ? $mission->getDateReelleDebut()->format('d/m/Y') : '-',
-                'dateReelleFin' => $mission->getDateReelleFin() ? $mission->getDateReelleFin()->format('d/m/Y') : '-',
-                'lieuReel' => $mission->getLieuReel() ?: '-',
-                'dureeReelle' => $mission->getDureePrevue() ? $mission->getDureePrevue() . ' jours' : '-',
-                'budgetPrevu' => number_format($mission->getBudgetPrevu(), 0, ',', ' ') . ' FCFA',
+                'id' => $session->getId(),
+                'missionId' => $mission?->getId(),
+                'titre' => $mission?->getTitre() ?? '-',
+                'direction' => $session->getDirection() ? $session->getDirection()->getLibelle() : '-',
+                'fonds' => $session->getFonds() ? $session->getFonds()->getLibelle() : '-',
+                'dateReelleDebut' => $session->getDateReelleDebut() ? $session->getDateReelleDebut()->format('d/m/Y') : '-',
+                'dateReelleFin' => $session->getDateReelleFin() ? $session->getDateReelleFin()->format('d/m/Y') : '-',
+                'lieuReel' => $session->getLieuReel() ?? '-',
+                'dureeReelle' => $session->getDureeReelle() ? $session->getDureeReelle() . ' jours' : '-',
+                'budgetPrevu' => number_format((float) $session->getBudgetPrevu(), 0, ',', ' ') . ' FCFA',
                 'depensesReelles' => number_format($depensesReelles, 0, ',', ' ') . ' FCFA',
-                'statut' => $mission->getStatutActivite() ? $mission->getStatutActivite()->getLibelle() : '-',
-                'statut_couleur' => $mission->getStatutActivite() ? $mission->getStatutActivite()->getCouleur() : 'secondary'
+                'statut' => $session->getStatutActivite() ? $session->getStatutActivite()->getLibelle() : '-',
+                'statut_couleur' => $session->getStatutActivite() ? $session->getStatutActivite()->getCouleur() : 'secondary',
+                'statut_code' => $session->getStatutActivite() ? $session->getStatutActivite()->getCode() : null,
             ];
         }
-        
+
         return $this->json($data);
     }
 
@@ -201,541 +288,614 @@ class MissionController extends AbstractController
     }
 
     #[Route('/planned/list', name: 'app_mission_planned_list', methods: ['GET'])]
-    public function plannedList(MissionRepository $missionRepository): JsonResponse
+    public function plannedList(MissionSessionRepository $missionSessionRepository): JsonResponse
     {
-        $missions = $missionRepository->findPlannedMissions();
+        $sessions = $missionSessionRepository->findPlannedSessions();
         $data = [];
-        
-        foreach ($missions as $mission) {
-            // Compter les participants prévus
-            $participantsPrevu = count($mission->getUserMissions());
-            
+
+        foreach ($sessions as $session) {
+            $mission = $session->getMission();
             $data[] = [
-                'id' => $mission->getId(),
-                'titre' => $mission->getTitre(),
-                'direction' => $mission->getDirection() ? $mission->getDirection()->getLibelle() : '-',
-                'fonds' => $mission->getFonds() ? $mission->getFonds()->getLibelle() : '-',
-                'datePrevueDebut' => $mission->getDatePrevueDebut() ? $mission->getDatePrevueDebut()->format('d/m/Y') : '-',
-                'datePrevueFin' => $mission->getDatePrevueFin() ? $mission->getDatePrevueFin()->format('d/m/Y') : '-',
-                'lieuPrevu' => $mission->getLieuPrevu(),
-                'dureePrevue' => $mission->getDureePrevue() . ' jours',
-                'budgetPrevu' => number_format($mission->getBudgetPrevu(), 0, ',', ' ') . ' FCFA',
-                'participantsPrevu' => $participantsPrevu . ' participant(s)',
-                'statut' => $mission->getStatutActivite() ? $mission->getStatutActivite()->getLibelle() : '-',
-                'statut_couleur' => $mission->getStatutActivite() ? $mission->getStatutActivite()->getCouleur() : 'secondary'
+                'id' => $session->getId(),
+                'missionId' => $mission?->getId(),
+                'titre' => $mission?->getTitre() ?? '-',
+                'direction' => $session->getDirection() ? $session->getDirection()->getLibelle() : '-',
+                'fonds' => $session->getFonds() ? $session->getFonds()->getLibelle() : '-',
+                'datePrevueDebut' => $session->getDatePrevueDebut() ? $session->getDatePrevueDebut()->format('d/m/Y') : '-',
+                'datePrevueFin' => $session->getDatePrevueFin() ? $session->getDatePrevueFin()->format('d/m/Y') : '-',
+                'lieuPrevu' => $session->getLieuPrevu() ?? '-',
+                'dureePrevue' => $session->getDureePrevue() ? $session->getDureePrevue() . ' jours' : '-',
+                'budgetPrevu' => number_format((float) $session->getBudgetPrevu(), 0, ',', ' ') . ' FCFA',
+                'participantsPrevu' => count($session->getUserMissions()) . ' participant(s)',
+                'statut' => $session->getStatutActivite() ? $session->getStatutActivite()->getLibelle() : '-',
+                'statut_couleur' => $session->getStatutActivite() ? $session->getStatutActivite()->getCouleur() : 'secondary',
+                'statut_code' => $session->getStatutActivite() ? $session->getStatutActivite()->getCode() : null,
             ];
         }
-        
+
         return $this->json($data);
     }
 
     #[Route('/new', name: 'app_mission_new', methods: ['POST'])]
     #[IsGranted('ROLE_EDITEUR')]
-    public function new(Request $request, EntityManagerInterface $entityManager): JsonResponse
+    public function new(Request $request, EntityManagerInterface $entityManager, MissionRepository $missionRepository): JsonResponse
     {
         try {
-            // Récupérer les données JSON
             $data = json_decode($request->get('data'), true);
-            
             if (!$data) {
                 return $this->json(['success' => false, 'message' => 'Données JSON invalides'], 400);
             }
-            
-            // Validation des champs requis
-            $requiredFields = ['titre', 'directionId', 'fondsId', 'lieuPrevu', 'datePrevueDebut', 'datePrevueFin', 'dureePrevue', 'budgetPrevu'];
+
+            $requiredFields = ['titre', 'directionId', 'fondsId', 'lieuPrevu', 'datePrevueDebut', 'datePrevueFin', 'dureePrevue'];
             foreach ($requiredFields as $field) {
-                if (!isset($data[$field]) || empty($data[$field])) {
+                if (!isset($data[$field]) || $data[$field] === '' || $data[$field] === null) {
                     return $this->json(['success' => false, 'message' => "Le champ {$field} est requis"], 400);
                 }
             }
-            
-            $mission = new Mission();
-            $mission->setTitre($data['titre']);
-            $mission->setDescription($data['description'] ?? null);
-            $mission->setLieuPrevu($data['lieuPrevu']);
-            $mission->setDatePrevueDebut(new \DateTime($data['datePrevueDebut']));
-            $mission->setDatePrevueFin(new \DateTime($data['datePrevueFin']));
-            $mission->setDureePrevue($data['dureePrevue']);
-            $mission->setBudgetPrevu($data['budgetPrevu']);
-            
-            // Récupérer le statut par défaut (prévue non exécutée)
+
+            $mission = null;
+            if (!empty($data['missionId'])) {
+                $mission = $missionRepository->find((int) $data['missionId']);
+            }
+
+            if (!$mission) {
+                $mission = new Mission();
+                $mission->setTitre($data['titre']);
+                $mission->setDescription($data['description'] ?? null);
+                $entityManager->persist($mission);
+            } else {
+                $mission->setTitre($data['titre']);
+                $mission->setDescription($data['description'] ?? $mission->getDescription());
+            }
+
+            $missionSession = new MissionSession();
+            $missionSession->setMission($mission);
+            $missionSession->setLieuPrevu($data['lieuPrevu']);
+            $missionSession->setDatePrevueDebut(new \DateTime($data['datePrevueDebut']));
+            $missionSession->setDatePrevueFin(new \DateTime($data['datePrevueFin']));
+            $missionSession->setDureePrevue((int) $data['dureePrevue']);
+            $missionSession->setBudgetPrevu(isset($data['budgetPrevu']) ? (string) (float) $data['budgetPrevu'] : '0');
+            $missionSession->setNotes($data['notes'] ?? null);
+
             $statutActivite = $entityManager->getRepository(\App\Entity\StatutActivite::class)->findOneBy(['code' => 'prevue_non_executee']);
             if (!$statutActivite) {
-                return $this->json(['success' => false, 'message' => 'Statut d\'activité par défaut introuvable'], 500);
+                return $this->json(['success' => false, 'message' => "Statut d'activité par défaut introuvable"], 500);
             }
-            $mission->setStatutActivite($statutActivite);
-            $mission->setNotes($data['notes'] ?? null);
-            
-            // Récupérer la direction
+            $missionSession->setStatutActivite($statutActivite);
+
             $direction = $entityManager->getRepository(\App\Entity\Direction::class)->find($data['directionId']);
             if (!$direction) {
                 return $this->json(['success' => false, 'message' => 'Direction introuvable'], 404);
             }
-            $mission->setDirection($direction);
-            
-            // Récupérer le type de fonds
+            $missionSession->setDirection($direction);
+
             $fonds = $entityManager->getRepository(\App\Entity\TypeFonds::class)->find($data['fondsId']);
             if (!$fonds) {
                 return $this->json(['success' => false, 'message' => 'Type de fonds introuvable'], 404);
             }
-            $mission->setFonds($fonds);
-        
-        $entityManager->persist($mission);
-        $entityManager->flush();
-        
-        // Ajouter les participants
-        if (isset($data['participants']) && is_array($data['participants'])) {
-            foreach ($data['participants'] as $userId) {
-                $user = $entityManager->getRepository(User::class)->find($userId);
-                if ($user) {
-                    $userMission = new UserMission();
-                    $userMission->setUser($user);
-                    $userMission->setMission($mission);
-                    // Récupérer le statut de participation par défaut (inscrit)
-                    $statutParticipation = $entityManager->getRepository(\App\Entity\StatutParticipation::class)->findOneBy(['code' => 'inscrit']);
-                    $userMission->setStatutParticipation($statutParticipation);
-                    $entityManager->persist($userMission);
-                }
-            }
-        }
-        
-        // Ajouter les dépenses prévues
-        $totalBudgetPrevu = 0;
-        if (isset($data['depenses']) && is_array($data['depenses'])) {
-            foreach ($data['depenses'] as $depense) {
-                $categorie = $entityManager->getRepository(\App\Entity\CategorieDepense::class)->find($depense['categorieId']);
-                if ($categorie) {
-                    $depenseMission = new \App\Entity\DepenseMission();
-                    $depenseMission->setMission($mission);
-                    $depenseMission->setCategorie($categorie);
-                    $depenseMission->setMontantPrevu($depense['montant']);
-                    $entityManager->persist($depenseMission);
-                    $totalBudgetPrevu += (float)$depense['montant'];
-                }
-            }
-        }
-        
-        // Mettre à jour le budget prévu de la mission avec le total des dépenses
-        $mission->setBudgetPrevu($totalBudgetPrevu);
-        
-        // Ajouter les documents
-        $index = 0;
-        while ($request->files->has("document_{$index}")) {
-            $file = $request->files->get("document_{$index}");
-            $nom = $request->get("document_nom_{$index}");
-            
-            if ($file && $nom) {
-                // Récupérer les informations du fichier avant de le déplacer
-                $originalFilename = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
-                $safeFilename = transliterator_transliterate('Any-Latin; Latin-ASCII', $originalFilename);
-                $newFilename = $safeFilename.'-'.uniqid().'.'.$file->guessExtension();
-                $fileSize = $file->getSize();
-                $fileType = $file->getClientMimeType();
-                
-                // Déplacer le fichier
-                $file->move(
-                    $this->getParameter('documents_directory'),
-                    $newFilename
-                );
-                
-                // Créer l'entité DocumentMission
-                $documentMission = new \App\Entity\DocumentMission();
-                $documentMission->setMission($mission);
-                $documentMission->setNom($nom);
-                $documentMission->setNomFichier($newFilename);
-                $documentMission->setType($fileType);
-                $documentMission->setTaille($fileSize);
-                
-                $entityManager->persist($documentMission);
-            }
-            
-            $index++;
-        }
-        
+            $missionSession->setFonds($fonds);
+
+            $entityManager->persist($missionSession);
             $entityManager->flush();
-            
+
+            if (isset($data['participants']) && is_array($data['participants'])) {
+                $statutParticipation = $entityManager->getRepository(\App\Entity\StatutParticipation::class)->findOneBy(['code' => 'inscrit']);
+                foreach ($data['participants'] as $userId) {
+                    $user = $entityManager->getRepository(User::class)->find($userId);
+                    if ($user) {
+                        $userMission = new UserMission();
+                        $userMission->setUser($user);
+                        $userMission->setMissionSession($missionSession);
+                        $userMission->setStatutParticipation($statutParticipation);
+                        $entityManager->persist($userMission);
+                    }
+                }
+            }
+
+            $totalBudgetPrevu = 0;
+            if (isset($data['depenses']) && is_array($data['depenses'])) {
+                foreach ($data['depenses'] as $depense) {
+                    $categorie = $entityManager->getRepository(\App\Entity\CategorieDepense::class)->find($depense['categorieId']);
+                    if ($categorie) {
+                        $depenseMission = new DepenseMission();
+                        $depenseMission->setMissionSession($missionSession);
+                        $depenseMission->setCategorie($categorie);
+                        $depenseMission->setMontantPrevu((string) (float) $depense['montant']);
+                        $entityManager->persist($depenseMission);
+                        $totalBudgetPrevu += (float) $depense['montant'];
+                    }
+                }
+            }
+
+            if ($totalBudgetPrevu > 0) {
+                $missionSession->setBudgetPrevu((string) $totalBudgetPrevu);
+            }
+
+            $index = 0;
+            while ($request->files->has("document_{$index}")) {
+                $file = $request->files->get("document_{$index}");
+                $nom = $request->get("document_nom_{$index}");
+
+                if ($file && $nom) {
+                    $originalFilename = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+                    $safeFilename = transliterator_transliterate('Any-Latin; Latin-ASCII', $originalFilename);
+                    $newFilename = $safeFilename . '-' . uniqid() . '.' . $file->guessExtension();
+                    $fileSize = $file->getSize();
+                    $fileType = $file->getClientMimeType();
+
+                    $file->move(
+                        $this->getParameter('documents_directory'),
+                        $newFilename
+                    );
+
+                    $documentMission = new DocumentMission();
+                    $documentMission->setMissionSession($missionSession);
+                    $documentMission->setNom($nom);
+                    $documentMission->setNomFichier($newFilename);
+                    $documentMission->setType($fileType);
+                    $documentMission->setTaille($fileSize);
+
+                    $entityManager->persist($documentMission);
+                }
+
+                $index++;
+            }
+
+            $entityManager->flush();
+
             return $this->json([
                 'success' => true,
                 'message' => 'Mission créée avec succès',
-                'missionId' => $mission->getId()
+                'missionId' => $mission->getId(),
+                'missionSessionId' => $missionSession->getId(),
             ]);
-            
         } catch (\Exception $e) {
             return $this->json([
                 'success' => false,
-                'message' => 'Erreur lors de la création de la mission: ' . $e->getMessage()
+                'message' => 'Erreur lors de la création de la mission: ' . $e->getMessage(),
             ], 500);
         }
     }
 
-    #[Route('/{id}', name: 'app_mission_show', methods: ['GET'])]
-    public function show(Mission $mission): Response
+    #[Route('/session/{id}', name: 'app_mission_session_show', methods: ['GET'])]
+    public function showSession(MissionSession $missionSession): Response
     {
         return $this->render('mission/show.html.twig', [
-            'mission' => $mission
+            'missionSession' => $missionSession,
+            'mission' => $missionSession->getMission(),
+        ]);
+    }
+
+    #[Route('/{id}', name: 'app_mission_show', methods: ['GET'])]
+    public function show(MissionSessionRepository $missionSessionRepository, MissionRepository $missionRepository, int $id): Response
+    {
+        $missionSession = $missionSessionRepository->find($id);
+        if ($missionSession) {
+            return $this->render('mission/show.html.twig', [
+                'missionSession' => $missionSession,
+                'mission' => $missionSession->getMission(),
+            ]);
+        }
+
+        $mission = $missionRepository->find($id);
+        if (!$mission) {
+            throw $this->createNotFoundException('Mission ou session introuvable');
+        }
+
+        $sessions = $missionSessionRepository->findMissionSessions($mission->getId());
+
+        return $this->render('mission/template_show.html.twig', [
+            'mission' => $mission,
+            'sessions' => $sessions,
         ]);
     }
 
     #[Route('/{id}/edit', name: 'app_mission_edit', methods: ['GET'])]
     #[IsGranted('ROLE_EDITEUR')]
-    public function edit(Mission $mission): Response
+    public function edit(MissionSessionRepository $missionSessionRepository, int $id): Response
     {
+        $missionSession = $missionSessionRepository->find($id);
+        if (!$missionSession) {
+            throw $this->createNotFoundException('Session de mission introuvable');
+        }
+
         return $this->render('mission/edit.html.twig', [
-            'mission' => $mission
+            'missionSession' => $missionSession,
+            'mission' => $missionSession->getMission(),
         ]);
     }
 
     #[Route('/{id}/update', name: 'app_mission_update', methods: ['PUT'])]
     #[IsGranted('ROLE_EDITEUR')]
-    public function update(Request $request, Mission $mission, EntityManagerInterface $entityManager): JsonResponse
+    public function update(Request $request, MissionSessionRepository $missionSessionRepository, EntityManagerInterface $entityManager, int $id): JsonResponse
     {
+        $missionSession = $missionSessionRepository->find($id);
+        if (!$missionSession) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Session de mission introuvable',
+            ], 404);
+        }
+
         $data = json_decode($request->getContent(), true);
-        
-        $mission->setTitre($data['titre']);
-        $mission->setDescription($data['description'] ?? null);
-        $mission->setLieuPrevu($data['lieuPrevu']);
-        $mission->setDatePrevueDebut(new \DateTime($data['datePrevueDebut']));
-        $mission->setDatePrevueFin(new \DateTime($data['datePrevueFin']));
-        $mission->setDureePrevue($data['dureePrevue']);
-        $mission->setBudgetPrevu($data['budgetPrevu']);
-        
-        // Récupérer la direction
-        $direction = $entityManager->getRepository(\App\Entity\Direction::class)->find($data['directionId']);
-        $mission->setDirection($direction);
-        
-        // Récupérer le type de fonds
-        $fonds = $entityManager->getRepository(\App\Entity\TypeFonds::class)->find($data['fondsId']);
-        $mission->setFonds($fonds);
-        
+
+        $mission = $missionSession->getMission();
+        if (isset($data['titre'])) {
+            $mission->setTitre($data['titre']);
+        }
+        if (isset($data['description'])) {
+            $mission->setDescription($data['description']);
+        }
+
+        if (isset($data['lieuPrevu'])) {
+            $missionSession->setLieuPrevu($data['lieuPrevu']);
+        }
+        if (isset($data['datePrevueDebut'])) {
+            $missionSession->setDatePrevueDebut(new \DateTime($data['datePrevueDebut']));
+        }
+        if (isset($data['datePrevueFin'])) {
+            $missionSession->setDatePrevueFin(new \DateTime($data['datePrevueFin']));
+        }
+        if (isset($data['dureePrevue'])) {
+            $missionSession->setDureePrevue((int) $data['dureePrevue']);
+        }
+        if (isset($data['budgetPrevu'])) {
+            $missionSession->setBudgetPrevu((string) (float) $data['budgetPrevu']);
+        }
+        if (isset($data['notes'])) {
+            $missionSession->setNotes($data['notes']);
+        }
+        if (isset($data['directionId'])) {
+            $direction = $entityManager->getRepository(\App\Entity\Direction::class)->find($data['directionId']);
+            $missionSession->setDirection($direction);
+        }
+        if (isset($data['fondsId'])) {
+            $fonds = $entityManager->getRepository(\App\Entity\TypeFonds::class)->find($data['fondsId']);
+            $missionSession->setFonds($fonds);
+        }
+
         $entityManager->flush();
-        
+
         return $this->json([
             'success' => true,
-            'message' => 'Mission modifiée avec succès'
+            'message' => 'Session de mission mise à jour avec succès',
         ]);
     }
 
     #[Route('/{id}', name: 'app_mission_delete', methods: ['DELETE'])]
     #[IsGranted('ROLE_ADMIN')]
-    public function delete(Mission $mission, EntityManagerInterface $entityManager): JsonResponse
+    public function delete(MissionSessionRepository $missionSessionRepository, MissionRepository $missionRepository, EntityManagerInterface $entityManager, int $id): JsonResponse
     {
-        $entityManager->remove($mission);
-        $entityManager->flush();
-        
+        $missionSession = $missionSessionRepository->find($id);
+        if ($missionSession) {
+            $mission = $missionSession->getMission();
+            $entityManager->remove($missionSession);
+            $entityManager->flush();
+
+            if ($mission && $mission->getSessions()->count() === 0) {
+                $entityManager->remove($mission);
+                $entityManager->flush();
+            }
+
+            return $this->json([
+                'success' => true,
+                'message' => 'Session de mission supprimée avec succès',
+            ]);
+        }
+
+        $mission = $missionRepository->find($id);
+        if ($mission) {
+            foreach ($mission->getSessions() as $session) {
+                $entityManager->remove($session);
+            }
+            $entityManager->remove($mission);
+            $entityManager->flush();
+
+            return $this->json([
+                'success' => true,
+                'message' => 'Mission supprimée avec succès',
+            ]);
+        }
+
         return $this->json([
-            'success' => true,
-            'message' => 'Mission supprimée avec succès'
-        ]);
+            'success' => false,
+            'message' => 'Mission ou session introuvable',
+        ], 404);
+    }
+
+    private function recalculateBudgetPrevu(MissionSession $missionSession): float
+    {
+        $totalPrevu = 0;
+        foreach ($missionSession->getDepenseMissions() as $depense) {
+            $totalPrevu += (float) $depense->getMontantPrevu();
+        }
+
+        return $totalPrevu;
     }
 
     #[Route('/{id}/add-document', name: 'app_mission_add_document', methods: ['POST'])]
-    public function addDocument(Request $request, Mission $mission, EntityManagerInterface $entityManager): JsonResponse
+    public function addDocument(Request $request, MissionSession $missionSession, EntityManagerInterface $entityManager): JsonResponse
     {
         $file = $request->files->get('file');
         $nom = $request->get('nom');
-        
+
         if (!$file || !$nom) {
             return $this->json([
                 'success' => false,
-                'message' => 'Fichier et nom requis'
+                'message' => 'Fichier et nom requis',
             ], 400);
         }
-        
+
         try {
-            // Générer un nom de fichier unique
             $originalFilename = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
             $safeFilename = transliterator_transliterate('Any-Latin; Latin-ASCII', $originalFilename);
-            $newFilename = $safeFilename.'-'.uniqid().'.'.$file->guessExtension();
-            
-            // Récupérer les informations du fichier avant de le déplacer
+            $newFilename = $safeFilename . '-' . uniqid() . '.' . $file->guessExtension();
             $fileSize = $file->getSize();
             $fileType = $file->getClientMimeType();
-            
-            // Déplacer le fichier
+
             $file->move(
                 $this->getParameter('documents_directory'),
                 $newFilename
             );
-            
-            // Créer l'entité DocumentMission
-            $documentMission = new \App\Entity\DocumentMission();
-            $documentMission->setMission($mission);
+
+            $documentMission = new DocumentMission();
+            $documentMission->setMissionSession($missionSession);
             $documentMission->setNom($nom);
             $documentMission->setNomFichier($newFilename);
             $documentMission->setType($fileType);
             $documentMission->setTaille($fileSize);
-            
+
             $entityManager->persist($documentMission);
             $entityManager->flush();
-            
+
             return $this->json([
                 'success' => true,
-                'message' => 'Document ajouté avec succès'
+                'message' => 'Document ajouté avec succès',
             ]);
-            
         } catch (\Exception $e) {
             return $this->json([
                 'success' => false,
-                'message' => 'Erreur lors de l\'ajout du document: ' . $e->getMessage()
+                'message' => "Erreur lors de l'ajout du document: " . $e->getMessage(),
             ], 500);
         }
     }
 
     #[Route('/{id}/add-depense', name: 'app_mission_add_depense', methods: ['POST'])]
-    public function addDepense(Request $request, Mission $mission, EntityManagerInterface $entityManager): JsonResponse
+    public function addDepense(Request $request, MissionSession $missionSession, EntityManagerInterface $entityManager): JsonResponse
     {
         $data = json_decode($request->getContent(), true);
-        
+
         if (!isset($data['categorieId']) || !isset($data['montant'])) {
             return $this->json([
                 'success' => false,
-                'message' => 'Catégorie et montant requis'
+                'message' => 'Catégorie et montant requis',
             ], 400);
         }
-        
+
         try {
-            // Récupérer la catégorie
             $categorie = $entityManager->getRepository(\App\Entity\CategorieDepense::class)->find($data['categorieId']);
             if (!$categorie) {
                 return $this->json([
                     'success' => false,
-                    'message' => 'Catégorie de dépense introuvable'
+                    'message' => 'Catégorie de dépense introuvable',
                 ], 404);
             }
-            
-            // Créer l'entité DepenseMission
-            $depenseMission = new \App\Entity\DepenseMission();
-            $depenseMission->setMission($mission);
+
+            $depenseMission = new DepenseMission();
+            $depenseMission->setMissionSession($missionSession);
             $depenseMission->setCategorie($categorie);
-            $depenseMission->setMontantPrevu($data['montant']);
-            
+            $depenseMission->setMontantPrevu((string) (float) $data['montant']);
+
             $entityManager->persist($depenseMission);
             $entityManager->flush();
-            
-            // Recalculer le budget prévu de la mission
-            $totalPrevu = $this->recalculateBudgetPrevu($mission);
-            $mission->setBudgetPrevu($totalPrevu);
-            $entityManager->persist($mission);
+
+            $totalPrevu = $this->recalculateBudgetPrevu($missionSession);
+            $missionSession->setBudgetPrevu((string) $totalPrevu);
+            $entityManager->persist($missionSession);
             $entityManager->flush();
-            
+
             return $this->json([
                 'success' => true,
                 'message' => 'Dépense ajoutée avec succès',
                 'totaux' => [
-                    'totalPrevu' => $totalPrevu
-                ]
+                    'totalPrevu' => $totalPrevu,
+                ],
             ]);
-            
         } catch (\Exception $e) {
             return $this->json([
                 'success' => false,
-                'message' => 'Erreur lors de l\'ajout de la dépense: ' . $e->getMessage()
+                'message' => "Erreur lors de l'ajout de la dépense: " . $e->getMessage(),
             ], 500);
         }
-    }
-
-    /**
-     * Recalcule le budget prévu d'une mission en additionnant tous les montants prévus des dépenses
-     */
-    private function recalculateBudgetPrevu(Mission $mission): float
-    {
-        $totalPrevu = 0;
-        foreach ($mission->getDepenseMissions() as $depense) {
-            $totalPrevu += (float)$depense->getMontantPrevu();
-        }
-        return $totalPrevu;
     }
 
     #[Route('/{id}/add-participant', name: 'app_mission_add_participant', methods: ['POST'])]
-    public function addParticipant(Request $request, Mission $mission, EntityManagerInterface $entityManager): JsonResponse
+    public function addParticipant(Request $request, MissionSession $missionSession, EntityManagerInterface $entityManager): JsonResponse
     {
         $data = json_decode($request->getContent(), true);
-        
-        if (!isset($data['userId'])) {
+        $userIds = $data['userIds'] ?? ($data['userId'] ?? null);
+
+        if (!$userIds) {
             return $this->json([
                 'success' => false,
-                'message' => 'ID utilisateur requis'
+                'message' => 'ID utilisateur requis',
             ], 400);
         }
-        
-        try {
-            // Récupérer l'utilisateur
-            $user = $entityManager->getRepository(\App\Entity\User::class)->find($data['userId']);
+
+        $direction = $missionSession->getDirection();
+        if (!$direction) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Aucune direction associée à la mission',
+            ], 400);
+        }
+
+        $statutParticipation = $entityManager->getRepository(\App\Entity\StatutParticipation::class)->findOneBy(['code' => 'inscrit']);
+        $added = 0;
+
+        foreach ((array) $userIds as $userId) {
+            $user = $entityManager->getRepository(User::class)->find($userId);
             if (!$user) {
                 return $this->json([
                     'success' => false,
-                    'message' => 'Utilisateur introuvable'
+                    'message' => "Utilisateur introuvable (ID: {$userId})",
                 ], 404);
             }
-            
-            // Vérifier que l'utilisateur appartient à la même direction que la mission
-            if ($user->getService()->getDirection()->getId() !== $mission->getDirection()->getId()) {
+
+            $service = $user->getService();
+            $serviceDirection = $service ? $service->getDirection() : null;
+            if (!$serviceDirection || $serviceDirection->getId() !== $direction->getId()) {
                 return $this->json([
                     'success' => false,
-                    'message' => 'L\'utilisateur doit appartenir à la même direction que la mission'
+                    'message' => "L'utilisateur {$user->getNom()} {$user->getPrenom()} n'appartient pas à la direction de la mission",
                 ], 400);
             }
-            
-            // Vérifier que l'utilisateur n'est pas déjà participant
-            $existingUserMission = $entityManager->getRepository(\App\Entity\UserMission::class)->findOneBy([
-                'mission' => $mission,
-                'user' => $user
+
+            $existing = $entityManager->getRepository(UserMission::class)->findOneBy([
+                'missionSession' => $missionSession,
+                'user' => $user,
             ]);
-            
-            if ($existingUserMission) {
-                return $this->json([
-                    'success' => false,
-                    'message' => 'Cet utilisateur est déjà participant à cette mission'
-                ], 400);
+
+            if ($existing) {
+                continue;
             }
-            
-            // Récupérer le statut de participation par défaut (inscrit)
-            $statutParticipation = $entityManager->getRepository(\App\Entity\StatutParticipation::class)->findOneBy(['code' => 'inscrit']);
-            
-            // Créer l'entité UserMission
-            $userMission = new \App\Entity\UserMission();
-            $userMission->setMission($mission);
+
+            $userMission = new UserMission();
+            $userMission->setMissionSession($missionSession);
             $userMission->setUser($user);
             $userMission->setStatutParticipation($statutParticipation);
-            
+
             $entityManager->persist($userMission);
-            $entityManager->flush();
-            
-            return $this->json([
-                'success' => true,
-                'message' => 'Participant ajouté avec succès'
-            ]);
-            
-        } catch (\Exception $e) {
-            return $this->json([
-                'success' => false,
-                'message' => 'Erreur lors de l\'ajout du participant: ' . $e->getMessage()
-            ], 500);
+            $added++;
         }
+
+        $entityManager->flush();
+
+        return $this->json([
+            'success' => true,
+            'message' => $added > 1 ? "{$added} participants ajoutés avec succès" : 'Participant ajouté avec succès',
+        ]);
     }
 
     #[Route('/{id}/realisation', name: 'app_mission_realisation', methods: ['GET'])]
-    public function realisation(Mission $mission): Response
+    public function realisation(MissionSession $missionSession): Response
     {
         return $this->render('mission/realisation.html.twig', [
-            'mission' => $mission
+            'missionSession' => $missionSession,
+            'mission' => $missionSession->getMission(),
         ]);
     }
 
     #[Route('/{id}/realisation/participants', name: 'app_mission_realisation_participants', methods: ['GET'])]
-    public function getParticipantsForRealisation(Mission $mission, EntityManagerInterface $entityManager): JsonResponse
+    public function getParticipantsForRealisation(MissionSession $missionSession, EntityManagerInterface $entityManager): JsonResponse
     {
         $data = [
             'prevus' => [],
-            'disponibles' => []
+            'disponibles' => [],
         ];
-        
-        // Participants prévus (déjà inscrits)
-        foreach ($mission->getUserMissions() as $userMission) {
+
+        foreach ($missionSession->getUserMissions() as $userMission) {
+            $user = $userMission->getUser();
             $data['prevus'][] = [
                 'id' => $userMission->getId(),
-                'userId' => $userMission->getUser()->getId(),
-                'nom' => $userMission->getUser()->getNom(),
-                'prenom' => $userMission->getUser()->getPrenom(),
-                'matricule' => $userMission->getUser()->getMatricule(),
-                'statut_participation_id' => $userMission->getStatutParticipation() ? $userMission->getStatutParticipation()->getId() : null,
-                'statut_libelle' => $userMission->getStatutParticipation() ? $userMission->getStatutParticipation()->getLibelle() : 'Non défini',
-                'statut_couleur' => $userMission->getStatutParticipation() ? $userMission->getStatutParticipation()->getCouleur() : '#6c757d'
+                'userId' => $user->getId(),
+                'nom' => $user->getNom(),
+                'prenom' => $user->getPrenom(),
+                'matricule' => $user->getMatricule(),
+                'statut_participation_id' => $userMission->getStatutParticipation()?->getId(),
+                'statut_libelle' => $userMission->getStatutParticipation()?->getLibelle() ?? 'Non défini',
+                'statut_couleur' => $userMission->getStatutParticipation()?->getCouleur() ?? '#6c757d',
             ];
         }
-        
-        // Utilisateurs de la direction non encore participants
-        $direction = $mission->getDirection();
+
+        $direction = $missionSession->getDirection();
         if ($direction) {
-            // Récupérer tous les services de cette direction
-            $services = $direction->getServices();
             $users = [];
-            foreach ($services as $service) {
+            foreach ($direction->getServices() as $service) {
                 $serviceUsers = $entityManager->getRepository(User::class)->findBy(['service' => $service]);
                 $users = array_merge($users, $serviceUsers);
             }
-            
-            $participantsIds = array_map(function($um) { return $um->getUser()->getId(); }, $mission->getUserMissions()->toArray());
-            
-            $data['disponibles'] = [];
+
+            $participantsIds = array_map(static fn (UserMission $um) => $um->getUser()->getId(), $missionSession->getUserMissions()->toArray());
+
             foreach ($users as $user) {
-                if (!in_array($user->getId(), $participantsIds)) {
+                if (!in_array($user->getId(), $participantsIds, true)) {
                     $data['disponibles'][] = [
                         'id' => $user->getId(),
                         'nom' => $user->getNom(),
                         'prenom' => $user->getPrenom(),
-                        'matricule' => $user->getMatricule()
+                        'matricule' => $user->getMatricule(),
                     ];
                 }
             }
         }
-        
+
         return $this->json($data);
     }
 
     #[Route('/{id}/realisation/depenses', name: 'app_mission_realisation_depenses', methods: ['GET'])]
-    public function getRealisationDepenses(Mission $mission): JsonResponse
+    public function getRealisationDepenses(MissionSession $missionSession): JsonResponse
     {
         $depenses = [];
         $totalPrevu = 0;
         $totalReel = 0;
-        
-        foreach ($mission->getDepenseMissions() as $depense) {
-            $montantPrevu = (float)$depense->getMontantPrevu();
-            $montantReel = $depense->getMontantReel() ? (float)$depense->getMontantReel() : 0;
+
+        foreach ($missionSession->getDepenseMissions() as $depense) {
+            $montantPrevu = (float) $depense->getMontantPrevu();
+            $montantReel = $depense->getMontantReel() ? (float) $depense->getMontantReel() : 0;
             $ecart = $montantReel - $montantPrevu;
-            
+
             $totalPrevu += $montantPrevu;
             $totalReel += $montantReel;
-            
+
             $depenses[] = [
                 'id' => $depense->getId(),
                 'categorie' => $depense->getCategorie()->getLibelle(),
                 'categorieId' => $depense->getCategorie()->getId(),
                 'montantPrevu' => $montantPrevu,
                 'montantReel' => $montantReel,
-                'ecart' => $ecart
+                'ecart' => $ecart,
             ];
         }
-        
+
         return $this->json([
             'depenses' => $depenses,
             'totaux' => [
                 'totalPrevu' => $totalPrevu,
                 'totalReel' => $totalReel,
-                'totalEcart' => $totalReel - $totalPrevu
-            ]
+                'totalEcart' => $totalReel - $totalPrevu,
+            ],
         ]);
     }
 
     #[Route('/{id}/realisation/complete', name: 'app_mission_realisation_complete', methods: ['POST'])]
-    public function completeRealisation(Request $request, Mission $mission, EntityManagerInterface $entityManager): JsonResponse
+    public function completeRealisation(Request $request, MissionSession $missionSession, EntityManagerInterface $entityManager): JsonResponse
     {
         $data = json_decode($request->getContent(), true);
-        
+
         // Log pour débogage
         error_log('Mission realisation data received: ' . json_encode($data));
-        
+
         try {
             // 1. Mettre à jour les informations de la mission
             if (isset($data['dateReelleDebut'])) {
-                $mission->setDateReelleDebut(new \DateTime($data['dateReelleDebut']));
+                $missionSession->setDateReelleDebut(new \DateTime($data['dateReelleDebut']));
             }
             if (isset($data['dateReelleFin'])) {
-                $mission->setDateReelleFin(new \DateTime($data['dateReelleFin']));
+                $missionSession->setDateReelleFin(new \DateTime($data['dateReelleFin']));
             }
             if (isset($data['lieuReel'])) {
-                $mission->setLieuReel($data['lieuReel']);
+                $missionSession->setLieuReel($data['lieuReel']);
             }
-            
+
             // Calculer la durée réelle
             if (isset($data['dateReelleDebut']) && isset($data['dateReelleFin'])) {
                 $dateDebut = new \DateTime($data['dateReelleDebut']);
                 $dateFin = new \DateTime($data['dateReelleFin']);
                 $dureeReelle = $dateDebut->diff($dateFin)->days + 1; // +1 pour inclure le jour de fin
-                $mission->setDureeReelle($dureeReelle);
+                $missionSession->setDureeReelle($dureeReelle);
             }
-            
+
             // 2. Mettre à jour le statut de l'activité selon la nature
             $natureCode = $data['natureMission'] ?? 'prevue_executee';
             $statutActivite = $entityManager->getRepository(\App\Entity\StatutActivite::class)->findOneBy(['code' => $natureCode]);
@@ -743,8 +903,8 @@ class MissionController extends AbstractController
                 // Fallback vers le statut par défaut si le code n'existe pas
                 $statutActivite = $entityManager->getRepository(\App\Entity\StatutActivite::class)->findOneBy(['code' => 'prevue_executee']);
             }
-            $mission->setStatutActivite($statutActivite);
-            
+            $missionSession->setStatutActivite($statutActivite);
+
             // 3. Mettre à jour les statuts des participants
             if (isset($data['participants'])) {
                 foreach ($data['participants'] as $participantData) {
@@ -755,39 +915,39 @@ class MissionController extends AbstractController
                     }
                 }
             }
-            
+
             // 4. Ajouter les nouveaux participants
             if (isset($data['nouveauxParticipants'])) {
                 $statutNonPrevusParticipe = $entityManager->getRepository(\App\Entity\StatutParticipation::class)->findOneBy(['code' => 'non_prevus_participe']);
-                
+
                 foreach ($data['nouveauxParticipants'] as $userId) {
                     $user = $entityManager->getRepository(User::class)->find($userId);
                     if ($user) {
                         $userMission = new \App\Entity\UserMission();
-                        $userMission->setMission($mission);
+                        $userMission->setMissionSession($missionSession);
                         $userMission->setUser($user);
                         $userMission->setStatutParticipation($statutNonPrevusParticipe);
                         $entityManager->persist($userMission);
                     }
                 }
             }
-            
+
             // 5. Ajouter les dépenses réelles
             if (isset($data['depensesReelles'])) {
                 foreach ($data['depensesReelles'] as $depenseData) {
                     $categorie = $entityManager->getRepository(\App\Entity\CategorieDepense::class)->find($depenseData['categorieId']);
                     if ($categorie) {
                         $depenseMission = $entityManager->getRepository(\App\Entity\DepenseMission::class)->findOneBy([
-                            'mission' => $mission,
+                            'missionSession' => $missionSession,
                             'categorie' => $categorie
                         ]);
-                        
+
                         if ($depenseMission) {
                             $depenseMission->setMontantReel($depenseData['montant']);
                         } else {
                             // Créer une nouvelle dépense si elle n'existe pas
                             $depenseMission = new \App\Entity\DepenseMission();
-                            $depenseMission->setMission($mission);
+                            $depenseMission->setMissionSession($missionSession);
                             $depenseMission->setCategorie($categorie);
                             $depenseMission->setMontantReel($depenseData['montant']);
                             $entityManager->persist($depenseMission);
@@ -795,42 +955,41 @@ class MissionController extends AbstractController
                     }
                 }
             }
-            
+
             // Calculer le budget réel total
             $budgetReel = 0;
-            foreach ($mission->getDepenseMissions() as $depense) {
+            foreach ($missionSession->getDepenseMissions() as $depense) {
                 if ($depense->getMontantReel()) {
-                    $budgetReel += (float)$depense->getMontantReel();
+                    $budgetReel += (float) $depense->getMontantReel();
                 }
             }
-            $mission->setBudgetReel($budgetReel);
-            
+            $missionSession->setBudgetReel($budgetReel);
+
             $entityManager->flush();
-            
+
             return $this->json([
                 'success' => true,
-                'message' => 'Mission marquée comme réalisée avec succès'
+                'message' => 'Mission marquée comme réalisée avec succès',
             ]);
-            
+
         } catch (\Exception $e) {
             return $this->json([
                 'success' => false,
-                'message' => 'Erreur lors de la réalisation: ' . $e->getMessage()
+                'message' => 'Erreur lors de la réalisation: ' . $e->getMessage(),
             ], 500);
         }
     }
 
     #[Route('/export/pdf', name: 'app_mission_export_pdf', methods: ['GET'])]
-    public function exportPdf(Request $request, MissionRepository $missionRepository, PdfService $pdfService): Response
+    public function exportPdf(Request $request, MissionSessionRepository $missionSessionRepository, PdfService $pdfService): Response
     {
-        // Récupérer les paramètres de filtrage
         $statutId = $request->query->get('statut');
         $directionId = $request->query->get('direction');
         $periode = $request->query->get('periode');
         $participant = $request->query->get('participant');
-        
-        $missions = $missionRepository->findAllWithFilters($statutId, $directionId, $periode, $participant);
-        
+
+        $missionSessions = $missionSessionRepository->findAllWithFilters($statutId, $directionId, $periode, $participant);
+
         // Préparer les données pour le PDF avec toutes les colonnes
         $headers = [
             'ID', 'Titre', 'Description', 'Direction', 'Fonds', 'Lieu prévu', 'Lieu réel',
@@ -838,35 +997,36 @@ class MissionController extends AbstractController
             'Durée prévue', 'Budget prévu', 'Statut', 'Notes'
         ];
         $data = [];
-        
-        foreach ($missions as $mission) {
+
+        foreach ($missionSessions as $session) {
+            $mission = $session->getMission();
             $data[] = [
-                $mission->getId(),
+                $session->getId(),
                 $mission->getTitre(),
                 $mission->getDescription() ?: '-',
-                $mission->getDirection() ? $mission->getDirection()->getLibelle() : '-',
-                $mission->getFonds() ? $mission->getFonds()->getLibelle() : '-',
-                $mission->getLieuPrevu() ?: '-',
-                $mission->getLieuReel() ?: '-',
-                $mission->getDatePrevueDebut() ? $mission->getDatePrevueDebut()->format('d/m/Y') : '-',
-                $mission->getDatePrevueFin() ? $mission->getDatePrevueFin()->format('d/m/Y') : '-',
-                $mission->getDateReelleDebut() ? $mission->getDateReelleDebut()->format('d/m/Y') : '-',
-                $mission->getDateReelleFin() ? $mission->getDateReelleFin()->format('d/m/Y') : '-',
-                $mission->getDureePrevue() . ' jours',
-                number_format($mission->getBudgetPrevu(), 0, ',', ' ') . ' FCFA',
-                $mission->getStatutActivite() ? $mission->getStatutActivite()->getLibelle() : '-',
-                $mission->getNotes() ?: '-'
+                $session->getDirection() ? $session->getDirection()->getLibelle() : '-',
+                $session->getFonds() ? $session->getFonds()->getLibelle() : '-',
+                $session->getLieuPrevu() ?: '-',
+                $session->getLieuReel() ?: '-',
+                $session->getDatePrevueDebut() ? $session->getDatePrevueDebut()->format('d/m/Y') : '-',
+                $session->getDatePrevueFin() ? $session->getDatePrevueFin()->format('d/m/Y') : '-',
+                $session->getDateReelleDebut() ? $session->getDateReelleDebut()->format('d/m/Y') : '-',
+                $session->getDateReelleFin() ? $session->getDateReelleFin()->format('d/m/Y') : '-',
+                $session->getDureePrevue() . ' jours',
+                number_format((float) $session->getBudgetPrevu(), 0, ',', ' ') . ' FCFA',
+                $session->getStatutActivite() ? $session->getStatutActivite()->getLibelle() : '-',
+                $session->getNotes() ?: '-',
             ];
         }
-        
+
         // Préparer les filtres appliqués
         $filters = [];
         if ($statutId) {
-            $statut = $missionRepository->getEntityManager()->getRepository('App\Entity\StatutActivite')->find($statutId);
+            $statut = $missionSessionRepository->getEntityManager()->getRepository('App\Entity\StatutActivite')->find($statutId);
             if ($statut) $filters[] = 'Statut: ' . $statut->getLibelle();
         }
         if ($directionId) {
-            $direction = $missionRepository->getEntityManager()->getRepository('App\Entity\Direction')->find($directionId);
+            $direction = $missionSessionRepository->getEntityManager()->getRepository('App\Entity\Direction')->find($directionId);
             if ($direction) $filters[] = 'Direction: ' . $direction->getLibelle();
         }
         if ($periode) {
@@ -878,10 +1038,10 @@ class MissionController extends AbstractController
             $filters[] = 'Période: ' . ($periodeTexts[$periode] ?? $periode);
         }
         if ($participant) {
-            $user = $missionRepository->getEntityManager()->getRepository('App\Entity\User')->find($participant);
+            $user = $missionSessionRepository->getEntityManager()->getRepository('App\Entity\User')->find($participant);
             if ($user) $filters[] = 'Participant: ' . $user->getNom() . ' ' . $user->getPrenom();
         }
-        
+
         // Générer le PDF
         $pdfContent = $pdfService->generateLandscapeTablePdf(
             'Liste des Missions',
@@ -890,7 +1050,7 @@ class MissionController extends AbstractController
             $filters,
             'missions_anac_benin.pdf'
         );
-        
+
         // Créer la réponse
         $response = new Response($pdfContent);
         $response->headers->set('Content-Type', 'application/pdf');
@@ -898,7 +1058,7 @@ class MissionController extends AbstractController
             ResponseHeaderBag::DISPOSITION_ATTACHMENT,
             'missions_anac_benin.pdf'
         ));
-        
+
         return $response;
     }
 
@@ -907,18 +1067,14 @@ class MissionController extends AbstractController
     {
         $directions = $directionRepository->findAll();
         $data = [];
-        
+
         foreach ($directions as $direction) {
             $data[] = [
                 'id' => $direction->getId(),
-                'libelle' => $direction->getLibelle()
+                'libelle' => $direction->getLibelle(),
             ];
         }
-        
+
         return $this->json($data);
     }
-
-
-
-
 }

@@ -20,9 +20,14 @@
 	<a href="{{ path('app_mission_index') }}" class="btn btn-secondary btn-sm">
 		<i class="fa fa-arrow-left"></i> Retour
 	</a>
-	<a href="{{ path('app_mission_create') }}" class="btn btn-primary btn-sm">
-		<i class="fa fa-plus"></i> Nouvelle Mission
+	{% if can_create_mission() %}
+	<a href="{{ path('app_mission_modele_create') }}" class="btn btn-outline-secondary btn-sm">
+		<i class="fa fa-plus"></i> Nouvelle mission
 	</a>
+	<a href="{{ path('app_mission_create') }}" class="btn btn-primary btn-sm">
+		<i class="fa fa-plane"></i> Nouvelle session
+	</a>
+	{% endif %}
 </div>
 {% endblock %}
 

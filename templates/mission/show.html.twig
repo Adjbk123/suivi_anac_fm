@@ -2,6 +2,9 @@
 
 {% block title %}Détail de la Mission{% endblock %}
 
+{% set session = missionSession %}
+{% set template = mission %}
+
 {% block breadcrumb %}
 <ul class="breadcrumb">
 	<li class="breadcrumb-item"><a href="{{ path('app_mission_index') }}">MISSIONS</a></li>
@@ -11,7 +14,7 @@
 
 {% block page_title %}
 <h1 class="page-header">
-	{{ mission.titre }} <small>Détail de la mission</small>
+	Détail de la Mission <small>{{ template ? template.titre : 'Session' }}</small>
 </h1>
 {% endblock %}
 
@@ -20,13 +23,13 @@
 	<a href="{{ path('app_mission_index') }}" class="btn btn-secondary btn-sm">
 		<i class="fa fa-arrow-left"></i> Retour
 	</a>
-	{% if mission.statutActivite and mission.statutActivite.code != 'prevue_executee' %}
-	<a href="{{ path('app_mission_edit', {'id': mission.id}) }}" class="btn btn-warning btn-sm">
-		                <i class="fa fa-edit text-warning"></i> Modifier
+	{% if session.statutActivite and session.statutActivite.code != 'prevue_executee' %}
+	<a href="{{ path('app_mission_edit', {'id': session.id}) }}" class="btn btn-warning btn-sm">
+		<i class="fa fa-edit text-warning"></i> Modifier
 	</a>
 	{% endif %}
-	{% if mission.statutActivite and mission.statutActivite.code == 'prevue_non_executee' %}
-	<a href="{{ path('app_mission_realisation', {'id': mission.id}) }}" class="btn btn-success btn-sm">
+	{% if session.statutActivite and session.statutActivite.code == 'prevue_non_executee' %}
+	<a href="{{ path('app_mission_realisation', {'id': session.id}) }}" class="btn btn-success btn-sm">
 		<i class="fa fa-check-circle"></i> Marquer comme réalisée
 	</a>
 	{% endif %}
@@ -36,8 +39,7 @@
 {% block body %}
 <div class="row">
 	<div class="col-xl-12">
-		<!-- Informations générales -->
-		<div class="card mb-4">
+		<div class="card mb-3">
 			<div class="card-header">
 				<h5 class="card-title mb-0">
 					<i class="fa fa-info-circle text-primary"></i> Informations générales
@@ -48,47 +50,47 @@
 					<div class="col-md-6">
 						<table class="table table-borderless">
 							<tr>
-								<td><strong>Titre :</strong></td>
-								<td>{{ mission.titre }}</td>
+								<td width="150"><strong>Titre :</strong></td>
+								<td>{{ template ? template.titre : '-' }}</td>
 							</tr>
 							<tr>
 								<td><strong>Direction :</strong></td>
-								<td>{{ mission.direction ? mission.direction.libelle : '-' }}</td>
+								<td>{{ session.direction ? session.direction.libelle : '-' }}</td>
 							</tr>
 							<tr>
 								<td><strong>Fonds :</strong></td>
-								<td>{{ mission.fonds ? mission.fonds.libelle : '-' }}</td>
+								<td>{{ session.fonds ? session.fonds.libelle : '-' }}</td>
 							</tr>
 							<tr>
 								<td><strong>Lieu prévu :</strong></td>
-								<td>{{ mission.lieuPrevu }}</td>
+								<td>{{ session.lieuPrevu }}</td>
 							</tr>
 						</table>
 					</div>
 					<div class="col-md-6">
 						<table class="table table-borderless">
 							<tr>
-								<td><strong>Date de début :</strong></td>
-								<td>{{ mission.datePrevueDebut ? mission.datePrevueDebut|date('d/m/Y') : '-' }}</td>
+								<td width="150"><strong>Date début :</strong></td>
+								<td>{{ session.datePrevueDebut ? session.datePrevueDebut|date('d/m/Y') : '-' }}</td>
 							</tr>
 							<tr>
-								<td><strong>Date de fin :</strong></td>
-								<td>{{ mission.datePrevueFin ? mission.datePrevueFin|date('d/m/Y') : '-' }}</td>
+								<td><strong>Date fin :</strong></td>
+								<td>{{ session.datePrevueFin ? session.datePrevueFin|date('d/m/Y') : '-' }}</td>
 							</tr>
 							<tr>
 								<td><strong>Durée prévue :</strong></td>
-								<td>{{ mission.dureePrevue }} jours</td>
+								<td>{{ session.dureePrevue }} jours</td>
 							</tr>
 							<tr>
 								<td><strong>Budget prévu :</strong></td>
-								<td>{{ mission.budgetPrevu ? mission.budgetPrevu|number_format(0, ',', ' ') : '0' }} FCFA</td>
+								<td>{{ session.budgetPrevu|number_format(0, ',', ' ') }} FCFA</td>
 							</tr>
 							<tr>
 								<td><strong>Statut :</strong></td>
 								<td>
-									{% if mission.statutActivite %}
-										<span class="badge bg-{{ mission.statutActivite.couleur }}">
-											{{ mission.statutActivite.libelle }}
+									{% if session.statutActivite %}
+										<span class="badge bg-{{ session.statutActivite.couleur }}">
+											{{ session.statutActivite.libelle }}
 										</span>
 									{% else %}
 										<span class="badge bg-secondary">Non défini</span>
@@ -98,29 +100,29 @@
 						</table>
 					</div>
 				</div>
-				{% if mission.description %}
+
+				{% if template and template.description %}
 				<div class="mt-3">
 					<strong>Description :</strong>
-					<p class="mb-0">{{ mission.description }}</p>
+					<p class="mb-0">{{ template.description }}</p>
 				</div>
 				{% endif %}
 			</div>
 		</div>
 
-		<!-- Participants -->
-		<div class="card mb-4">
+		<div class="card mb-3">
 			<div class="card-header d-flex justify-content-between align-items-center">
 				<h5 class="card-title mb-0">
-					<i class="fa fa-users text-primary"></i> Participants ({{ mission.userMissions|length }})
+					<i class="fa fa-users text-primary"></i> Participants ({{ session.userMissions|length }})
 				</h5>
-				{% if mission.statutActivite and mission.statutActivite.code != 'prevue_executee' %}
+				{% if session.statutActivite and session.statutActivite.code != 'prevue_executee' %}
 				<button type="button" class="btn btn-primary btn-sm" onclick="openAddParticipantModal()">
 					<i class="fa fa-plus"></i> Ajouter un participant
 				</button>
 				{% endif %}
 			</div>
 			<div class="card-body">
-				{% if mission.userMissions|length > 0 %}
+				{% if session.userMissions|length > 0 %}
 				<div class="table-responsive">
 					<table class="table table-hover">
 						<thead class="table-secondary">
@@ -129,11 +131,11 @@
 								<th>Nom</th>
 								<th>Prénom</th>
 								<th>Email</th>
-								<th>Statut d'exécution</th>
+								<th>Statut</th>
 							</tr>
 						</thead>
 						<tbody>
-							{% for userMission in mission.userMissions %}
+							{% for userMission in session.userMissions %}
 							<tr>
 								<td>{{ userMission.user.matricule ?: '-' }}</td>
 								<td>{{ userMission.user.nom }}</td>
@@ -154,75 +156,115 @@
 					</table>
 				</div>
 				{% else %}
-				<p class="text-muted mb-0">Aucun participant assigné à cette mission.</p>
+				<div class="text-center text-muted">
+					<i class="fa fa-users fa-2x mb-2"></i>
+					<p>Aucun participant inscrit</p>
+				</div>
 				{% endif %}
 			</div>
 		</div>
 
-		<!-- Dépenses prévues -->
-		<div class="card mb-4">
+		<div class="card mb-3">
 			<div class="card-header d-flex justify-content-between align-items-center">
 				<h5 class="card-title mb-0">
 					<i class="fa fa-money-bill text-primary"></i> Dépenses prévues
 				</h5>
-				{% if mission.statutActivite and mission.statutActivite.code != 'prevue_executee' %}
+				{% if session.statutActivite and session.statutActivite.code != 'prevue_executee' %}
 				<button type="button" class="btn btn-primary btn-sm" onclick="openAddDepenseModal()">
 					<i class="fa fa-plus"></i> Ajouter une dépense
 				</button>
 				{% endif %}
 			</div>
 			<div class="card-body">
-				{% if mission.depenseMissions|length > 0 %}
+				{% if session.depenseMissions|length > 0 %}
 				<div class="table-responsive">
 					<table class="table table-hover">
 						<thead class="table-secondary">
 							<tr>
 								<th>Catégorie</th>
-								<th>Montant prévu (FCFA)</th>
+								<th>Montant prévu</th>
+								<th>Montant réel</th>
+								<th>Écart</th>
 							</tr>
 						</thead>
 						<tbody>
-							{% for depenseMission in mission.depenseMissions %}
+							{% for depense in session.depenseMissions %}
 							<tr>
-								<td>{{ depenseMission.categorie.libelle }}</td>
-								<td>{{ depenseMission.montantPrevu|number_format(0, ',', ' ') }}</td>
+								<td>{{ depense.categorie.libelle }}</td>
+								<td>{{ depense.montantPrevu|number_format(0, ',', ' ') }} FCFA</td>
+								<td>{{ depense.montantReel ? depense.montantReel|number_format(0, ',', ' ') ~ ' FCFA' : '-' }}</td>
+								<td>
+									{% if depense.montantReel %}
+										{% set ecart = depense.montantReel - depense.montantPrevu %}
+										{% set ecartClass = ecart > 0 ? 'text-danger' : (ecart < 0 ? 'text-success' : 'text-muted') %}
+										<span class="{{ ecartClass }}">
+											{{ ecart|number_format(0, ',', ' ') }} FCFA
+										</span>
+									{% else %}
+										-
+									{% endif %}
+								</td>
 							</tr>
 							{% endfor %}
 						</tbody>
-						<tfoot>
-							<tr class="table-info">
+						<tfoot class="table-info">
+							<tr>
 								<td><strong>Total</strong></td>
 								<td>
 									<strong>
 										{% set totalPrevu = 0 %}
-										{% for depenseMission in mission.depenseMissions %}
-											{% set totalPrevu = totalPrevu + depenseMission.montantPrevu %}
+										{% for depense in session.depenseMissions %}
+											{% set totalPrevu = totalPrevu + depense.montantPrevu %}
 										{% endfor %}
 										{{ totalPrevu|number_format(0, ',', ' ') }} FCFA
 									</strong>
+								</td>
+								<td>
+									<strong>
+										{% set totalReel = 0 %}
+										{% for depense in session.depenseMissions %}
+											{% if depense.montantReel %}
+												{% set totalReel = totalReel + depense.montantReel %}
+											{% endif %}
+										{% endfor %}
+										{{ totalReel > 0 ? totalReel|number_format(0, ',', ' ') ~ ' FCFA' : '-' }}
+									</strong>
+								</td>
+								<td>
+									{% if totalReel > 0 %}
+										{% set ecartTotal = totalReel - totalPrevu %}
+										{% set ecartClass = ecartTotal > 0 ? 'text-danger' : (ecartTotal < 0 ? 'text-success' : 'text-muted') %}
+										<strong class="{{ ecartClass }}">
+											{{ ecartTotal|number_format(0, ',', ' ') }} FCFA
+										</strong>
+									{% else %}
+										-
+									{% endif %}
 								</td>
 							</tr>
 						</tfoot>
 					</table>
 				</div>
 				{% else %}
-				<p class="text-muted mb-0">Aucune dépense prévue pour cette mission.</p>
+				<div class="text-center text-muted">
+					<i class="fa fa-money-bill fa-2x mb-2"></i>
+					<p>Aucune dépense prévue</p>
+				</div>
 				{% endif %}
 			</div>
 		</div>
 
-		<!-- Documents -->
-		<div class="card mb-4">
+		<div class="card mb-3">
 			<div class="card-header d-flex justify-content-between align-items-center">
 				<h5 class="card-title mb-0">
-					<i class="fa fa-file-alt text-primary"></i> Documents
+					<i class="fa fa-file-alt text-primary"></i> Documents ({{ session.documentMissions|length }})
 				</h5>
 				<button type="button" class="btn btn-primary btn-sm" onclick="openAddDocumentModal()">
 					<i class="fa fa-plus"></i> Ajouter un document
 				</button>
 			</div>
 			<div class="card-body">
-				{% if mission.documentMissions|length > 0 %}
+				{% if session.documentMissions|length > 0 %}
 				<div class="table-responsive">
 					<table class="table table-hover">
 						<thead class="table-secondary">
@@ -231,25 +273,23 @@
 								<th>Type</th>
 								<th>Taille</th>
 								<th>Date d'upload</th>
-								                        <th><i class="fa fa-cogs"></i></th>
+								<th><i class="fa fa-cogs"></i></th>
 							</tr>
 						</thead>
 						<tbody>
-							{% for document in mission.documentMissions %}
+							{% for document in session.documentMissions %}
 							<tr>
 								<td>{{ document.nom }}</td>
 								<td>{{ document.type }}</td>
-								<td>{{ (document.taille / 1024)|round(2) }} KB</td>
+								<td>{{ (document.taille / 1024)|round(1) }} KB</td>
 								<td>{{ document.dateUpload|date('d/m/Y H:i') }}</td>
 								<td>
 									<div class="btn-group" role="group">
-										{% if document.type starts with 'image/' or document.type == 'application/pdf' or document.type starts with 'text/' %}
-										<button type="button" class="btn btn-outline-info btn-sm" onclick="previewDocument('/uploads/documents/{{ document.nomFichier }}', '{{ document.nom }}', '{{ document.type }}')" title="Voir">
-											<i class="fa fa-eye"></i>
-										</button>
-										{% endif %}
-										<a href="/uploads/documents/{{ document.nomFichier }}" class="btn btn-outline-primary btn-sm" download title="Télécharger">
-											<i class="fa fa-download"></i>
+										<a href="{{ asset('uploads/documents/' ~ document.nomFichier) }}" target="_blank" class="btn btn-sm btn-outline-info">
+											<i class="fa fa-eye"></i> Voir
+										</a>
+										<a href="{{ asset('uploads/documents/' ~ document.nomFichier) }}" target="_blank" class="btn btn-sm btn-outline-primary">
+											<i class="fa fa-download"></i> Télécharger
 										</a>
 									</div>
 								</td>
@@ -259,27 +299,28 @@
 					</table>
 				</div>
 				{% else %}
-				<p class="text-muted mb-0">Aucun document ajouté à cette mission.</p>
+				<div class="text-center text-muted">
+					<i class="fa fa-file-alt fa-2x mb-2"></i>
+					<p>Aucun document ajouté</p>
+				</div>
 				{% endif %}
 			</div>
 		</div>
 
-		<!-- Notes -->
-		{% if mission.notes %}
-		<div class="card mb-4">
+		{% if session.notes %}
+		<div class="card">
 			<div class="card-header">
 				<h5 class="card-title mb-0">
 					<i class="fa fa-sticky-note text-primary"></i> Notes
 				</h5>
 			</div>
 			<div class="card-body">
-				<p class="mb-0">{{ mission.notes }}</p>
+				<p class="mb-0">{{ session.notes }}</p>
 			</div>
 		</div>
 		{% endif %}
 	</div>
 </div>
-
 
 <!-- Modal d'ajout de document -->
 <div class="modal fade" id="addDocumentModal" tabindex="-1" aria-labelledby="addDocumentModalLabel" aria-hidden="true">
@@ -293,19 +334,19 @@
 				<form id="addDocumentForm">
 					<div class="mb-3">
 						<label for="documentName" class="form-label">Nom du document *</label>
-						<input type="text" class="form-control" id="documentName" required>
+						<input type="text" class="form-control" id="documentName" name="documentName" required>
 					</div>
 					<div class="mb-3">
 						<label for="documentFile" class="form-label">Fichier *</label>
-						<input type="file" class="form-control" id="documentFile" required>
+						<input type="file" class="form-control" id="documentFile" name="documentFile" required>
+						<div class="form-text">Formats acceptés : PDF, images, documents texte</div>
 					</div>
 				</form>
 			</div>
 			<div class="modal-footer">
 				<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
 				<button type="button" class="btn btn-primary" onclick="submitDocument()">
-					<i class="fa fa-spinner fa-spin" id="documentSpinner" style="display: none;"></i>
-					Ajouter
+					<i class="fa fa-upload"></i> Ajouter
 				</button>
 			</div>
 		</div>
@@ -324,21 +365,20 @@
 				<form id="addDepenseForm">
 					<div class="mb-3">
 						<label for="depenseCategorie" class="form-label">Catégorie de dépense *</label>
-						<select class="form-select" id="depenseCategorie" required>
-							<option value="">Choisir une catégorie</option>
+						<select class="form-control" id="depenseCategorie" name="depenseCategorie" required>
+							<option value="">Sélectionner une catégorie</option>
 						</select>
 					</div>
 					<div class="mb-3">
-						<label for="depenseMontant" class="form-label">Montant (FCFA) *</label>
-						<input type="number" class="form-control" id="depenseMontant" min="0" step="1" required>
+						<label for="depenseMontant" class="form-label">Montant prévu (FCFA) *</label>
+						<input type="number" class="form-control" id="depenseMontant" name="depenseMontant" min="0" step="1" required>
 					</div>
 				</form>
 			</div>
 			<div class="modal-footer">
 				<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
 				<button type="button" class="btn btn-primary" onclick="submitDepense()">
-					<i class="fa fa-spinner fa-spin" id="depenseSpinner" style="display: none;"></i>
-					Ajouter
+					<i class="fa fa-plus"></i> Ajouter
 				</button>
 			</div>
 		</div>
@@ -360,7 +400,7 @@
 						<select class="form-control" id="participantUser" name="participantUser" required>
 							<option value="">Sélectionner un utilisateur</option>
 						</select>
-						<small class="form-text text-muted">Seuls les utilisateurs de la direction {{ mission.direction.libelle }} sont affichés</small>
+						<small class="form-text text-muted">Seuls les utilisateurs de la direction {{ session.direction ? session.direction.libelle : '-' }} sont affichés</small>
 					</div>
 				</form>
 			</div>
@@ -373,207 +413,137 @@
 		</div>
 	</div>
 </div>
-{% endblock %}
 
-{% block javascripts %}
 <script>
-
-// Ouvrir le modal d'ajout de document
 function openAddDocumentModal() {
     const modal = new bootstrap.Modal(document.getElementById('addDocumentModal'));
     document.getElementById('addDocumentForm').reset();
     modal.show();
 }
 
-// Soumettre un document
 function submitDocument() {
     const form = document.getElementById('addDocumentForm');
     const formData = new FormData();
-    const spinner = document.getElementById('documentSpinner');
-    
-    formData.append('nom', document.getElementById('documentName').value);
-    formData.append('file', document.getElementById('documentFile').files[0]);
-    
-    if (!formData.get('nom') || !formData.get('file')) {
-        showToast('Veuillez remplir tous les champs requis.', 'error');
+
+    const documentName = document.getElementById('documentName').value;
+    const documentFile = document.getElementById('documentFile').files[0];
+
+    if (!documentName || !documentFile) {
+        alert('Veuillez remplir tous les champs obligatoires');
         return;
     }
-    
-    spinner.style.display = 'inline-block';
-    
-    fetch('/mission/{{ mission.id }}/add-document', {
+
+    formData.append('nom', documentName);
+    formData.append('file', documentFile);
+
+    fetch(`/mission/{{ session.id }}/add-document`, {
         method: 'POST',
         body: formData
     })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            showToast(data.message, 'success');
-            setTimeout(() => {
-                window.location.reload();
-            }, 1500);
-        } else {
-            showToast(data.message || 'Erreur lors de l\'ajout du document', 'error');
-        }
-    })
-    .catch(error => {
-        console.error('Erreur:', error);
-        showToast('Erreur lors de l\'ajout du document', 'error');
-    })
-    .finally(() => {
-        spinner.style.display = 'none';
-    });
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                fetch(window.location.href, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                    .then(() => window.location.reload());
+            } else {
+                alert(data.message || "Erreur lors de l'ajout du document");
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            alert("Erreur lors de l'ajout du document");
+        });
 }
 
-// Ouvrir le modal d'ajout de dépense
 function openAddDepenseModal() {
     const modal = new bootstrap.Modal(document.getElementById('addDepenseModal'));
     document.getElementById('addDepenseForm').reset();
-    loadCategoriesDepenses();
-    modal.show();
-}
 
-// Charger les catégories de dépenses
-function loadCategoriesDepenses() {
     fetch('/api/categories-depenses')
         .then(response => response.json())
         .then(data => {
             const select = document.getElementById('depenseCategorie');
-            select.innerHTML = '<option value="">Choisir une catégorie</option>';
+            select.innerHTML = '<option value="">Sélectionner une catégorie</option>';
             data.forEach(categorie => {
                 select.innerHTML += `<option value="${categorie.id}">${categorie.libelle}</option>`;
             });
-        })
-        .catch(error => console.error('Erreur:', error));
-}
+        });
 
-// Soumettre une dépense
-function submitDepense() {
-    const categorieId = document.getElementById('depenseCategorie').value;
-    const montant = document.getElementById('depenseMontant').value;
-    const spinner = document.getElementById('depenseSpinner');
-    
-    if (!categorieId || !montant) {
-        showToast('Veuillez remplir tous les champs requis.', 'error');
-        return;
-    }
-    
-    spinner.style.display = 'inline-block';
-    
-    fetch('/mission/{{ mission.id }}/add-depense', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            categorieId: parseInt(categorieId),
-            montant: parseFloat(montant)
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            showToast(data.message, 'success');
-            setTimeout(() => {
-                window.location.reload();
-            }, 1500);
-        } else {
-            showToast(data.message || 'Erreur lors de l\'ajout de la dépense', 'error');
-        }
-    })
-    .catch(error => {
-        console.error('Erreur:', error);
-        showToast('Erreur lors de l\'ajout de la dépense', 'error');
-    })
-    .finally(() => {
-        spinner.style.display = 'none';
-    });
-}
-
-// Modal pour ajouter un participant
-function openAddParticipantModal() {
-    const modal = new bootstrap.Modal(document.getElementById('addParticipantModal'));
-    document.getElementById('addParticipantForm').reset();
-    loadAvailableUsers();
     modal.show();
 }
 
-function loadAvailableUsers() {
-    const select = document.getElementById('participantUser');
-    select.innerHTML = '<option value="">Sélectionner un utilisateur</option>';
-    
-    fetch(`/api/users-by-direction/{{ mission.direction.id }}`)
+function submitDepense() {
+    const categorieId = document.getElementById('depenseCategorie').value;
+    const montant = document.getElementById('depenseMontant').value;
+
+    if (!categorieId || !montant) {
+        alert('Veuillez renseigner tous les champs');
+        return;
+    }
+
+    fetch(`/mission/{{ session.id }}/add-depense`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ categorieId: parseInt(categorieId, 10), montant: parseFloat(montant) })
+    })
         .then(response => response.json())
         .then(data => {
-            // Filtrer les utilisateurs déjà participants
-            const participantsIds = [{{ mission.userMissions|map(um => um.user.id)|join(', ') }}];
-            const availableUsers = data.filter(user => !participantsIds.includes(user.id));
-            
-            availableUsers.forEach(user => {
-                const option = document.createElement('option');
-                option.value = user.id;
-                option.textContent = `${user.nom} ${user.prenom} (${user.matricule || 'N/A'})`;
-                select.appendChild(option);
-            });
+            if (data.success) {
+                fetch(window.location.href, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                    .then(() => window.location.reload());
+            } else {
+                alert(data.message || "Erreur lors de l'ajout de la dépense");
+            }
         })
         .catch(error => {
             console.error('Erreur:', error);
-            showToast('Erreur lors du chargement des utilisateurs', 'error');
+            alert("Erreur lors de l'ajout de la dépense");
         });
+}
+
+function openAddParticipantModal() {
+    const modal = new bootstrap.Modal(document.getElementById('addParticipantModal'));
+    document.getElementById('addParticipantForm').reset();
+
+    fetch(`/api/users-by-direction/{{ session.direction ? session.direction.id : 0 }}?excludeMissionSessionParticipants={{ session.id }}`)
+        .then(response => response.json())
+        .then(data => {
+            const select = document.getElementById('participantUser');
+            select.innerHTML = '<option value="">Sélectionner un utilisateur</option>';
+            (data.users || []).forEach(user => {
+                select.innerHTML += `<option value="${user.id}">${user.nom} ${user.prenom} (${user.email})</option>`;
+            });
+        });
+
+    modal.show();
 }
 
 function submitParticipant() {
     const userId = document.getElementById('participantUser').value;
-    
+
     if (!userId) {
         alert('Veuillez sélectionner un utilisateur');
         return;
     }
-    
-    const data = {
-        userId: parseInt(userId)
-    };
-    
-    // Désactiver le bouton pendant l'ajout
-    const submitBtn = document.querySelector('#addParticipantModal .btn-primary');
-    const originalText = submitBtn.innerHTML;
-    submitBtn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Ajout en cours...';
-    submitBtn.disabled = true;
-    
-    fetch(`/mission/{{ mission.id }}/add-participant`, {
+
+    fetch(`/mission/{{ session.id }}/add-participant`, {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(data)
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: parseInt(userId, 10) })
     })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            // Fermer le modal
-            const modal = bootstrap.Modal.getInstance(document.getElementById('addParticipantModal'));
-            modal.hide();
-            
-            // Afficher le message de succès
-            showToast(data.message, 'success');
-            
-            // Recharger la page pour afficher le nouveau participant
-            setTimeout(() => {
-                window.location.reload();
-            }, 1000);
-        } else {
-            showToast(data.message || 'Erreur lors de l\'ajout du participant', 'error');
-        }
-    })
-    .catch(error => {
-        console.error('Erreur:', error);
-        showToast('Erreur lors de l\'ajout du participant', 'error');
-    })
-    .finally(() => {
-        // Réactiver le bouton
-        submitBtn.innerHTML = originalText;
-        submitBtn.disabled = false;
-    });
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                fetch(window.location.href, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                    .then(() => window.location.reload());
+            } else {
+                alert(data.message || "Erreur lors de l'ajout du participant");
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            alert("Erreur lors de l'ajout du participant");
+        });
 }
 </script>
 {% endblock %}

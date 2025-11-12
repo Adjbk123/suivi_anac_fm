@@ -2,24 +2,24 @@
 
 namespace App\Service;
 
-use App\Repository\FormationRepository;
-use App\Repository\MissionRepository;
+use App\Repository\FormationSessionRepository;
+use App\Repository\MissionSessionRepository;
 use Doctrine\ORM\EntityManagerInterface;
 
 class PerformanceService
 {
-    private FormationRepository $formationRepository;
-    private MissionRepository $missionRepository;
+    private FormationSessionRepository $formationSessionRepository;
+    private MissionSessionRepository $missionSessionRepository;
     private EntityManagerInterface $entityManager;
 
     public function __construct(
-        FormationRepository $formationRepository,
-        MissionRepository $missionRepository,
+        FormationSessionRepository $formationSessionRepository,
+        MissionSessionRepository $missionSessionRepository,
         EntityManagerInterface $entityManager
     ) {
-        $this->formationRepository = $formationRepository;
-        $this->missionRepository = $missionRepository;
-        $entityManager = $entityManager;
+        $this->formationSessionRepository = $formationSessionRepository;
+        $this->missionSessionRepository = $missionSessionRepository;
+        $this->entityManager = $entityManager;
     }
 
     /**
@@ -47,13 +47,13 @@ class PerformanceService
     {
         $year = $year ?? date('Y');
         
-        // Récupérer les formations de l'année
-        $formationsPrevues = $this->formationRepository->countByYear($year);
-        $formationsRealisees = $this->formationRepository->countExecutedByYear($year);
+        // Récupérer les sessions de formation de l'année
+        $formationsPrevues = $this->formationSessionRepository->countByYear($year);
+        $formationsRealisees = $this->formationSessionRepository->countExecutedByYear($year);
         
         // Récupérer les budgets
-        $budgetPrevu = $this->formationRepository->getTotalBudgetByYear($year);
-        $depensesReelles = $this->formationRepository->getTotalRealExpensesByYear($year);
+        $budgetPrevu = $this->formationSessionRepository->getTotalBudgetByYear($year);
+        $depensesReelles = $this->formationSessionRepository->getTotalRealExpensesByYear($year);
         
         // Calculer les taux
         $tauxPhysique = $formationsPrevues > 0 ? round(($formationsRealisees / $formationsPrevues) * 100, 1) : 0;
@@ -83,12 +83,12 @@ class PerformanceService
         $year = $year ?? date('Y');
         
         // Récupérer les missions de l'année
-        $missionsPrevues = $this->missionRepository->countByYear($year);
-        $missionsRealisees = $this->missionRepository->countExecutedByYear($year);
+        $missionsPrevues = $this->missionSessionRepository->countByYear($year);
+        $missionsRealisees = $this->missionSessionRepository->countExecutedByYear($year);
         
         // Récupérer les budgets
-        $budgetPrevu = $this->missionRepository->getTotalBudgetByYear($year);
-        $depensesReelles = $this->missionRepository->getTotalRealExpensesByYear($year);
+        $budgetPrevu = $this->missionSessionRepository->getTotalBudgetByYear($year);
+        $depensesReelles = $this->missionSessionRepository->getTotalRealExpensesByYear($year);
         
         // Calculer les taux
         $tauxPhysique = $missionsPrevues > 0 ? round(($missionsRealisees / $missionsPrevues) * 100, 1) : 0;
@@ -122,14 +122,24 @@ class PerformanceService
         $performanceByDirection = [];
         
         foreach ($directions as $direction) {
-            $formations = $this->formationRepository->findByDirectionAndYear($direction, $year);
-            $missions = $this->missionRepository->findByDirectionAndYear($direction, $year);
+            // Récupérer les sessions de formation par direction et année
+            $filters = ['direction' => $direction->getId()];
+            $formationSessions = $this->formationSessionRepository->findWithFilters($filters);
+            // Filtrer par année
+            $formationSessions = array_filter($formationSessions, function($fs) use ($year) {
+                return $fs->getDatePrevueDebut() && $fs->getDatePrevueDebut()->format('Y') == $year;
+            });
             
-            $formationsPrevues = count($formations);
-            $formationsRealisees = count(array_filter($formations, fn($f) => $f->getStatutActivite()->getCode() === 'prevue_executee'));
+            $missions = array_filter(
+                $this->missionSessionRepository->findAllWithFilters(null, (string) $direction->getId(), null, null),
+                static fn ($ms) => $ms->getDatePrevueDebut() && $ms->getDatePrevueDebut()->format('Y') == $year
+            );
+            
+            $formationsPrevues = count($formationSessions);
+            $formationsRealisees = count(array_filter($formationSessions, fn($fs) => $fs->getStatutActivite() && $fs->getStatutActivite()->getCode() === 'prevue_executee'));
             
             $missionsPrevues = count($missions);
-            $missionsRealisees = count(array_filter($missions, fn($m) => $m->getStatutActivite()->getCode() === 'prevue_executee'));
+            $missionsRealisees = count(array_filter($missions, static fn ($ms) => $ms->getStatutActivite() && $ms->getStatutActivite()->getCode() === 'prevue_executee'));
             
             $performanceByDirection[] = [
                 'direction' => $direction->getLibelle(),
@@ -233,8 +243,8 @@ class PerformanceService
         
         return [
             'monthly' => [
-                'formations' => $this->formationRepository->getMonthlyStatsByYear($year),
-                'missions' => $this->missionRepository->getMonthlyStatsByYear($year)
+                'formations' => $this->formationSessionRepository->getMonthlyStatsByYear($year),
+                'missions' => $this->missionSessionRepository->getMonthlyStatsByYear($year)
             ],
             'performance' => [
                 'formations' => $this->getFormationPerformance($year),

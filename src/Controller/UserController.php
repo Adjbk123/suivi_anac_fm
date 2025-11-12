@@ -8,6 +8,7 @@ use App\Repository\UserRepository;
 use App\Repository\ServiceRepository;
 use App\Repository\DomaineRepository;
 use App\Repository\PosteRepository;
+use App\Repository\DirectionRepository;
 use App\Service\PdfService;
 use App\Service\RoleService;
 use Doctrine\ORM\EntityManagerInterface;
@@ -43,6 +44,9 @@ class UserController extends AbstractController
                 'prenom' => $user->getPrenom(),
                 'email' => $user->getEmail(),
                 'matricule' => $user->getMatricule() ?: '-',
+                'role' => $user->getPrimaryRole(),
+                'direction' => $user->getDirection() ? $user->getDirection()->getLibelle() : '-',
+                'direction_id' => $user->getDirection() ? $user->getDirection()->getId() : null,
                 'service' => $user->getService() ? $user->getService()->getLibelle() : '-',
                 'service_id' => $user->getService() ? $user->getService()->getId() : null,
                 'domaine' => $user->getDomaine() ? $user->getDomaine()->getLibelle() : '-',
@@ -56,17 +60,33 @@ class UserController extends AbstractController
     }
 
     #[Route('/new', name: 'app_user_new', methods: ['POST'])]
-    public function new(Request $request, EntityManagerInterface $entityManager, ServiceRepository $serviceRepository, DomaineRepository $domaineRepository, PosteRepository $posteRepository, UserPasswordHasherInterface $passwordHasher): JsonResponse
+    public function new(Request $request, EntityManagerInterface $entityManager, ServiceRepository $serviceRepository, DomaineRepository $domaineRepository, PosteRepository $posteRepository, DirectionRepository $directionRepository, UserPasswordHasherInterface $passwordHasher): JsonResponse
     {
         $data = json_decode($request->getContent(), true);
         
-        if (!$data || !isset($data['nom']) || !isset($data['prenom']) || !isset($data['email']) || !isset($data['password']) || !isset($data['service_id'])) {
+        if (!$data || !isset($data['nom']) || !isset($data['prenom']) || !isset($data['email']) || !isset($data['password'])) {
             return $this->json(['success' => false, 'message' => 'Données manquantes'], 400);
         }
         
-        $service = $serviceRepository->find($data['service_id']);
-        if (!$service) {
-            return $this->json(['success' => false, 'message' => 'Service introuvable'], 404);
+        // La direction est optionnelle mais si elle n'est pas fournie, le service est obligatoire
+        if (!isset($data['direction_id']) && !isset($data['service_id'])) {
+            return $this->json(['success' => false, 'message' => 'Vous devez sélectionner une direction ou un service'], 400);
+        }
+        
+        $direction = null;
+        if (isset($data['direction_id']) && $data['direction_id']) {
+            $direction = $directionRepository->find($data['direction_id']);
+            if (!$direction) {
+                return $this->json(['success' => false, 'message' => 'Direction introuvable'], 404);
+            }
+        }
+        
+        $service = null;
+        if (isset($data['service_id']) && $data['service_id']) {
+            $service = $serviceRepository->find($data['service_id']);
+            if (!$service) {
+                return $this->json(['success' => false, 'message' => 'Service introuvable'], 404);
+            }
         }
         
         $domaine = null;
@@ -91,6 +111,7 @@ class UserController extends AbstractController
         $user->setEmail($data['email']);
         $user->setMatricule($data['matricule'] ?? null);
         $user->setPassword($passwordHasher->hashPassword($user, $data['password']));
+        $user->setDirection($direction);
         $user->setService($service);
         $user->setDomaine($domaine);
         $user->setPoste($poste);
@@ -122,25 +143,42 @@ class UserController extends AbstractController
             'prenom' => $user->getPrenom(),
             'email' => $user->getEmail(),
             'matricule' => $user->getMatricule(),
+            'direction_id' => $user->getDirection() ? $user->getDirection()->getId() : null,
             'service_id' => $user->getService() ? $user->getService()->getId() : null,
             'domaine_id' => $user->getDomaine() ? $user->getDomaine()->getId() : null,
             'poste_id' => $user->getPoste() ? $user->getPoste()->getId() : null,
-            'roles' => $user->getRoles()[0] ?? 'ROLE_USER' // Retourner le rôle principal
+            'roles' => $user->getPrimaryRole() // Retourner le rôle principal
         ]);
     }
 
     #[Route('/{id}', name: 'app_user_edit', methods: ['PUT'])]
-    public function edit(Request $request, User $user, EntityManagerInterface $entityManager, ServiceRepository $serviceRepository, DomaineRepository $domaineRepository, PosteRepository $posteRepository, UserPasswordHasherInterface $passwordHasher): JsonResponse
+    public function edit(Request $request, User $user, EntityManagerInterface $entityManager, ServiceRepository $serviceRepository, DomaineRepository $domaineRepository, PosteRepository $posteRepository, DirectionRepository $directionRepository, UserPasswordHasherInterface $passwordHasher): JsonResponse
     {
         $data = json_decode($request->getContent(), true);
         
-        if (!$data || !isset($data['nom']) || !isset($data['prenom']) || !isset($data['email']) || !isset($data['service_id'])) {
+        if (!$data || !isset($data['nom']) || !isset($data['prenom']) || !isset($data['email'])) {
             return $this->json(['success' => false, 'message' => 'Données manquantes'], 400);
         }
         
-        $service = $serviceRepository->find($data['service_id']);
-        if (!$service) {
-            return $this->json(['success' => false, 'message' => 'Service introuvable'], 404);
+        // La direction est optionnelle mais si elle n'est pas fournie, le service est obligatoire
+        if (!isset($data['direction_id']) && !isset($data['service_id'])) {
+            return $this->json(['success' => false, 'message' => 'Vous devez sélectionner une direction ou un service'], 400);
+        }
+        
+        $direction = null;
+        if (isset($data['direction_id']) && $data['direction_id']) {
+            $direction = $directionRepository->find($data['direction_id']);
+            if (!$direction) {
+                return $this->json(['success' => false, 'message' => 'Direction introuvable'], 404);
+            }
+        }
+        
+        $service = null;
+        if (isset($data['service_id']) && $data['service_id']) {
+            $service = $serviceRepository->find($data['service_id']);
+            if (!$service) {
+                return $this->json(['success' => false, 'message' => 'Service introuvable'], 404);
+            }
         }
         
         $domaine = null;
@@ -169,6 +207,7 @@ class UserController extends AbstractController
             $user->setPassword($passwordHasher->hashPassword($user, $data['password']));
         }
         
+        $user->setDirection($direction);
         $user->setService($service);
         $user->setDomaine($domaine);
         $user->setPoste($poste);
@@ -195,16 +234,40 @@ class UserController extends AbstractController
         return $this->json(['success' => true, 'message' => 'Utilisateur supprimé avec succès']);
     }
 
-    #[Route('/services/list', name: 'app_user_services_list', methods: ['GET'])]
-    public function getServices(ServiceRepository $serviceRepository): JsonResponse
+    #[Route('/directions/list', name: 'app_user_directions_list', methods: ['GET'])]
+    public function getDirections(DirectionRepository $directionRepository): JsonResponse
     {
-        $services = $serviceRepository->findAll();
+        $directions = $directionRepository->findAll();
+        
+        $data = [];
+        foreach ($directions as $direction) {
+            $data[] = [
+                'id' => $direction->getId(),
+                'libelle' => $direction->getLibelle()
+            ];
+        }
+        
+        return $this->json($data);
+    }
+
+    #[Route('/services/list', name: 'app_user_services_list', methods: ['GET'])]
+    public function getServices(ServiceRepository $serviceRepository, Request $request): JsonResponse
+    {
+        $directionId = $request->query->get('direction_id');
+        
+        if ($directionId) {
+            // Filtrer les services par direction
+            $services = $serviceRepository->findBy(['direction' => $directionId]);
+        } else {
+            $services = $serviceRepository->findAll();
+        }
         
         $data = [];
         foreach ($services as $service) {
             $data[] = [
                 'id' => $service->getId(),
                 'libelle' => $service->getLibelle(),
+                'direction_id' => $service->getDirection() ? $service->getDirection()->getId() : null,
                 'direction' => $service->getDirection() ? $service->getDirection()->getLibelle() : '-'
             ];
         }

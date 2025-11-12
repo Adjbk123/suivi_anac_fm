@@ -2,8 +2,8 @@
 
 namespace App\Controller;
 
-use App\Repository\FormationRepository;
-use App\Repository\MissionRepository;
+use App\Repository\FormationSessionRepository;
+use App\Repository\MissionSessionRepository;
 use App\Repository\UserRepository;
 use App\Repository\ServiceRepository;
 use App\Repository\StatutActiviteRepository;
@@ -19,8 +19,8 @@ class DashboardController extends AbstractController
 {
     #[Route('/', name: 'app_dashboard')]
     public function index(
-        FormationRepository $formationRepository,
-        MissionRepository $missionRepository,
+        FormationSessionRepository $formationSessionRepository,
+        MissionSessionRepository $missionSessionRepository,
         UserRepository $userRepository,
         ServiceRepository $serviceRepository,
         StatutActiviteRepository $statutActiviteRepository,
@@ -34,16 +34,16 @@ class DashboardController extends AbstractController
         
         // Statistiques générales pour l'année en cours
         $stats = [
-            'total_formations' => $formationRepository->countByYear($currentYear),
-            'total_missions' => $missionRepository->countByYear($currentYear),
-            'formations_executees' => $formationRepository->countExecutedByYear($currentYear),
-            'missions_executees' => $missionRepository->countExecutedByYear($currentYear),
-            'formations_prevues' => $formationRepository->countPlannedByYear($currentYear),
-            'missions_prevues' => $missionRepository->countPlannedByYear($currentYear),
-            'budget_total_formations' => $formationRepository->getTotalBudgetByYear($currentYear),
-            'budget_total_missions' => $missionRepository->getTotalBudgetByYear($currentYear),
-            'depenses_reelles_formations' => $formationRepository->getTotalRealExpensesByYear($currentYear),
-            'depenses_reelles_missions' => $missionRepository->getTotalRealExpensesByYear($currentYear),
+            'total_formations' => $formationSessionRepository->countByYear($currentYear),
+            'total_missions' => $missionSessionRepository->countByYear($currentYear),
+            'formations_executees' => $formationSessionRepository->countExecutedByYear($currentYear),
+            'missions_executees' => $missionSessionRepository->countExecutedByYear($currentYear),
+            'formations_prevues' => $formationSessionRepository->countPlannedByYear($currentYear),
+            'missions_prevues' => $missionSessionRepository->countPlannedByYear($currentYear),
+            'budget_total_formations' => $formationSessionRepository->getTotalBudgetByYear($currentYear),
+            'budget_total_missions' => $missionSessionRepository->getTotalBudgetByYear($currentYear),
+            'depenses_reelles_formations' => $formationSessionRepository->getTotalRealExpensesByYear($currentYear),
+            'depenses_reelles_missions' => $missionSessionRepository->getTotalRealExpensesByYear($currentYear),
         ];
         
         // Ajouter des statistiques spécifiques selon le rôle
@@ -54,8 +54,8 @@ class DashboardController extends AbstractController
         
         // Données pour les graphiques mensuels
         $monthlyData = [
-            'formations' => $formationRepository->getMonthlyStatsByYear($currentYear),
-            'missions' => $missionRepository->getMonthlyStatsByYear($currentYear),
+            'formations' => $formationSessionRepository->getMonthlyStatsByYear($currentYear),
+            'missions' => $missionSessionRepository->getMonthlyStatsByYear($currentYear),
         ];
         
         // Top 5 des services les plus actifs
@@ -63,21 +63,21 @@ class DashboardController extends AbstractController
         
         // Répartition par statut
         $statusDistribution = [
-            'formations' => $formationRepository->getStatusDistributionByYear($currentYear),
-            'missions' => $missionRepository->getStatusDistributionByYear($currentYear),
+            'formations' => $formationSessionRepository->getStatusDistributionByYear($currentYear),
+            'missions' => $missionSessionRepository->getStatusDistributionByYear($currentYear),
         ];
 
         // Nouvelles statistiques
-        $topExpensiveFormations = $formationRepository->getTopExpensiveFormations($currentYear);
-        $bottomExpensiveFormations = $formationRepository->getBottomExpensiveFormations($currentYear);
-        $topExpensiveMissions = $missionRepository->getTopExpensiveMissions($currentYear);
-        $bottomExpensiveMissions = $missionRepository->getBottomExpensiveMissions($currentYear);
+        $topExpensiveFormations = $formationSessionRepository->getTopExpensiveFormations($currentYear);
+        $bottomExpensiveFormations = $formationSessionRepository->getBottomExpensiveFormations($currentYear);
+        $topExpensiveMissions = $missionSessionRepository->getTopExpensiveMissions($currentYear);
+        $bottomExpensiveMissions = $missionSessionRepository->getBottomExpensiveMissions($currentYear);
         
-        $executionRateFormations = $formationRepository->getExecutionRateByDirection($currentYear);
-        $executionRateMissions = $missionRepository->getExecutionRateByDirection($currentYear);
+        $executionRateFormations = $formationSessionRepository->getExecutionRateByDirection($currentYear);
+        $executionRateMissions = $missionSessionRepository->getExecutionRateByDirection($currentYear);
         
-        $userParticipationFormations = $formationRepository->getUserParticipationStats($currentYear);
-        $userParticipationMissions = $missionRepository->getUserParticipationStats($currentYear);
+        $userParticipationFormations = $formationSessionRepository->getUserParticipationStats($currentYear);
+        $userParticipationMissions = $missionSessionRepository->getUserParticipationStats($currentYear);
         
         // Récupérer les données de performance
         $performanceData = $performanceService->getGlobalPerformance($currentYear);

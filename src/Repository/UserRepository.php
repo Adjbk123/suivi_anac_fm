@@ -100,17 +100,39 @@ class UserRepository extends ServiceEntityRepository
 
     /**
      * Trouver tous les utilisateurs d'une direction donnée
+     * Prend en compte les utilisateurs avec direction directe OU via service
      */
     public function findByDirection(int $directionId): array
     {
         $qb = $this->createQueryBuilder('u')
             ->leftJoin('u.service', 's')
-            ->leftJoin('s.direction', 'd')
-            ->where('d.id = :directionId')
+            ->leftJoin('s.direction', 'sd')
+            ->where('u.direction = :directionId OR sd.id = :directionId')
             ->setParameter('directionId', $directionId)
             ->orderBy('u.nom', 'ASC')
             ->addOrderBy('u.prenom', 'ASC');
             
+        return $qb->getQuery()->getResult();
+    }
+
+    public function findByDirectionPaginated(int $directionId, int $page, int $pageSize, array $excludedUserIds = []): array
+    {
+        $qb = $this->createQueryBuilder('u')
+            ->leftJoin('u.service', 's')
+            ->leftJoin('s.direction', 'sd')
+            ->where('u.direction = :directionId OR sd.id = :directionId')
+            ->setParameter('directionId', $directionId);
+            
+        if (!empty($excludedUserIds)) {
+            $qb->andWhere('u.id NOT IN (:excludedIds)')
+               ->setParameter('excludedIds', $excludedUserIds);
+        }
+        
+        $qb->orderBy('u.nom', 'ASC')
+           ->addOrderBy('u.prenom', 'ASC')
+           ->setFirstResult(($page - 1) * $pageSize)
+           ->setMaxResults($pageSize);
+
         return $qb->getQuery()->getResult();
     }
 }

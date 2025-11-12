@@ -38,4 +38,16 @@ class UserMissionRepository extends ServiceEntityRepository
             $this->getEntityManager()->flush();
         }
     }
+
+    public function findUserIdsByMissionSession(int $missionSessionId): array
+    {
+        $result = $this->createQueryBuilder('um')
+            ->select('IDENTITY(um.user) as userId')
+            ->where('um.missionSession = :missionSessionId')
+            ->setParameter('missionSessionId', $missionSessionId)
+            ->getQuery()
+            ->getScalarResult();
+
+        return array_map(static fn ($row) => (int) $row['userId'], $result);
+    }
 }

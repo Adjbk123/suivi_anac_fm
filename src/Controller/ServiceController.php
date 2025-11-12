@@ -174,7 +174,7 @@ class ServiceController extends AbstractController
             if ($isUsed) {
                 return $this->json([
                     'success' => false,
-                    'message' => 'Impossible de supprimer ce service car il est utilisé dans des missions ou formations'
+                    'message' => 'Impossible de supprimer ce service car il est utilisé dans des missions'
                 ], 400);
             }
             

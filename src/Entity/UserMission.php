@@ -20,7 +20,7 @@ class UserMission
 
     #[ORM\ManyToOne(inversedBy: 'userMissions')]
     #[ORM\JoinColumn(nullable: false)]
-    private ?Mission $mission = null;
+    private ?MissionSession $missionSession = null;
 
     #[ORM\ManyToOne(inversedBy: 'userMissions')]
     #[ORM\JoinColumn(nullable: false)]
@@ -46,14 +46,26 @@ class UserMission
         return $this;
     }
 
+    public function getMissionSession(): ?MissionSession
+    {
+        return $this->missionSession;
+    }
+
+    public function setMissionSession(?MissionSession $missionSession): static
+    {
+        $this->missionSession = $missionSession;
+
+        return $this;
+    }
+
     public function getMission(): ?Mission
     {
-        return $this->mission;
+        return $this->missionSession?->getMission();
     }
 
     public function setMission(?Mission $mission): static
     {
-        $this->mission = $mission;
+        $this->missionSession = $mission ? $mission->getOrCreateSession() : null;
 
         return $this;
     }

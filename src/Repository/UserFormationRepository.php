@@ -38,4 +38,28 @@ class UserFormationRepository extends ServiceEntityRepository
             $this->getEntityManager()->flush();
         }
     }
+
+    /**
+     * Trouve les IDs des utilisateurs participants à une session de formation
+     * (Méthode pour compatibilité avec l'ancien code - utilise formationSession maintenant)
+     */
+    public function findUserIdsByFormation(int $formationSessionId): array
+    {
+        $result = $this->createQueryBuilder('uf')
+            ->select('IDENTITY(uf.user) as userId')
+            ->where('uf.formationSession = :formationSessionId')
+            ->setParameter('formationSessionId', $formationSessionId)
+            ->getQuery()
+            ->getScalarResult();
+
+        return array_map(static fn ($row) => (int) $row['userId'], $result);
+    }
+    
+    /**
+     * Trouve les IDs des utilisateurs participants à une session de formation
+     */
+    public function findUserIdsByFormationSession(int $formationSessionId): array
+    {
+        return $this->findUserIdsByFormation($formationSessionId);
+    }
 }

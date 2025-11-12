@@ -1,0 +1,149 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Modèles de formations{% endblock %}
+
+{% block breadcrumb %}
+<ul class="breadcrumb">
+	<li class="breadcrumb-item"><a href="#">FORMATIONS</a></li>
+	<li class="breadcrumb-item active">Modèles</li>
+</ul>
+{% endblock %}
+
+{% block page_title %}
+<h1 class="page-header">
+	Modèles de formations <small>Gérez les formations disponibles pour planifier des sessions</small>
+</h1>
+{% endblock %}
+
+{% block buttons %}
+<div class="d-flex gap-2">
+	{% if can_create_formation() %}
+	<a href="{{ path('app_formation_modele_create') }}" class="btn btn-secondary btn-sm">
+		<i class="fa fa-plus"></i> Nouveau modèle
+	</a>
+	{% endif %}
+</div>
+{% endblock %}
+
+{% block body %}
+<div class="card">
+	<div class="card-body">
+		<div class="table-responsive">
+			<table class="table table-hover" id="modelesTable">
+				<thead class="table-secondary">
+					<tr>
+						<th>ID</th>
+						<th>Titre</th>
+						<th>Description</th>
+						<th>Créée le</th>
+						<th class="text-end"><i class="fa fa-cogs"></i></th>
+					</tr>
+				</thead>
+				<tbody>
+					{% for modele in modeles %}
+					<tr>
+						<td>{{ modele.id }}</td>
+						<td>{{ modele.titre }}</td>
+						<td>{{ modele.description|default('-') }}</td>
+						<td>{{ modele.createdAt ? modele.createdAt|date('d/m/Y H:i') : '-' }}</td>
+						<td class="text-end">
+							<div class="dropdown">
+								<button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+									Actions
+								</button>
+								<ul class="dropdown-menu dropdown-menu-end">
+									<li>
+										<a class="dropdown-item" href="{{ path('app_formation_show', { id: modele.id }) }}">
+											<i class="fa fa-eye text-info"></i> Voir
+										</a>
+									</li>
+									{% if can_create_formation() %}
+									<li>
+										<a class="dropdown-item" href="{{ path('app_formation_modele_edit', { id: modele.id }) }}">
+											<i class="fa fa-edit text-warning"></i> Modifier
+										</a>
+									</li>
+									<li>
+										<button type="button" class="dropdown-item text-danger" onclick="deleteFormationModele({{ modele.id }})">
+											<i class="fa fa-trash"></i> Supprimer
+										</button>
+									</li>
+									{% endif %}
+								</ul>
+							</div>
+						</td>
+					</tr>
+					{% else %}
+						<tr>
+							<td colspan="5" class="text-center text-muted">Aucun modèle enregistré pour le moment.</td>
+						</tr>
+					{% endfor %}
+				</tbody>
+			</table>
+		</div>
+	</div>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+	if (!window.jQuery || !$.fn.DataTable) {
+		return;
+	}
+
+	$('#modelesTable').DataTable({
+		language: {
+			"sProcessing": "Traitement en cours...",
+			"sSearch": "Rechercher&nbsp;:",
+			"sLengthMenu": "Afficher _MENU_ éléments",
+			"sInfo": "Affichage de l'élément _START_ à _END_ sur _TOTAL_ éléments",
+			"sInfoEmpty": "Affichage de l'élément 0 à 0 sur 0 élément",
+			"sInfoFiltered": "(filtré de _MAX_ éléments au total)",
+			"sLoadingRecords": "Chargement...",
+			"sZeroRecords": "Aucun élément à afficher",
+			"sEmptyTable": "Aucune donnée disponible dans le tableau",
+			"oPaginate": {
+				"sFirst": '<i class="fa fa-angle-double-left" style="font-size: 12px;"></i>',
+				"sPrevious": '<i class="fa fa-angle-left" style="font-size: 12px;"></i>',
+				"sNext": '<i class="fa fa-angle-right" style="font-size: 12px;"></i>',
+				"sLast": '<i class="fa fa-angle-double-right" style="font-size: 12px;"></i>'
+			},
+			"oAria": {
+				"sSortAscending": ": activer pour trier la colonne par ordre croissant",
+				"sSortDescending": ": activer pour trier la colonne par ordre décroissant"
+			}
+		},
+		pageLength: 10,
+		order: [[1, 'asc']]
+	});
+});
+
+function deleteFormationModele(id) {
+	if (!confirm('Confirmez-vous la suppression de ce modèle de formation ?')) {
+		return;
+	}
+
+	const url = "{{ path('app_formation_modele_delete', { id: 'ID_PLACEHOLDER' }) }}".replace('ID_PLACEHOLDER', id);
+
+	fetch(url, {
+		method: 'DELETE',
+		headers: {
+			'X-Requested-With': 'XMLHttpRequest'
+		}
+	})
+	.then(response => response.json().then(data => ({ ok: response.ok, data })))
+	.then(({ ok, data }) => {
+		if (!ok) {
+			throw new Error(data.message || 'La suppression a échoué.');
+		}
+		window.location.reload();
+	})
+	.catch(error => {
+		console.error('Erreur de suppression du modèle de formation :', error);
+		alert(error.message);
+	});
+}
+</script>
+{% endblock %}
+

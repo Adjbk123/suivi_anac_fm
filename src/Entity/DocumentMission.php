@@ -16,7 +16,7 @@ class DocumentMission
 
     #[ORM\ManyToOne(inversedBy: 'documentMissions')]
     #[ORM\JoinColumn(nullable: false)]
-    private ?Mission $mission = null;
+    private ?MissionSession $missionSession = null;
 
     #[ORM\Column(length: 255)]
     private ?string $nom = null;
@@ -43,14 +43,26 @@ class DocumentMission
         return $this->id;
     }
 
+    public function getMissionSession(): ?MissionSession
+    {
+        return $this->missionSession;
+    }
+
+    public function setMissionSession(?MissionSession $missionSession): static
+    {
+        $this->missionSession = $missionSession;
+
+        return $this;
+    }
+
     public function getMission(): ?Mission
     {
-        return $this->mission;
+        return $this->missionSession?->getMission();
     }
 
     public function setMission(?Mission $mission): static
     {
-        $this->mission = $mission;
+        $this->missionSession = $mission ? $mission->getOrCreateSession() : null;
 
         return $this;
     }

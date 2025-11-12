@@ -21,16 +21,16 @@ class TypeFonds
     #[ORM\Column(type: 'text', nullable: true)]
     private ?string $description = null;
 
-    #[ORM\OneToMany(mappedBy: 'fonds', targetEntity: Formation::class)]
-    private Collection $formations;
+    #[ORM\OneToMany(mappedBy: 'fonds', targetEntity: FormationSession::class)]
+    private Collection $formationSessions;
 
-    #[ORM\OneToMany(mappedBy: 'fonds', targetEntity: Mission::class)]
-    private Collection $missions;
+    #[ORM\OneToMany(mappedBy: 'fonds', targetEntity: MissionSession::class)]
+    private Collection $missionSessions;
 
     public function __construct()
     {
-        $this->formations = new ArrayCollection();
-        $this->missions = new ArrayCollection();
+        $this->formationSessions = new ArrayCollection();
+        $this->missionSessions = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -63,29 +63,29 @@ class TypeFonds
     }
 
     /**
-     * @return Collection<int, Formation>
+     * @return Collection<int, FormationSession>
      */
-    public function getFormations(): Collection
+    public function getFormationSessions(): Collection
     {
-        return $this->formations;
+        return $this->formationSessions;
     }
 
-    public function addFormation(Formation $formation): static
+    public function addFormationSession(FormationSession $formationSession): static
     {
-        if (!$this->formations->contains($formation)) {
-            $this->formations->add($formation);
-            $formation->setFonds($this);
+        if (!$this->formationSessions->contains($formationSession)) {
+            $this->formationSessions->add($formationSession);
+            $formationSession->setFonds($this);
         }
 
         return $this;
     }
 
-    public function removeFormation(Formation $formation): static
+    public function removeFormationSession(FormationSession $formationSession): static
     {
-        if ($this->formations->removeElement($formation)) {
+        if ($this->formationSessions->removeElement($formationSession)) {
             // set the owning side to null (unless already changed)
-            if ($formation->getFonds() === $this) {
-                $formation->setFonds(null);
+            if ($formationSession->getFonds() === $this) {
+                $formationSession->setFonds(null);
             }
         }
 
@@ -93,29 +93,29 @@ class TypeFonds
     }
 
     /**
-     * @return Collection<int, Mission>
+     * @return Collection<int, MissionSession>
      */
-    public function getMissions(): Collection
+    public function getMissionSessions(): Collection
     {
-        return $this->missions;
+        return $this->missionSessions;
     }
 
-    public function addMission(Mission $mission): static
+    public function addMissionSession(MissionSession $missionSession): static
     {
-        if (!$this->missions->contains($mission)) {
-            $this->missions->add($mission);
-            $mission->setFonds($this);
+        if (!$this->missionSessions->contains($missionSession)) {
+            $this->missionSessions->add($missionSession);
+            $missionSession->setFonds($this);
         }
 
         return $this;
     }
 
-    public function removeMission(Mission $mission): static
+    public function removeMissionSession(MissionSession $missionSession): static
     {
-        if ($this->missions->removeElement($mission)) {
+        if ($this->missionSessions->removeElement($missionSession)) {
             // set the owning side to null (unless already changed)
-            if ($mission->getFonds() === $this) {
-                $mission->setFonds(null);
+            if ($missionSession->getFonds() === $this) {
+                $missionSession->setFonds(null);
             }
         }
 
@@ -127,6 +127,6 @@ class TypeFonds
      */
     public function isUsed(): bool
     {
-        return !$this->formations->isEmpty() || !$this->missions->isEmpty();
+        return !$this->formationSessions->isEmpty() || !$this->missionSessions->isEmpty();
     }
 }

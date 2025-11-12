@@ -65,7 +65,7 @@
                                         <br><small class="text-muted">{{ formation.description|slice(0, 100) }}{% if formation.description|length > 100 %}...{% endif %}</small>
                                     {% endif %}
                                 </td>
-                                <td>{{ formation.service_name ?: '-' }}</td>
+                                <td>{{ formation.direction_name ?: '-' }}</td>
                                 <td>
                                     <span class="badge bg-info">{{ formation.status_name ?: 'Non défini' }}</span>
                                 </td>

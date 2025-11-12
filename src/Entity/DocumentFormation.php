@@ -15,7 +15,7 @@ class DocumentFormation
 
     #[ORM\ManyToOne(inversedBy: 'documentFormations')]
     #[ORM\JoinColumn(nullable: false)]
-    private ?Formation $formation = null;
+    private ?FormationSession $formationSession = null;
 
     #[ORM\Column(length: 255)]
     private ?string $nom = null;
@@ -42,14 +42,14 @@ class DocumentFormation
         return $this->id;
     }
 
-    public function getFormation(): ?Formation
+    public function getFormationSession(): ?FormationSession
     {
-        return $this->formation;
+        return $this->formationSession;
     }
 
-    public function setFormation(?Formation $formation): static
+    public function setFormationSession(?FormationSession $formationSession): static
     {
-        $this->formation = $formation;
+        $this->formationSession = $formationSession;
 
         return $this;
     }

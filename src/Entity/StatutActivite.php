@@ -27,16 +27,16 @@ class StatutActivite
     #[ORM\Column(length: 20)]
     private ?string $couleur = null;
 
-    #[ORM\OneToMany(mappedBy: 'statutActivite', targetEntity: Formation::class)]
-    private Collection $formations;
+    #[ORM\OneToMany(mappedBy: 'statutActivite', targetEntity: FormationSession::class)]
+    private Collection $formationSessions;
 
-    #[ORM\OneToMany(mappedBy: 'statutActivite', targetEntity: Mission::class)]
-    private Collection $missions;
+    #[ORM\OneToMany(mappedBy: 'statutActivite', targetEntity: MissionSession::class)]
+    private Collection $missionSessions;
 
     public function __construct()
     {
-        $this->formations = new ArrayCollection();
-        $this->missions = new ArrayCollection();
+        $this->formationSessions = new ArrayCollection();
+        $this->missionSessions = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -89,27 +89,27 @@ class StatutActivite
     }
 
     /**
-     * @return Collection<int, Formation>
+     * @return Collection<int, FormationSession>
      */
-    public function getFormations(): Collection
+    public function getFormationSessions(): Collection
     {
-        return $this->formations;
+        return $this->formationSessions;
     }
 
-    public function addFormation(Formation $formation): static
+    public function addFormationSession(FormationSession $formationSession): static
     {
-        if (!$this->formations->contains($formation)) {
-            $this->formations->add($formation);
-            $formation->setStatutActivite($this);
+        if (!$this->formationSessions->contains($formationSession)) {
+            $this->formationSessions->add($formationSession);
+            $formationSession->setStatutActivite($this);
         }
         return $this;
     }
 
-    public function removeFormation(Formation $formation): static
+    public function removeFormationSession(FormationSession $formationSession): static
     {
-        if ($this->formations->removeElement($formation)) {
-            if ($formation->getStatutActivite() === $this) {
-                $formation->setStatutActivite(null);
+        if ($this->formationSessions->removeElement($formationSession)) {
+            if ($formationSession->getStatutActivite() === $this) {
+                $formationSession->setStatutActivite(null);
             }
         }
         return $this;
@@ -118,25 +118,25 @@ class StatutActivite
     /**
      * @return Collection<int, Mission>
      */
-    public function getMissions(): Collection
+    public function getMissionSessions(): Collection
     {
-        return $this->missions;
+        return $this->missionSessions;
     }
 
-    public function addMission(Mission $mission): static
+    public function addMissionSession(MissionSession $missionSession): static
     {
-        if (!$this->missions->contains($mission)) {
-            $this->missions->add($mission);
-            $mission->setStatutActivite($this);
+        if (!$this->missionSessions->contains($missionSession)) {
+            $this->missionSessions->add($missionSession);
+            $missionSession->setStatutActivite($this);
         }
         return $this;
     }
 
-    public function removeMission(Mission $mission): static
+    public function removeMissionSession(MissionSession $missionSession): static
     {
-        if ($this->missions->removeElement($mission)) {
-            if ($mission->getStatutActivite() === $this) {
-                $mission->setStatutActivite(null);
+        if ($this->missionSessions->removeElement($missionSession)) {
+            if ($missionSession->getStatutActivite() === $this) {
+                $missionSession->setStatutActivite(null);
             }
         }
         return $this;
@@ -152,6 +152,6 @@ class StatutActivite
      */
     public function isUsed(): bool
     {
-        return !$this->formations->isEmpty() || !$this->missions->isEmpty();
+        return !$this->formationSessions->isEmpty() || !$this->missionSessions->isEmpty();
     }
 }

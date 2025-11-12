@@ -43,9 +43,9 @@
 							</div>
 							<div class="col-md-6">
 								<div class="mb-3">
-									<label for="serviceId" class="form-label">Service responsable *</label>
-									<select class="form-select" id="serviceId" name="serviceId" required>
-										<option value="">Choisir un service</option>
+									<label for="directionId" class="form-label">Direction responsable *</label>
+									<select class="form-select" id="directionId" name="directionId" required>
+										<option value="">Choisir une direction</option>
 									</select>
 								</div>
 							</div>
@@ -119,23 +119,23 @@
 <script>
 // Initialisation au chargement de la page
 document.addEventListener('DOMContentLoaded', function() {
-    loadServices();
+    loadDirections();
     loadFonds();
     loadStatutsActivite();
     setupEventListeners();
     calculateDuration();
 });
 
-// Charger les services
-function loadServices() {
-    fetch('/api/services')
+// Charger les directions
+function loadDirections() {
+    fetch('/api/directions')
         .then(response => response.json())
         .then(data => {
-            const select = document.getElementById('serviceId');
-            select.innerHTML = '<option value="">Choisir un service</option>';
-            data.forEach(service => {
-                const selected = service.id == {{ formation.service ? formation.service.id : 'null' }} ? 'selected' : '';
-                select.innerHTML += `<option value="${service.id}" ${selected}>${service.libelle} (${service.direction ? service.direction.libelle : '-'})</option>`;
+            const select = document.getElementById('directionId');
+            select.innerHTML = '<option value="">Choisir une direction</option>';
+            data.forEach(direction => {
+                const selected = direction.id == {{ formation.direction ? formation.direction.id : 'null' }} ? 'selected' : '';
+                select.innerHTML += `<option value="${direction.id}" ${selected}>${direction.libelle}</option>`;
             });
         })
         .catch(error => console.error('Erreur:', error));
@@ -208,7 +208,7 @@ document.getElementById('formationEditForm').addEventListener('submit', function
     // Préparer les données
     const formData = {
         titre: document.getElementById('titre').value,
-        serviceId: document.getElementById('serviceId').value,
+        directionId: document.getElementById('directionId').value,
         fondsId: document.getElementById('fondsId').value,
         lieuPrevu: document.getElementById('lieuPrevu').value,
         datePrevueDebut: document.getElementById('datePrevueDebut').value,

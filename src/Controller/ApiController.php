@@ -18,6 +18,8 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\HttpFoundation\Request;
+use App\Repository\UserMissionRepository;
 
 #[Route('/api')]
 class ApiController extends AbstractController
@@ -197,6 +199,42 @@ class ApiController extends AbstractController
         return $this->json($data);
     }
 
+    #[Route('/formations', name: 'api_formations', methods: ['GET'])]
+    public function getFormations(FormationRepository $formationRepository): JsonResponse
+    {
+        $templates = $formationRepository->findBy([], ['titre' => 'ASC']);
+        $data = [];
+
+        foreach ($templates as $template) {
+            $data[] = [
+                'id' => $template->getId(),
+                'titre' => $template->getTitre(),
+                'description' => $template->getDescription(),
+                'createdAt' => $template->getCreatedAt() ? $template->getCreatedAt()->format('Y-m-d H:i:s') : null,
+            ];
+        }
+
+        return $this->json($data);
+    }
+
+    #[Route('/missions', name: 'api_missions', methods: ['GET'])]
+    public function getMissions(MissionRepository $missionRepository): JsonResponse
+    {
+        $missions = $missionRepository->findBy([], ['titre' => 'ASC']);
+        $data = [];
+
+        foreach ($missions as $mission) {
+            $data[] = [
+                'id' => $mission->getId(),
+                'titre' => $mission->getTitre(),
+                'description' => $mission->getDescription(),
+                'createdAt' => $mission->getCreatedAt() ? $mission->getCreatedAt()->format('Y-m-d H:i:s') : null,
+            ];
+        }
+
+        return $this->json($data);
+    }
+
     #[Route('/statuts-activite', name: 'api_statuts_activite', methods: ['GET'])]
     public function getStatutsActivite(StatutActiviteRepository $statutActiviteRepository): JsonResponse
     {
@@ -270,9 +308,9 @@ class ApiController extends AbstractController
                 'dureeReelle' => $formation->getDureeReelle(),
                 'budgetPrevu' => $formation->getBudgetPrevu(),
                 'depensesReelles' => $depensesReelles,
-                'service' => $formation->getService() ? [
-                    'id' => $formation->getService()->getId(),
-                    'libelle' => $formation->getService()->getLibelle()
+                'direction' => $formation->getDirection() ? [
+                    'id' => $formation->getDirection()->getId(),
+                    'libelle' => $formation->getDirection()->getLibelle()
                 ] : null,
                 'fonds' => $formation->getFonds() ? [
                     'id' => $formation->getFonds()->getId(),
@@ -332,9 +370,9 @@ class ApiController extends AbstractController
                 'dureeReelle' => $mission->getDureeReelle(),
                 'budgetPrevu' => $mission->getBudgetPrevu(),
                 'depensesReelles' => $depensesReelles,
-                'service' => $mission->getService() ? [
-                    'id' => $mission->getService()->getId(),
-                    'libelle' => $mission->getService()->getLibelle()
+                'direction' => $mission->getDirection() ? [
+                    'id' => $mission->getDirection()->getId(),
+                    'libelle' => $mission->getDirection()->getLibelle()
                 ] : null,
                 'fonds' => $mission->getFonds() ? [
                     'id' => $mission->getFonds()->getId(),
@@ -360,23 +398,54 @@ class ApiController extends AbstractController
     }
 
     #[Route('/users-by-direction/{directionId}', name: 'api_users_by_direction', methods: ['GET'])]
-    public function getUsersByDirection(int $directionId, UserRepository $userRepository): JsonResponse
-    {
-        // Récupérer tous les utilisateurs des services de cette direction
-        $users = $userRepository->findByDirection($directionId);
-        
+    public function getUsersByDirection(
+        int $directionId,
+        Request $request,
+        UserRepository $userRepository,
+        UserMissionRepository $userMissionRepository,
+        \App\Repository\UserFormationRepository $userFormationRepository
+    ): JsonResponse {
+        $page = max(1, (int) $request->query->get('page', 1));
+        $pageSize = min(100, max(1, (int) $request->query->get('pageSize', 50)));
+        $missionSessionId = $request->query->getInt('excludeMissionParticipants', 0);
+        if ($missionSessionId === 0) {
+            $missionSessionId = $request->query->getInt('excludeMissionSessionParticipants', 0);
+        }
+        $formationSessionId = $request->query->getInt('excludeFormationSessionParticipants', 0);
+
+        $excludedIds = [];
+
+        if ($missionSessionId > 0) {
+            $excludedIds = array_merge($excludedIds, $userMissionRepository->findUserIdsByMissionSession($missionSessionId));
+        }
+
+        if ($formationSessionId > 0) {
+            $excludedIds = array_merge($excludedIds, $userFormationRepository->findUserIdsByFormationSession($formationSessionId));
+        }
+
+        $users = $userRepository->findByDirectionPaginated($directionId, $page, $pageSize, $excludedIds);
+
         $data = [];
         foreach ($users as $user) {
+            $service = $user->getService();
+            $direction = $user->getDirection() ?: ($service ? $service->getDirection() : null);
+
             $data[] = [
                 'id' => $user->getId(),
                 'matricule' => $user->getMatricule(),
                 'nom' => $user->getNom(),
                 'prenom' => $user->getPrenom(),
                 'email' => $user->getEmail(),
-                'service' => $user->getService() ? $user->getService()->getLibelle() : '-'
+                'service' => $service ? $service->getLibelle() : '-',
+                'direction' => $direction ? $direction->getLibelle() : '-'
             ];
         }
-        
-        return $this->json($data);
+
+        return $this->json([
+            'page' => $page,
+            'pageSize' => $pageSize,
+            'count' => count($data),
+            'users' => $data
+        ]);
     }
 }

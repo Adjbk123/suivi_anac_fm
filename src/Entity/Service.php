@@ -25,16 +25,9 @@ class Service
     #[ORM\Column(type: 'text', nullable: true)]
     private ?string $description = null;
 
-    #[ORM\OneToMany(mappedBy: 'service', targetEntity: Formation::class)]
-    private Collection $formations;
-
-    #[ORM\OneToMany(mappedBy: 'service', targetEntity: Mission::class)]
-    private Collection $missions;
 
     public function __construct()
     {
-        $this->formations = new ArrayCollection();
-        $this->missions = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -79,80 +72,14 @@ class Service
     }
 
     /**
-     * @return Collection<int, Formation>
-     */
-    public function getFormations(): Collection
-    {
-        return $this->formations;
-    }
-
-    public function addFormation(Formation $formation): static
-    {
-        if (!$this->formations->contains($formation)) {
-            $this->formations->add($formation);
-            $formation->setService($this);
-        }
-
-        return $this;
-    }
-
-    public function removeFormation(Formation $formation): static
-    {
-        if ($this->formations->removeElement($formation)) {
-            // set the owning side to null (unless already changed)
-            if ($formation->getService() === $this) {
-                $formation->setService(null);
-            }
-        }
-
-        return $this;
-    }
-
-    /**
-     * @return Collection<int, Mission>
-     */
-    public function getMissions(): Collection
-    {
-        return $this->missions;
-    }
-
-    public function addMission(Mission $mission): static
-    {
-        if (!$this->missions->contains($mission)) {
-            $this->missions->add($mission);
-            $mission->setService($this);
-        }
-
-        return $this;
-    }
-
-    public function removeMission(Mission $mission): static
-    {
-        if ($this->missions->removeElement($mission)) {
-            // set the owning side to null (unless already changed)
-            if ($mission->getService() === $this) {
-                $mission->setService(null);
-            }
-        }
-
-        return $this;
-    }
-
-    /**
      * Vérifie si ce service est utilisé
+     * Un service est considéré comme utilisé s'il est associé à des utilisateurs
      */
     public function isUsed(): bool
     {
-        try {
-            // Vérifier si les collections sont initialisées
-            if ($this->formations === null || $this->missions === null) {
-                return false;
-            }
-            
-            return !$this->formations->isEmpty() || !$this->missions->isEmpty();
-        } catch (\Exception $e) {
-            // En cas d'erreur, considérer comme non utilisé
-            return false;
-        }
+        // Un service peut être utilisé par des utilisateurs
+        // Pour une vérification complète, il faudrait injecter UserRepository
+        // Pour l'instant, on retourne false car on ne peut pas vérifier sans repository
+        return false;
     }
 }

@@ -40,10 +40,12 @@
 								<th>Prénom</th>
 								<th>Email</th>
 								<th>Matricule</th>
+								<th>Rôle</th>
+								<th>Direction</th>
 								<th>Service</th>
 								<th>Domaine</th>
 								<th>Poste</th>
-								                        <th><i class="fa fa-cogs"></i></th>
+								<th><i class="fa fa-cogs"></i></th>
 							</tr>
 						</thead>
 						<tbody>
@@ -95,13 +97,23 @@
 						</div>
 					</div>
 					
+					<!-- Direction -->
+					<div class="mb-3">
+						<label for="direction_id" class="form-label">Direction</label>
+						<select class="form-control" id="direction_id" name="direction_id">
+							<option value="">Sélectionner une direction</option>
+						</select>
+						<small class="form-text text-muted">Pour les DG, sélectionnez uniquement la direction (sans service)</small>
+					</div>
+					
 					<!-- Service et Domaine sur la même ligne -->
 					<div class="row mb-3">
 						<div class="col-md-6">
-							<label for="service_id" class="form-label">Service <span class="text-danger">*</span></label>
-							<select class="form-control" id="service_id" name="service_id" required>
+							<label for="service_id" class="form-label">Service</label>
+							<select class="form-control" id="service_id" name="service_id">
 								<option value="">Sélectionner un service</option>
 							</select>
+							<small class="form-text text-muted">Optionnel si une direction est sélectionnée</small>
 						</div>
 						<div class="col-md-6">
 							<label for="domaine_id" class="form-label">Domaine (optionnel)</label>
@@ -187,9 +199,20 @@ function togglePassword(fieldId) {
 document.addEventListener('DOMContentLoaded', function() {
     initializeDataTable();
     loadUsers();
+    loadDirections();
     loadServices();
     loadDomaines();
     loadPostes();
+    
+    // Ajouter un écouteur d'événement pour le changement de direction
+    document.getElementById('direction_id').addEventListener('change', function() {
+        const directionId = this.value;
+        if (directionId) {
+            loadServicesByDirection(directionId);
+        } else {
+            loadServices();
+        }
+    });
 });
 
 // Initialiser DataTable
@@ -296,12 +319,37 @@ function initializeDataTable() {
             
             // Ajouter les données
             data.forEach(user => {
+                // Déterminer le badge pour le rôle
+                let roleBadge = '';
+                let roleText = '';
+                switch(user.role) {
+                    case 'ROLE_ADMIN':
+                        roleBadge = '<span class="badge bg-danger">Admin</span>';
+                        roleText = 'Admin';
+                        break;
+                    case 'ROLE_DIRECTEUR':
+                        roleBadge = '<span class="badge bg-primary">Directeur</span>';
+                        roleText = 'Directeur';
+                        break;
+                    case 'ROLE_EDITEUR':
+                        roleBadge = '<span class="badge bg-warning">Éditeur</span>';
+                        roleText = 'Éditeur';
+                        break;
+                    case 'ROLE_USER':
+                    default:
+                        roleBadge = '<span class="badge bg-secondary">Utilisateur</span>';
+                        roleText = 'Utilisateur';
+                        break;
+                }
+                
                 usersTable.row.add([
                     user.id,
                     user.nom,
                     user.prenom,
                     user.email,
                     user.matricule,
+                    roleBadge,
+                    user.direction,
                     user.service,
                     user.domaine,
                     user.poste,
@@ -338,6 +386,27 @@ function initializeDataTable() {
         });
 }
 
+// Fonction pour charger les directions
+function loadDirections() {
+    fetch("{{ path('app_user_directions_list') }}")
+        .then(response => response.json())
+        .then(data => {
+            const select = document.getElementById('direction_id');
+            select.innerHTML = '<option value="">Sélectionner une direction</option>';
+            
+            data.forEach(direction => {
+                const option = document.createElement('option');
+                option.value = direction.id;
+                option.textContent = direction.libelle;
+                select.appendChild(option);
+            });
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            showToast('Erreur lors du chargement des directions', 'error');
+        });
+}
+
 // Fonction pour charger les services
 function loadServices() {
     fetch("{{ path('app_user_services_list') }}")
@@ -350,6 +419,29 @@ function loadServices() {
                 const option = document.createElement('option');
                 option.value = service.id;
                 option.textContent = `${service.libelle} (${service.direction})`;
+                option.dataset.directionId = service.direction_id;
+                select.appendChild(option);
+            });
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            showToast('Erreur lors du chargement des services', 'error');
+        });
+}
+
+// Fonction pour charger les services filtrés par direction
+function loadServicesByDirection(directionId) {
+    return fetch(`{{ path('app_user_services_list') }}?direction_id=${directionId}`)
+        .then(response => response.json())
+        .then(data => {
+            const select = document.getElementById('service_id');
+            select.innerHTML = '<option value="">Sélectionner un service</option>';
+            
+            data.forEach(service => {
+                const option = document.createElement('option');
+                option.value = service.id;
+                option.textContent = service.libelle;
+                option.dataset.directionId = service.direction_id;
                 select.appendChild(option);
             });
         })
@@ -418,14 +510,24 @@ function editUser(id) {
     fetch(`{{ path('app_user_show', {'id': 'PLACEHOLDER'}) }}`.replace('PLACEHOLDER', id))
         .then(response => response.json())
         .then(data => {
-                         document.getElementById('nom').value = data.nom;
-             document.getElementById('prenom').value = data.prenom;
-             document.getElementById('email').value = data.email || '';
-             document.getElementById('matricule').value = data.matricule || '';
-             document.getElementById('password').value = ''; // Ne pas afficher le mot de passe
-             document.getElementById('service_id').value = data.service_id || '';
-             document.getElementById('domaine_id').value = data.domaine_id || '';
-             document.getElementById('poste_id').value = data.poste_id || '';
+            document.getElementById('nom').value = data.nom;
+            document.getElementById('prenom').value = data.prenom;
+            document.getElementById('email').value = data.email || '';
+            document.getElementById('matricule').value = data.matricule || '';
+            document.getElementById('password').value = ''; // Ne pas afficher le mot de passe
+            document.getElementById('direction_id').value = data.direction_id || '';
+            
+            // Si une direction est sélectionnée, charger les services filtrés
+            if (data.direction_id) {
+                loadServicesByDirection(data.direction_id).then(() => {
+                    document.getElementById('service_id').value = data.service_id || '';
+                });
+            } else {
+                document.getElementById('service_id').value = data.service_id || '';
+            }
+            
+            document.getElementById('domaine_id').value = data.domaine_id || '';
+            document.getElementById('poste_id').value = data.poste_id || '';
             document.getElementById('userModalLabel').textContent = 'Modifier l\'Utilisateur';
             
             // Ajuster le label du mot de passe pour la modification
@@ -493,11 +595,17 @@ document.getElementById('userForm').addEventListener('submit', function(e) {
     
     // Validation côté client
     const passwordValue = document.getElementById('password').value;
+    const rolesValue = document.getElementById('roles').value;
     
     // Vérifier que le mot de passe est fourni lors de la création d'un nouvel utilisateur
     if (!editingId && (!passwordValue || passwordValue.trim() === '')) {
         showToast('Le mot de passe est requis pour créer un nouvel utilisateur', 'error');
-        hideButtonSpinner();
+        return;
+    }
+    
+    // Vérifier qu'un rôle est sélectionné
+    if (!rolesValue || rolesValue.trim() === '') {
+        showToast('Veuillez sélectionner un rôle pour l\'utilisateur', 'error');
         return;
     }
     
@@ -509,7 +617,8 @@ document.getElementById('userForm').addEventListener('submit', function(e) {
          prenom: document.getElementById('prenom').value,
          email: document.getElementById('email').value,
          matricule: document.getElementById('matricule').value || null,
-         service_id: document.getElementById('service_id').value,
+         direction_id: document.getElementById('direction_id').value || null,
+         service_id: document.getElementById('service_id').value || null,
          domaine_id: document.getElementById('domaine_id').value || null,
          poste_id: document.getElementById('poste_id').value || null,
          roles: document.getElementById('roles').value

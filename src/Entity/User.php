@@ -17,8 +17,12 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column]
     private ?int $id = null;
 
+    #[ORM\ManyToOne(targetEntity: Direction::class)]
+    #[ORM\JoinColumn(nullable: true)]
+    private ?Direction $direction = null;
+
     #[ORM\ManyToOne(targetEntity: Service::class)]
-    #[ORM\JoinColumn(nullable: false)]
+    #[ORM\JoinColumn(nullable: true)]
     private ?Service $service = null;
 
     #[ORM\ManyToOne(targetEntity: Domaine::class)]
@@ -73,6 +77,18 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function getId(): ?int
     {
         return $this->id;
+    }
+
+    public function getDirection(): ?Direction
+    {
+        return $this->direction;
+    }
+
+    public function setDirection(?Direction $direction): static
+    {
+        $this->direction = $direction;
+
+        return $this;
     }
 
     public function getService(): ?Service
@@ -161,6 +177,21 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->roles = $roles;
 
         return $this;
+    }
+
+    /**
+     * Retourne le rôle principal de l'utilisateur (sans ROLE_USER automatique)
+     */
+    public function getPrimaryRole(): string
+    {
+        // Retourner le premier rôle qui n'est pas ROLE_USER
+        foreach ($this->roles as $role) {
+            if ($role !== 'ROLE_USER') {
+                return $role;
+            }
+        }
+        
+        return 'ROLE_USER';
     }
 
     public function getPhoto(): ?string

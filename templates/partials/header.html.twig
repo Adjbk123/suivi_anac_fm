@@ -54,7 +54,7 @@
 				<a class="dropdown-item d-flex align-items-center" href="{{ path('app_profile') }}">Mon Profil <i class="fa fa-user-circle fa-fw ms-auto text-body text-opacity-50"></i></a>
 				<a class="dropdown-item d-flex align-items-center" href="{{ path('app_profile_change_password') }}">Changer mot de passe <i class="fa fa-key fa-fw ms-auto text-body text-opacity-50"></i></a>
 				<div class="dropdown-divider"></div>
-				<a class="dropdown-item d-flex align-items-center" href="{{ path('app_logout') }}">Déconnexion <i class="fa fa-sign-out-alt fa-fw ms-auto text-body text-opacity-50"></i></a>
+				<a class="dropdown-item d-flex align-items-center" href="{{ path('app_logout') }}" id="header-logout-link">Déconnexion <i class="fa fa-sign-out-alt fa-fw ms-auto text-body text-opacity-50"></i></a>
 			</div>
 		</div>
 	</div>
@@ -295,5 +295,52 @@ document.addEventListener('DOMContentLoaded', function() {
                 break;
         }
     });
+    
+    // Gestion de la déconnexion avec SweetAlert
+    const headerLogoutLink = document.getElementById('header-logout-link');
+    
+    if (headerLogoutLink) {
+        headerLogoutLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            const logoutUrl = this.getAttribute('href');
+            
+            // Vérifier si SweetAlert est disponible, sinon le charger
+            if (typeof Swal === 'undefined') {
+                // Charger SweetAlert2 si pas encore chargé
+                const link = document.createElement('link');
+                link.rel = 'stylesheet';
+                link.href = 'https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css';
+                document.head.appendChild(link);
+                
+                const script = document.createElement('script');
+                script.src = 'https://cdn.jsdelivr.net/npm/sweetalert2@11';
+                script.onload = function() {
+                    showLogoutConfirmation(logoutUrl);
+                };
+                document.head.appendChild(script);
+            } else {
+                showLogoutConfirmation(logoutUrl);
+            }
+        });
+    }
+    
+    function showLogoutConfirmation(logoutUrl) {
+        Swal.fire({
+            title: 'Déconnexion',
+            text: 'Êtes-vous sûr de vouloir vous déconnecter ?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#14517E',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Oui, me déconnecter',
+            cancelButtonText: 'Annuler',
+            reverseButtons: true
+        }).then((result) => {
+            if (result.isConfirmed) {
+                window.location.href = logoutUrl;
+            }
+        });
+    }
 });
 </script>

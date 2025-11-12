@@ -1,0 +1,122 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Nouveau modèle de mission{% endblock %}
+
+{% block breadcrumb %}
+<ul class="breadcrumb">
+	<li class="breadcrumb-item"><a href="{{ path('app_mission_index') }}">MISSIONS</a></li>
+	<li class="breadcrumb-item"><a href="{{ path('app_mission_modele_index') }}">Modèles</a></li>
+	<li class="breadcrumb-item active">Nouveau</li>
+</ul>
+{% endblock %}
+
+{% block page_title %}
+<h1 class="page-header">
+	Créer un modèle de mission <small>Définissez le titre et la description</small>
+</h1>
+{% endblock %}
+
+{% block buttons %}
+<div class="d-flex gap-2">
+	<a href="{{ path('app_mission_modele_index') }}" class="btn btn-outline-secondary btn-sm">
+		<i class="fa fa-arrow-left"></i> Retour à la liste
+	</a>
+</div>
+{% endblock %}
+
+{% block body %}
+<div class="row">
+	<div class="col-12">
+		<div class="card">
+			<div class="card-body">
+				<form id="missionModeleForm" onsubmit="submitMissionModele(event)">
+					<div class="mb-3">
+						<label for="modeleTitre" class="form-label">Titre de la mission <span class="text-danger">*</span></label>
+						<input type="text" class="form-control" id="modeleTitre" name="titre" maxlength="255" required>
+					</div>
+					<div class="mb-3">
+						<label for="modeleDescription" class="form-label">Description</label>
+						<textarea class="form-control" id="modeleDescription" name="description" rows="6" placeholder="Décrivez brièvement le contexte ou les objectifs de la mission"></textarea>
+					</div>
+					<div class="d-flex justify-content-end gap-2">
+						<button type="reset" class="btn btn-outline-secondary btn-sm">
+							<i class="fa fa-ban"></i> Réinitialiser
+						</button>
+						<button type="submit" class="btn btn-primary btn-sm">
+							<i class="fa fa-save"></i> Enregistrer
+						</button>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
+</div>
+
+<div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1055;">
+	<div id="modeleToast" class="toast align-items-center text-bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
+		<div class="d-flex">
+			<div class="toast-body" id="modeleToastMessage">
+				Opération effectuée.
+			</div>
+			<button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Fermer"></button>
+		</div>
+	</div>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+<script>
+function showModeleToast(message, success = true) {
+	const toastEl = document.getElementById('modeleToast');
+	const toastMessage = document.getElementById('modeleToastMessage');
+	if (!toastEl || !toastMessage) {
+		alert(message);
+		return;
+	}
+	toastMessage.textContent = message;
+	toastEl.classList.toggle('text-bg-danger', !success);
+	toastEl.classList.toggle('text-bg-success', success);
+	const toast = new bootstrap.Toast(toastEl);
+	toast.show();
+}
+
+function submitMissionModele(event) {
+	event.preventDefault();
+
+	const titre = document.getElementById('modeleTitre').value.trim();
+	const description = document.getElementById('modeleDescription').value.trim();
+
+	if (!titre) {
+		showModeleToast('Le titre est obligatoire.', false);
+		return;
+	}
+
+	fetch("{{ path('app_mission_modele_store') }}", {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			'X-Requested-With': 'XMLHttpRequest'
+		},
+		body: JSON.stringify({
+			titre,
+			description: description || null
+		})
+	})
+	.then(response => response.json().then(data => ({ ok: response.ok, data })))
+	.then(({ ok, data }) => {
+		if (!ok) {
+			throw new Error(data.message || "Impossible d'enregistrer le modèle.");
+		}
+
+		showModeleToast(data.message ?? 'Modèle enregistré avec succès.');
+		setTimeout(() => {
+			window.location.href = "{{ path('app_mission_modele_index') }}";
+		}, 800);
+	})
+	.catch(error => {
+		console.error('Erreur lors de la création du modèle de mission :', error);
+		showModeleToast(error.message, false);
+	});
+}
+</script>
+{% endblock %}

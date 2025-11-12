@@ -18,7 +18,7 @@
 {% block buttons %}
 <div class="d-flex gap-2">
 	{% if can_create_formation() %}
-	<a href="{{ path('app_formation_create') }}" class="btn btn-primary btn-sm">
+	<a href="{{ path('app_formation_create') }}" class="btn btn-secondary btn-sm">
 		<i class="fa fa-plus"></i> Nouvelle Formation
 	</a>
 	{% endif %}
@@ -31,7 +31,7 @@
     <div class="col-xl-12">
         {% include 'widgets/performance_summary.html.twig' with {
             'title': 'Performance Formations ' ~ currentYear,
-            'header_color': 'primary',
+            'header_color': 'secondary',
             'header_icon': 'fa-graduation-cap',
             'physique_taux': performanceData.taux_physique,
             'physique_color': performanceData.couleur_physique,
@@ -66,9 +66,9 @@
 						</select>
 					</div>
 					<div class="col-md-3">
-						<label for="serviceFilter" class="form-label">Service</label>
-						<select class="form-select" id="serviceFilter">
-							<option value="">Tous les services</option>
+						<label for="directionFilter" class="form-label">Direction</label>
+						<select class="form-select" id="directionFilter">
+							<option value="">Toutes les directions</option>
 						</select>
 					</div>
 					<div class="col-md-3">
@@ -89,13 +89,13 @@
 				</div>
 				<div class="row mt-3">
 					<div class="col-12 text-center">
-						<button type="button" class="btn btn-primary btn-sm" onclick="applyFilters()">
+						<button type="button" class="btn btn-secondary btn-sm" onclick="applyFilters()">
 							<i class="fa fa-search"></i> Appliquer les filtres
 						</button>
 						<button type="button" class="btn btn-outline-secondary btn-sm" onclick="resetFilters()">
 							<i class="fa fa-refresh"></i> Réinitialiser
 						</button>
-						<button type="button" class="btn btn-warning btn-sm" onclick="exportBudgetReport()">
+						<button type="button" class="btn btn-outline-secondary btn-sm" onclick="exportBudgetReport()">
 							<i class="fa fa-chart-line"></i> Rapport Budget
 						</button>
 					</div>
@@ -137,14 +137,12 @@
 let formationsTable = null;
 let filtersData = null;
 
-// Initialiser DataTable au chargement de la page
 document.addEventListener('DOMContentLoaded', function() {
     initializeDataTable();
     loadFiltersData();
     loadFormations();
 });
 
-// Charger les données des filtres
 function loadFiltersData() {
     fetch("{{ path('app_formation_filters_data') }}")
         .then(response => response.json())
@@ -157,11 +155,8 @@ function loadFiltersData() {
         });
 }
 
-// Remplir les filtres avec les données
 function populateFilters() {
     if (!filtersData) return;
-    
-    // Remplir le filtre des statuts
     const statutFilter = document.getElementById('statutFilter');
     filtersData.statuts.forEach(statut => {
         const option = document.createElement('option');
@@ -169,17 +164,15 @@ function populateFilters() {
         option.textContent = statut.libelle;
         statutFilter.appendChild(option);
     });
-    
-    // Remplir le filtre des services
-    const serviceFilter = document.getElementById('serviceFilter');
-    filtersData.services.forEach(service => {
+
+    const directionFilter = document.getElementById('directionFilter');
+    filtersData.directions.forEach(direction => {
         const option = document.createElement('option');
-        option.value = service.id;
-        option.textContent = service.libelle;
-        serviceFilter.appendChild(option);
+        option.value = direction.id;
+        option.textContent = direction.libelle;
+        directionFilter.appendChild(option);
     });
-    
-    // Remplir le filtre des participants
+
     const participantFilter = document.getElementById('participantFilter');
     filtersData.users.forEach(user => {
         const option = document.createElement('option');
@@ -189,7 +182,6 @@ function populateFilters() {
     });
 }
 
-// Initialiser DataTable
 function initializeDataTable() {
     formationsTable = $('#formationsTable').DataTable({
         language: {
@@ -219,7 +211,7 @@ function initializeDataTable() {
         order: [[0, 'asc']],
         columnDefs: [
             {
-                targets: -1, // Dernière colonne (Actions)
+                targets: -1,
                 orderable: false,
                 searchable: false
             }
@@ -257,9 +249,7 @@ function initializeDataTable() {
     });
 }
 
-// Fonction pour charger les formations avec filtres
 function loadFormations(filters = {}) {
-    // Afficher le skeleton loading
     const tableContainer = document.querySelector('#formationsTable').closest('.table-responsive');
     if (tableContainer) {
         tableContainer.style.position = 'relative';
@@ -277,43 +267,37 @@ function loadFormations(filters = {}) {
         `;
         tableContainer.appendChild(skeleton);
     }
-    
-    // Construire l'URL avec les paramètres de filtrage
     const url = new URL("{{ path('app_formation_list') }}", window.location.origin);
     Object.keys(filters).forEach(key => {
         if (filters[key] && filters[key] !== '') {
             url.searchParams.append(key, filters[key]);
         }
     });
-    
+
     fetch(url)
         .then(response => response.json())
         .then(data => {
-            // Masquer le skeleton loading
             const skeleton = document.getElementById('skeleton-loading');
             if (skeleton) {
                 skeleton.remove();
             }
-            
-            // Vider la table DataTable
+
             formationsTable.clear();
-            
-            // Ajouter les données
             data.forEach(formation => {
                 const statutBadge = getStatutBadge(formation.statut, formation.statut_couleur);
                 formationsTable.row.add([
                     formation.id,
                     formation.titre,
-                    formation.service,
+                    formation.direction,
                     formation.fonds,
                     `${formation.datePrevueDebut} - ${formation.datePrevueFin}`,
                     formation.dureePrevue,
                     formation.budgetPrevu,
                     statutBadge,
                     `<div class="dropdown" style="position: relative;">
-                                        <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="position: relative; z-index: 1;">
-                    <i class="fa fa-ellipsis-h"></i>
-                </button>
+                        <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="position: relative; z-index: 1;">
+                            <i class="fa fa-ellipsis-h"></i>
+                        </button>
                         <ul class="dropdown-menu dropdown-menu-end" style="position: absolute; z-index: 99999; right: 0; left: auto;">
                             <li><a class="dropdown-item" href="/formation/${formation.id}">
                                 <i class="fa fa-eye text-info"></i> Voir
@@ -330,12 +314,10 @@ function loadFormations(filters = {}) {
                     </div>`
                 ]);
             });
-            
-            // Redessiner la table
+
             formationsTable.draw();
         })
         .catch(error => {
-            // Masquer le skeleton loading en cas d'erreur
             const skeleton = document.getElementById('skeleton-loading');
             if (skeleton) {
                 skeleton.remove();
@@ -345,29 +327,26 @@ function loadFormations(filters = {}) {
         });
 }
 
-// Obtenir les valeurs des filtres
 function getFilters() {
     return {
         statut: document.getElementById('statutFilter').value,
-        service: document.getElementById('serviceFilter').value,
+        direction: document.getElementById('directionFilter').value,
         periode: document.getElementById('periodeFilter').value,
         participant: document.getElementById('participantFilter').value
     };
 }
 
-// Appliquer les filtres
 function applyFilters() {
     const filters = getFilters();
     loadFormations(filters);
 }
 
-// Réinitialiser les filtres
 function resetFilters() {
     document.getElementById('statutFilter').value = '';
-    document.getElementById('serviceFilter').value = '';
+    document.getElementById('directionFilter').value = '';
     document.getElementById('periodeFilter').value = '';
     document.getElementById('participantFilter').value = '';
-    
+
     loadFormations();
 }
 
@@ -382,12 +361,10 @@ function exportBudgetReport() {
     window.open(url.toString(), '_blank');
 }
 
-                // Fonction pour obtenir le badge de statut
-                function getStatutBadge(statut, couleur) {
-                    return `<span class="badge bg-${couleur}">${statut}</span>`;
-                }
+function getStatutBadge(statut, couleur) {
+    return `<span class="badge bg-${couleur}">${statut}</span>`;
+}
 
-// Fonction pour supprimer une formation
 function deleteFormation(id) {
     if (confirm('Êtes-vous sûr de vouloir supprimer cette formation ?')) {
         fetch(`/formation/${id}`, {
