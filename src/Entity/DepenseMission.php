@@ -3,6 +3,8 @@
 namespace App\Entity;
 
 use App\Repository\DepenseMissionRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
@@ -27,6 +29,14 @@ class DepenseMission
 
     #[ORM\Column(type: Types::DECIMAL, precision: 10, scale: 2, nullable: true)]
     private ?string $montantReel = null;
+
+    #[ORM\OneToMany(mappedBy: 'depenseMission', targetEntity: DepenseMissionParticipant::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
+    private Collection $participantAllocations;
+
+    public function __construct()
+    {
+        $this->participantAllocations = new ArrayCollection();
+    }
 
     public function getId(): ?int
     {
@@ -89,6 +99,35 @@ class DepenseMission
     public function setMontantReel(?string $montantReel): static
     {
         $this->montantReel = $montantReel;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, DepenseMissionParticipant>
+     */
+    public function getParticipantAllocations(): Collection
+    {
+        return $this->participantAllocations;
+    }
+
+    public function addParticipantAllocation(DepenseMissionParticipant $allocation): static
+    {
+        if (!$this->participantAllocations->contains($allocation)) {
+            $this->participantAllocations->add($allocation);
+            $allocation->setDepenseMission($this);
+        }
+
+        return $this;
+    }
+
+    public function removeParticipantAllocation(DepenseMissionParticipant $allocation): static
+    {
+        if ($this->participantAllocations->removeElement($allocation)) {
+            if ($allocation->getDepenseMission() === $this) {
+                $allocation->setDepenseMission(null);
+            }
+        }
 
         return $this;
     }

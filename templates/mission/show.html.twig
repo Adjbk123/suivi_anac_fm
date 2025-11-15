@@ -4,6 +4,9 @@
 
 {% set session = missionSession %}
 {% set template = mission %}
+{% set participantExpenseStats = participantExpenseStats|default([]) %}
+{% set depenseAllocationsView = depenseAllocationsView|default({}) %}
+{% set allocationAlerts = allocationAlerts|default([]) %}
 
 {% block breadcrumb %}
 <ul class="breadcrumb">
@@ -110,6 +113,101 @@
 			</div>
 		</div>
 
+		{% if participantExpenseStats|length > 0 %}
+		<div class="card mb-3">
+			<div class="card-header">
+				<h5 class="card-title mb-0">
+					<i class="fa fa-chart-pie text-primary"></i> Dépenses par participant
+				</h5>
+			</div>
+			<div class="card-body">
+				<div class="table-responsive">
+					<table class="table table-hover align-middle">
+						<thead class="table-secondary">
+							<tr>
+								<th>Participant</th>
+								<th>Statut</th>
+								<th>Montant prévu</th>
+								<th>Montant réel</th>
+								<th>Écart</th>
+								<th>Détails</th>
+							</tr>
+						</thead>
+						<tbody>
+							{% for stat in participantExpenseStats %}
+							<tr>
+								<td>
+									<div class="fw-semibold">{{ stat.nom }} {{ stat.prenom }}</div>
+									<div class="text-muted small">{{ stat.email ?: '-' }}</div>
+								</td>
+								<td>
+									{% if stat.statut %}
+										<span class="badge bg-{{ stat.statutCouleur }}">{{ stat.statut }}</span>
+									{% else %}
+										<span class="badge bg-secondary">Non défini</span>
+									{% endif %}
+								</td>
+								<td>{{ stat.totalPrevu ? stat.totalPrevu|number_format(0, ',', ' ') ~ ' FCFA' : '-' }}</td>
+								<td>{{ stat.totalReel ? stat.totalReel|number_format(0, ',', ' ') ~ ' FCFA' : '-' }}</td>
+								<td>
+									{% set ecart = stat.ecart %}
+									{% set ecartClass = ecart > 0 ? 'text-danger' : (ecart < 0 ? 'text-success' : 'text-muted') %}
+									<span class="{{ ecartClass }}">
+										{{ ecart ? ecart|number_format(0, ',', ' ') ~ ' FCFA' : '-' }}
+									</span>
+								</td>
+								<td>
+									{% if stat.details|length > 0 %}
+									<ul class="list-unstyled small mb-0">
+										{% for detail in stat.details %}
+										<li class="d-flex align-items-center justify-content-between gap-2 flex-wrap">
+											<div class="me-2">
+												<strong>{{ detail.categorie }}</strong> :
+												{% set prevu = detail.montantPrevu %}
+												{% set reel = detail.montantReel %}
+												{% if prevu is not null or reel is not null %}
+													{% if prevu is not null %}
+														{{ prevu|number_format(0, ',', ' ') }} FCFA
+													{% endif %}
+													<span class="text-muted">
+														{% if reel is not null %}
+															(réel {{ reel|number_format(0, ',', ' ') }} FCFA)
+														{% else %}
+															(réel non renseigné)
+														{% endif %}
+													</span>
+												{% else %}
+													<span class="text-muted">Non renseigné</span>
+												{% endif %}
+											</div>
+											{% if detail.allocationId %}
+											<div class="btn-group btn-group-sm flex-nowrap">
+												<button type="button" class="btn btn-outline-primary btn-sm" title="Modifier"
+													onclick="openEditAllocationModal({{ detail.allocationId }}, {{ detail.montantPrevu is not null ? detail.montantPrevu : 'null' }})">
+													<i class="fa fa-edit"></i>
+												</button>
+												<button type="button" class="btn btn-outline-danger btn-sm" title="Supprimer"
+													onclick="confirmDeleteAllocation({{ detail.allocationId }})">
+													<i class="fa fa-trash-alt"></i>
+												</button>
+											</div>
+											{% endif %}
+										</li>
+										{% endfor %}
+									</ul>
+									{% else %}
+									<span class="text-muted">Aucune répartition renseignée</span>
+									{% endif %}
+								</td>
+							</tr>
+							{% endfor %}
+						</tbody>
+					</table>
+				</div>
+			</div>
+		</div>
+		{% endif %}
+
 		<div class="card mb-3">
 			<div class="card-header d-flex justify-content-between align-items-center">
 				<h5 class="card-title mb-0">
@@ -176,79 +274,89 @@
 				{% endif %}
 			</div>
 			<div class="card-body">
+				{% if allocationAlerts|length > 0 %}
+				<div class="alert alert-warning">
+					<ul class="mb-0">
+						{% for message in allocationAlerts %}
+						<li>{{ message }}</li>
+						{% endfor %}
+					</ul>
+				</div>
+				{% endif %}
+				<h6 class="text-uppercase text-muted fw-semibold mb-3">Synthèse par catégorie</h6>
 				{% if session.depenseMissions|length > 0 %}
 				<div class="table-responsive">
 					<table class="table table-hover">
-						<thead class="table-secondary">
-							<tr>
-								<th>Catégorie</th>
-								<th>Montant prévu</th>
-								<th>Montant réel</th>
-								<th>Écart</th>
-							</tr>
-						</thead>
-						<tbody>
-							{% for depense in session.depenseMissions %}
-							<tr>
-								<td>{{ depense.categorie.libelle }}</td>
-								<td>{{ depense.montantPrevu|number_format(0, ',', ' ') }} FCFA</td>
-								<td>{{ depense.montantReel ? depense.montantReel|number_format(0, ',', ' ') ~ ' FCFA' : '-' }}</td>
-								<td>
-									{% if depense.montantReel %}
-										{% set ecart = depense.montantReel - depense.montantPrevu %}
-										{% set ecartClass = ecart > 0 ? 'text-danger' : (ecart < 0 ? 'text-success' : 'text-muted') %}
-										<span class="{{ ecartClass }}">
-											{{ ecart|number_format(0, ',', ' ') }} FCFA
-										</span>
-									{% else %}
-										-
-									{% endif %}
-								</td>
-							</tr>
-							{% endfor %}
-						</tbody>
-						<tfoot class="table-info">
-							<tr>
-								<td><strong>Total</strong></td>
-								<td>
-									<strong>
-										{% set totalPrevu = 0 %}
-										{% for depense in session.depenseMissions %}
-											{% set totalPrevu = totalPrevu + depense.montantPrevu %}
-										{% endfor %}
-										{{ totalPrevu|number_format(0, ',', ' ') }} FCFA
-									</strong>
-								</td>
-								<td>
-									<strong>
-										{% set totalReel = 0 %}
-										{% for depense in session.depenseMissions %}
-											{% if depense.montantReel %}
-												{% set totalReel = totalReel + depense.montantReel %}
-											{% endif %}
-										{% endfor %}
-										{{ totalReel > 0 ? totalReel|number_format(0, ',', ' ') ~ ' FCFA' : '-' }}
-									</strong>
-								</td>
-								<td>
-									{% if totalReel > 0 %}
-										{% set ecartTotal = totalReel - totalPrevu %}
-										{% set ecartClass = ecartTotal > 0 ? 'text-danger' : (ecartTotal < 0 ? 'text-success' : 'text-muted') %}
-										<strong class="{{ ecartClass }}">
-											{{ ecartTotal|number_format(0, ',', ' ') }} FCFA
+							<thead class="table-secondary">
+								<tr>
+									<th>Catégorie</th>
+									<td>Montant prévu</td>
+									<th>Montant réel</th>
+									<th>Écart</th>
+								</tr>
+							</thead>
+							<tbody>
+								{% for depense in session.depenseMissions %}
+								<tr>
+									<td>{{ depense.categorie.libelle }}</td>
+									<td>{{ depense.montantPrevu|number_format(0, ',', ' ') }} FCFA</td>
+									<td>{{ depense.montantReel ? depense.montantReel|number_format(0, ',', ' ') ~ ' FCFA' : '-' }}</td>
+									<td>
+										{% if depense.montantReel %}
+											{% set ecart = depense.montantReel - depense.montantPrevu %}
+											{% set ecartClass = ecart > 0 ? 'text-danger' : (ecart < 0 ? 'text-success' : 'text-muted') %}
+											<span class="{{ ecartClass }}">
+												{{ ecart|number_format(0, ',', ' ') }} FCFA
+											</span>
+										{% else %}
+											-
+										{% endif %}
+									</td>
+								</tr>
+								{% endfor %}
+							</tbody>
+							<tfoot class="table-info">
+								<tr>
+									<td><strong>Total</strong></td>
+									<td>
+										<strong>
+											{% set totalPrevu = 0 %}
+											{% for depense in session.depenseMissions %}
+												{% set totalPrevu = totalPrevu + depense.montantPrevu %}
+											{% endfor %}
+											{{ totalPrevu|number_format(0, ',', ' ') }} FCFA
 										</strong>
-									{% else %}
-										-
-									{% endif %}
-								</td>
-							</tr>
+									</td>
+									<td>
+										<strong>
+											{% set totalReel = 0 %}
+											{% for depense in session.depenseMissions %}
+												{% if depense.montantReel %}
+													{% set totalReel = totalReel + depense.montantReel %}
+												{% endif %}
+											{% endfor %}
+											{{ totalReel > 0 ? totalReel|number_format(0, ',', ' ') ~ ' FCFA' : '-' }}
+										</strong>
+									</td>
+									<td>
+										{% if totalReel > 0 %}
+											{% set ecartTotal = totalReel - totalPrevu %}
+											{% set ecartClass = ecartTotal > 0 ? 'text-danger' : (ecartTotal < 0 ? 'text-success' : 'text-muted') %}
+											<strong class="{{ ecartClass }}">
+												{{ ecartTotal|number_format(0, ',', ' ') }} FCFA
+											</strong>
+										{% else %}
+											-
+										{% endif %}
+									</td>
+								</tr>
 						</tfoot>
 					</table>
 				</div>
 				{% else %}
 				<div class="text-center text-muted">
 					<i class="fa fa-money-bill fa-2x mb-2"></i>
-					<p>Aucune dépense prévue</p>
+					<p>Aucune dépense planifiée pour cette mission.</p>
 				</div>
 				{% endif %}
 			</div>
@@ -345,7 +453,7 @@
 			</div>
 			<div class="modal-footer">
 				<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-				<button type="button" class="btn btn-primary" onclick="submitDocument()">
+				<button type="button" class="btn btn-primary" id="addDocumentSubmitBtn" onclick="submitDocument()">
 					<i class="fa fa-upload"></i> Ajouter
 				</button>
 			</div>
@@ -370,6 +478,13 @@
 						</select>
 					</div>
 					<div class="mb-3">
+						<label for="depenseParticipant" class="form-label">Participant concerné *</label>
+						<select class="form-control" id="depenseParticipant" name="depenseParticipant" required>
+							<option value="">Sélectionner un participant</option>
+						</select>
+						<div class="form-text">Un participant ne peut posséder qu'une seule dépense par catégorie.</div>
+					</div>
+					<div class="mb-3">
 						<label for="depenseMontant" class="form-label">Montant prévu (FCFA) *</label>
 						<input type="number" class="form-control" id="depenseMontant" name="depenseMontant" min="0" step="1" required>
 					</div>
@@ -377,7 +492,7 @@
 			</div>
 			<div class="modal-footer">
 				<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-				<button type="button" class="btn btn-primary" onclick="submitDepense()">
+				<button type="button" class="btn btn-primary" id="addDepenseSubmitBtn" onclick="submitDepense()">
 					<i class="fa fa-plus"></i> Ajouter
 				</button>
 			</div>
@@ -414,7 +529,35 @@
 	</div>
 </div>
 
+<!-- Modal d'édition d'une dépense participant -->
+<div class="modal fade" id="editAllocationModal" tabindex="-1" aria-labelledby="editAllocationModalLabel" aria-hidden="true">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="editAllocationModalLabel">Modifier la dépense participant</h5>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body">
+				<form id="editAllocationForm">
+					<input type="hidden" id="allocationId">
+					<div class="mb-3">
+						<label for="allocationMontant" class="form-label">Montant prévu (FCFA) *</label>
+						<input type="number" class="form-control" id="allocationMontant" min="0" step="1000" required>
+					</div>
+				</form>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+				<button type="button" class="btn btn-primary" id="allocationSaveBtn" onclick="submitAllocationEdit()">Enregistrer</button>
+			</div>
+		</div>
+	</div>
+</div>
+
 <script>
+const participantOptionsData = {{ participantOptionsData|json_encode(constant('JSON_UNESCAPED_UNICODE'))|raw }};
+const allocationIndexData = {{ allocationIndexData|json_encode|raw }};
+
 function openAddDocumentModal() {
     const modal = new bootstrap.Modal(document.getElementById('addDocumentModal'));
     document.getElementById('addDocumentForm').reset();
@@ -436,6 +579,13 @@ function submitDocument() {
     formData.append('nom', documentName);
     formData.append('file', documentFile);
 
+    const submitBtn = document.getElementById('addDocumentSubmitBtn');
+    const originalText = submitBtn ? submitBtn.innerHTML : null;
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fa fa-spinner fa-spin me-1"></i> Ajout...';
+    }
+
     fetch(`/mission/{{ session.id }}/add-document`, {
         method: 'POST',
         body: formData
@@ -452,6 +602,12 @@ function submitDocument() {
         .catch(error => {
             console.error('Erreur:', error);
             alert("Erreur lors de l'ajout du document");
+        })
+        .finally(() => {
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText ?? '<i class="fa fa-upload"></i> Ajouter';
+            }
         });
 }
 
@@ -459,32 +615,102 @@ function openAddDepenseModal() {
     const modal = new bootstrap.Modal(document.getElementById('addDepenseModal'));
     document.getElementById('addDepenseForm').reset();
 
-    fetch('/api/categories-depenses')
-        .then(response => response.json())
-        .then(data => {
-            const select = document.getElementById('depenseCategorie');
-            select.innerHTML = '<option value="">Sélectionner une catégorie</option>';
-            data.forEach(categorie => {
-                select.innerHTML += `<option value="${categorie.id}">${categorie.libelle}</option>`;
-            });
-        });
+    loadCategoriesDepenses().then(() => {
+        const categorieSelect = document.getElementById('depenseCategorie');
+        if (categorieSelect && !categorieSelect.dataset.listenerAttached) {
+            categorieSelect.addEventListener('change', () => populateParticipantsSelect(categorieSelect.value));
+            categorieSelect.dataset.listenerAttached = 'true';
+        }
+        populateParticipantsSelect(categorieSelect ? categorieSelect.value : null);
+    });
+    populateParticipantsSelect(null);
 
     modal.show();
+}
+
+function loadCategoriesDepenses() {
+    const select = document.getElementById('depenseCategorie');
+    select.innerHTML = '<option value="">Sélectionner une catégorie</option>';
+
+    return fetch('/api/categories-depenses')
+        .then(response => response.json())
+        .then(data => {
+            data.forEach(categorie => {
+                const option = document.createElement('option');
+                option.value = categorie.id;
+                option.textContent = categorie.libelle;
+                select.appendChild(option);
+            });
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            alert('Erreur lors du chargement des catégories');
+        });
+}
+
+function populateParticipantsSelect(categoryId) {
+    const select = document.getElementById('depenseParticipant');
+    if (!select) {
+        return;
+    }
+
+    const usedIds = categoryId && allocationIndexData[categoryId] ? allocationIndexData[categoryId] : [];
+    select.innerHTML = '<option value="">Sélectionner un participant</option>';
+
+    participantOptionsData.forEach(option => {
+        const isUsed = categoryId && usedIds.includes(option.id);
+        const optionElement = document.createElement('option');
+        optionElement.value = option.id;
+        optionElement.textContent = isUsed ? `${option.label} (déjà utilisé)` : option.label;
+        if (isUsed) {
+            optionElement.disabled = true;
+        }
+        select.appendChild(optionElement);
+    });
+
+    if (select.value && select.options[select.selectedIndex]?.disabled) {
+        select.value = '';
+    }
+
+    if (!select.value) {
+        const firstEnabled = Array.from(select.options).find(opt => opt.value && !opt.disabled);
+        if (firstEnabled) {
+            select.value = firstEnabled.value;
+        }
+    }
 }
 
 function submitDepense() {
     const categorieId = document.getElementById('depenseCategorie').value;
     const montant = document.getElementById('depenseMontant').value;
+    const participantId = document.getElementById('depenseParticipant').value;
 
-    if (!categorieId || !montant) {
+    if (!categorieId || !montant || !participantId) {
         alert('Veuillez renseigner tous les champs');
         return;
+    }
+
+    const disabledOption = document.querySelector(`#depenseParticipant option[value="${participantId}"][disabled]`);
+    if (disabledOption) {
+        alert('Ce participant possède déjà une dépense pour cette catégorie.');
+        return;
+    }
+
+    const submitBtn = document.getElementById('addDepenseSubmitBtn');
+    const originalText = submitBtn ? submitBtn.innerHTML : null;
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fa fa-spinner fa-spin me-1"></i> Ajout...';
     }
 
     fetch(`/mission/{{ session.id }}/add-depense`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ categorieId: parseInt(categorieId, 10), montant: parseFloat(montant) })
+        body: JSON.stringify({
+            categorieId: parseInt(categorieId, 10),
+            montant: parseFloat(montant),
+            participantId: parseInt(participantId, 10)
+        })
     })
         .then(response => response.json())
         .then(data => {
@@ -498,6 +724,12 @@ function submitDepense() {
         .catch(error => {
             console.error('Erreur:', error);
             alert("Erreur lors de l'ajout de la dépense");
+        })
+        .finally(() => {
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText ?? '<i class="fa fa-plus"></i> Ajouter';
+            }
         });
 }
 
@@ -544,6 +776,85 @@ function submitParticipant() {
             console.error('Erreur:', error);
             alert("Erreur lors de l'ajout du participant");
         });
+}
+
+function openEditAllocationModal(allocationId, currentAmount = null) {
+    document.getElementById('allocationId').value = allocationId;
+    document.getElementById('allocationMontant').value = currentAmount !== null ? currentAmount : '';
+    const modal = new bootstrap.Modal(document.getElementById('editAllocationModal'));
+    modal.show();
+}
+
+function submitAllocationEdit() {
+    const allocationId = document.getElementById('allocationId').value;
+    const montant = document.getElementById('allocationMontant').value;
+    if (!allocationId || !montant) {
+        alert('Veuillez renseigner le montant.');
+        return;
+    }
+
+    const saveBtn = document.getElementById('allocationSaveBtn');
+    const originalText = saveBtn ? saveBtn.innerHTML : null;
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<i class="fa fa-spinner fa-spin me-1"></i>Enregistrement...';
+    }
+
+    fetch(`/mission/allocation/${allocationId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ montant: parseFloat(montant) })
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const modal = bootstrap.Modal.getInstance(document.getElementById('editAllocationModal'));
+                modal.hide();
+                showToast(data.message, 'success');
+                setTimeout(() => window.location.reload(), 800);
+            } else {
+                showToast(data.message || 'Erreur lors de la mise à jour', 'error');
+            }
+        })
+        .catch(() => showToast('Erreur lors de la mise à jour', 'error'))
+        .finally(() => {
+            if (saveBtn && originalText !== null) {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = originalText;
+            }
+        });
+}
+
+function confirmDeleteAllocation(allocationId) {
+    Swal.fire({
+        title: 'Supprimer cette dépense ?',
+        text: 'Cette action est irréversible.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Oui, supprimer',
+        cancelButtonText: 'Annuler'
+    }).then(result => {
+        if (result.isConfirmed) {
+            deleteAllocation(allocationId);
+        }
+    });
+}
+
+function deleteAllocation(allocationId) {
+    fetch(`/mission/allocation/${allocationId}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' }
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast(data.message, 'success');
+                setTimeout(() => window.location.reload(), 800);
+            } else {
+                showToast(data.message || 'Erreur lors de la suppression', 'error');
+            }
+        })
+        .catch(() => showToast('Erreur lors de la suppression', 'error'));
 }
 </script>
 {% endblock %}

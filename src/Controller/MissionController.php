@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use App\Entity\DepenseMission;
+use App\Entity\DepenseMissionParticipant;
 use App\Entity\DocumentMission;
 use App\Entity\Mission;
 use App\Entity\MissionSession;
@@ -378,6 +379,7 @@ class MissionController extends AbstractController
             $entityManager->persist($missionSession);
             $entityManager->flush();
 
+            $userMissionsByUserId = [];
             if (isset($data['participants']) && is_array($data['participants'])) {
                 $statutParticipation = $entityManager->getRepository(\App\Entity\StatutParticipation::class)->findOneBy(['code' => 'inscrit']);
                 foreach ($data['participants'] as $userId) {
@@ -388,19 +390,87 @@ class MissionController extends AbstractController
                         $userMission->setMissionSession($missionSession);
                         $userMission->setStatutParticipation($statutParticipation);
                         $entityManager->persist($userMission);
+                        $userMissionsByUserId[$user->getId()] = $userMission;
                     }
                 }
             }
 
             $totalBudgetPrevu = 0;
-            if (isset($data['depenses']) && is_array($data['depenses'])) {
+            $depenseEntitiesByCategory = [];
+            $participantDepensesPayload = isset($data['participantDepenses']) && is_array($data['participantDepenses'])
+                ? $data['participantDepenses']
+                : [];
+
+            if (!empty($participantDepensesPayload)) {
+                $allocationsByCategory = [];
+
+                foreach ($participantDepensesPayload as $row) {
+                    $participantId = (int) ($row['participantId'] ?? 0);
+                    $categorieId = (int) ($row['categorieId'] ?? 0);
+                    $montant = isset($row['montant']) ? (float) $row['montant'] : 0;
+
+                    if ($participantId <= 0 || $categorieId <= 0 || $montant <= 0) {
+                        continue;
+                    }
+
+                    $allocationsByCategory[$categorieId][] = [
+                        'participantId' => $participantId,
+                        'montant' => $montant,
+                    ];
+                }
+
+                foreach ($allocationsByCategory as $categorieId => $allocations) {
+                    $categorie = $entityManager->getRepository(\App\Entity\CategorieDepense::class)->find($categorieId);
+                    if (!$categorie) {
+                        continue;
+                    }
+
+                    $montantTotal = array_reduce($allocations, static function (float $carry, array $item): float {
+                        return $carry + ($item['montant'] ?? 0);
+                    }, 0.0);
+
+                    if ($montantTotal <= 0) {
+                        continue;
+                    }
+
+                    $depenseMission = new DepenseMission();
+                    $depenseMission->setMissionSession($missionSession);
+                    $depenseMission->setCategorie($categorie);
+                    $depenseMission->setMontantPrevu(number_format($montantTotal, 2, '.', ''));
+                    $entityManager->persist($depenseMission);
+
+                    $depenseEntitiesByCategory[$categorieId] = $depenseMission;
+                    $totalBudgetPrevu += $montantTotal;
+                }
+
+                foreach ($allocationsByCategory as $categorieId => $allocations) {
+                    $depenseMission = $depenseEntitiesByCategory[$categorieId] ?? null;
+                    if (!$depenseMission) {
+                        continue;
+                    }
+
+                    foreach ($allocations as $allocation) {
+                        $participantId = $allocation['participantId'] ?? 0;
+                        $userMission = $userMissionsByUserId[$participantId] ?? null;
+                        if (!$userMission) {
+                            continue;
+                        }
+
+                        $allocationEntity = new DepenseMissionParticipant();
+                        $allocationEntity->setDepenseMission($depenseMission);
+                        $allocationEntity->setUserMission($userMission);
+                        $allocationEntity->setMontantPrevu(number_format($allocation['montant'], 2, '.', ''));
+                        $entityManager->persist($allocationEntity);
+                    }
+                }
+            } elseif (isset($data['depenses']) && is_array($data['depenses'])) {
                 foreach ($data['depenses'] as $depense) {
-                    $categorie = $entityManager->getRepository(\App\Entity\CategorieDepense::class)->find($depense['categorieId']);
-                    if ($categorie) {
+                    $categorie = $entityManager->getRepository(\App\Entity\CategorieDepense::class)->find($depense['categorieId'] ?? null);
+                    if ($categorie && isset($depense['montant'])) {
                         $depenseMission = new DepenseMission();
                         $depenseMission->setMissionSession($missionSession);
                         $depenseMission->setCategorie($categorie);
-                        $depenseMission->setMontantPrevu((string) (float) $depense['montant']);
+                        $depenseMission->setMontantPrevu(number_format((float) $depense['montant'], 2, '.', ''));
                         $entityManager->persist($depenseMission);
                         $totalBudgetPrevu += (float) $depense['montant'];
                     }
@@ -460,9 +530,17 @@ class MissionController extends AbstractController
     #[Route('/session/{id}', name: 'app_mission_session_show', methods: ['GET'])]
     public function showSession(MissionSession $missionSession): Response
     {
+        [$participantStats, $depenseAllocations, $allocationAlerts] = $this->buildMissionAllocationViewData($missionSession);
+        [$participantOptionsData, $allocationIndexData] = $this->buildMissionParticipantSelectData($missionSession);
+
         return $this->render('mission/show.html.twig', [
             'missionSession' => $missionSession,
             'mission' => $missionSession->getMission(),
+            'participantExpenseStats' => $participantStats,
+            'depenseAllocationsView' => $depenseAllocations,
+            'allocationAlerts' => $allocationAlerts,
+            'participantOptionsData' => $participantOptionsData,
+            'allocationIndexData' => $allocationIndexData,
         ]);
     }
 
@@ -471,9 +549,17 @@ class MissionController extends AbstractController
     {
         $missionSession = $missionSessionRepository->find($id);
         if ($missionSession) {
+            [$participantStats, $depenseAllocations, $allocationAlerts] = $this->buildMissionAllocationViewData($missionSession);
+            [$participantOptionsData, $allocationIndexData] = $this->buildMissionParticipantSelectData($missionSession);
+
             return $this->render('mission/show.html.twig', [
                 'missionSession' => $missionSession,
                 'mission' => $missionSession->getMission(),
+                'participantExpenseStats' => $participantStats,
+                'depenseAllocationsView' => $depenseAllocations,
+                'allocationAlerts' => $allocationAlerts,
+                'participantOptionsData' => $participantOptionsData,
+                'allocationIndexData' => $allocationIndexData,
             ]);
         }
 
@@ -520,9 +606,18 @@ class MissionController extends AbstractController
         $data = json_decode($request->getContent(), true);
 
         $mission = $missionSession->getMission();
-        if (isset($data['titre'])) {
-            $mission->setTitre($data['titre']);
+        if (!empty($data['missionModeleId']) && (int) $data['missionModeleId'] !== $mission->getId()) {
+            $nouvelleMission = $entityManager->getRepository(Mission::class)->find((int) $data['missionModeleId']);
+            if (!$nouvelleMission) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Modèle de mission introuvable',
+                ], 404);
+            }
+            $missionSession->setMission($nouvelleMission);
+            $mission = $nouvelleMission;
         }
+
         if (isset($data['description'])) {
             $mission->setDescription($data['description']);
         }
@@ -552,6 +647,12 @@ class MissionController extends AbstractController
         if (isset($data['fondsId'])) {
             $fonds = $entityManager->getRepository(\App\Entity\TypeFonds::class)->find($data['fondsId']);
             $missionSession->setFonds($fonds);
+        }
+        if (!empty($data['statutActiviteId'])) {
+            $statut = $entityManager->getRepository(\App\Entity\StatutActivite::class)->find($data['statutActiviteId']);
+            if ($statut) {
+                $missionSession->setStatutActivite($statut);
+            }
         }
 
         $entityManager->flush();
@@ -665,14 +766,22 @@ class MissionController extends AbstractController
     {
         $data = json_decode($request->getContent(), true);
 
-        if (!isset($data['categorieId']) || !isset($data['montant'])) {
+        if (!isset($data['categorieId']) || !isset($data['montant']) || !isset($data['participantId'])) {
             return $this->json([
                 'success' => false,
-                'message' => 'Catégorie et montant requis',
+                'message' => 'Catégorie, participant et montant requis',
             ], 400);
         }
 
         try {
+            $montant = (float) $data['montant'];
+            if ($montant <= 0) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Le montant doit être supérieur à zéro',
+                ], 400);
+            }
+
             $categorie = $entityManager->getRepository(\App\Entity\CategorieDepense::class)->find($data['categorieId']);
             if (!$categorie) {
                 return $this->json([
@@ -681,12 +790,48 @@ class MissionController extends AbstractController
                 ], 404);
             }
 
-            $depenseMission = new DepenseMission();
-            $depenseMission->setMissionSession($missionSession);
-            $depenseMission->setCategorie($categorie);
-            $depenseMission->setMontantPrevu((string) (float) $data['montant']);
+            $userMission = $entityManager->getRepository(UserMission::class)->find($data['participantId']);
+            if (!$userMission || $userMission->getMissionSession()->getId() !== $missionSession->getId()) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Participant invalide pour cette mission',
+                ], 400);
+            }
 
-            $entityManager->persist($depenseMission);
+            $depenseMission = $entityManager->getRepository(DepenseMission::class)->findOneBy([
+                'missionSession' => $missionSession,
+                'categorie' => $categorie,
+            ]);
+
+            if (!$depenseMission) {
+                $depenseMission = new DepenseMission();
+                $depenseMission->setMissionSession($missionSession);
+                $depenseMission->setCategorie($categorie);
+                $depenseMission->setMontantPrevu(number_format(0, 2, '.', ''));
+                $entityManager->persist($depenseMission);
+            }
+
+            $existingAllocation = $entityManager->getRepository(DepenseMissionParticipant::class)->findOneBy([
+                'depenseMission' => $depenseMission,
+                'userMission' => $userMission,
+            ]);
+
+            if ($existingAllocation) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Ce participant possède déjà une dépense pour cette catégorie.',
+                ], 400);
+            }
+
+            $currentMontant = (float) ($depenseMission->getMontantPrevu() ?? 0);
+            $depenseMission->setMontantPrevu(number_format($currentMontant + $montant, 2, '.', ''));
+
+            $allocation = new DepenseMissionParticipant();
+            $allocation->setDepenseMission($depenseMission);
+            $allocation->setUserMission($userMission);
+            $allocation->setMontantPrevu(number_format($montant, 2, '.', ''));
+            $entityManager->persist($allocation);
+
             $entityManager->flush();
 
             $totalPrevu = $this->recalculateBudgetPrevu($missionSession);
@@ -848,6 +993,26 @@ class MissionController extends AbstractController
             $totalPrevu += $montantPrevu;
             $totalReel += $montantReel;
 
+            $allocations = [];
+            $totalAllocationReelle = 0;
+
+            foreach ($depense->getParticipantAllocations() as $allocation) {
+                $userMission = $allocation->getUserMission();
+                $user = $userMission?->getUser();
+                $montantAllocation = $allocation->getMontantReel() ? (float) $allocation->getMontantReel() : 0;
+                $totalAllocationReelle += $montantAllocation;
+
+                $allocations[] = [
+                    'id' => $allocation->getId(),
+                    'userMissionId' => $userMission?->getId(),
+                    'userId' => $user?->getId(),
+                    'nom' => $user?->getNom(),
+                    'prenom' => $user?->getPrenom(),
+                    'montantPrevu' => $allocation->getMontantPrevu() ? (float) $allocation->getMontantPrevu() : null,
+                    'montantReel' => $montantAllocation,
+                ];
+            }
+
             $depenses[] = [
                 'id' => $depense->getId(),
                 'categorie' => $depense->getCategorie()->getLibelle(),
@@ -855,6 +1020,8 @@ class MissionController extends AbstractController
                 'montantPrevu' => $montantPrevu,
                 'montantReel' => $montantReel,
                 'ecart' => $ecart,
+                'allocations' => $allocations,
+                'allocationReelleTotale' => $totalAllocationReelle,
             ];
         }
 
@@ -877,6 +1044,17 @@ class MissionController extends AbstractController
         error_log('Mission realisation data received: ' . json_encode($data));
 
         try {
+            $sessionUserMissionsById = [];
+            $sessionUserMissionsByUserId = [];
+
+            foreach ($missionSession->getUserMissions() as $existingUserMission) {
+                $sessionUserMissionsById[$existingUserMission->getId()] = $existingUserMission;
+                $user = $existingUserMission->getUser();
+                if ($user) {
+                    $sessionUserMissionsByUserId[$user->getId()] = $existingUserMission;
+                }
+            }
+
             // 1. Mettre à jour les informations de la mission
             if (isset($data['dateReelleDebut'])) {
                 $missionSession->setDateReelleDebut(new \DateTime($data['dateReelleDebut']));
@@ -920,7 +1098,7 @@ class MissionController extends AbstractController
             if (isset($data['nouveauxParticipants'])) {
                 $statutNonPrevusParticipe = $entityManager->getRepository(\App\Entity\StatutParticipation::class)->findOneBy(['code' => 'non_prevus_participe']);
 
-                foreach ($data['nouveauxParticipants'] as $userId) {
+                        foreach ($data['nouveauxParticipants'] as $userId) {
                     $user = $entityManager->getRepository(User::class)->find($userId);
                     if ($user) {
                         $userMission = new \App\Entity\UserMission();
@@ -928,6 +1106,11 @@ class MissionController extends AbstractController
                         $userMission->setUser($user);
                         $userMission->setStatutParticipation($statutNonPrevusParticipe);
                         $entityManager->persist($userMission);
+
+                         $sessionUserMissionsByUserId[$user->getId()] = $userMission;
+                                if ($userMission->getId()) {
+                                    $sessionUserMissionsById[$userMission->getId()] = $userMission;
+                                }
                     }
                 }
             }
@@ -951,6 +1134,96 @@ class MissionController extends AbstractController
                             $depenseMission->setCategorie($categorie);
                             $depenseMission->setMontantReel($depenseData['montant']);
                             $entityManager->persist($depenseMission);
+                        }
+
+                        $existingAllocations = [];
+                        foreach ($depenseMission->getParticipantAllocations() as $allocationEntity) {
+                            $userMission = $allocationEntity->getUserMission();
+                            if ($userMission && $userMission->getId()) {
+                                $existingAllocations[$userMission->getId()] = $allocationEntity;
+                            }
+                        }
+
+                        $allocationPayloads = $depenseData['allocations'] ?? [];
+                        $keptAllocations = [];
+                        $allocationTotal = 0.0;
+
+                        foreach ($allocationPayloads as $allocationPayload) {
+                            $allocationAmount = $allocationPayload['montant'] ?? $allocationPayload['montantReel'] ?? null;
+                            if ($allocationAmount === null) {
+                                continue;
+                            }
+
+                            $userMission = null;
+                            if (!empty($allocationPayload['userMissionId'])) {
+                                $userMissionId = (int) $allocationPayload['userMissionId'];
+                                $userMission = $sessionUserMissionsById[$userMissionId] ?? $entityManager->getRepository(\App\Entity\UserMission::class)->find($userMissionId);
+                                if ($userMission) {
+                                    $sessionUserMissionsById[$userMission->getId()] = $userMission;
+                                    $user = $userMission->getUser();
+                                    if ($user) {
+                                        $sessionUserMissionsByUserId[$user->getId()] = $userMission;
+                                    }
+                                }
+                            } elseif (!empty($allocationPayload['userId'])) {
+                                $userId = (int) $allocationPayload['userId'];
+                                $userMission = $sessionUserMissionsByUserId[$userId] ?? null;
+                            }
+
+                            if (!$userMission) {
+                                throw new \InvalidArgumentException('Participant invalide détecté dans la répartition des dépenses.');
+                            }
+
+                            $allocationEntity = null;
+                            $userMissionId = $userMission->getId();
+
+                            if ($userMissionId && isset($existingAllocations[$userMissionId])) {
+                                $allocationEntity = $existingAllocations[$userMissionId];
+                            } else {
+                                $allocationEntity = new DepenseMissionParticipant();
+                                $allocationEntity->setDepenseMission($depenseMission);
+                                $allocationEntity->setUserMission($userMission);
+                                $entityManager->persist($allocationEntity);
+                            }
+
+                            $formattedAmount = number_format((float) $allocationAmount, 2, '.', '');
+                            $allocationEntity->setMontantReel($formattedAmount);
+                            $allocationTotal += (float) $formattedAmount;
+
+                            if (array_key_exists('montantPrevu', $allocationPayload)) {
+                                $formattedPlanned = $allocationPayload['montantPrevu'] === null
+                                    ? null
+                                    : number_format((float) $allocationPayload['montantPrevu'], 2, '.', '');
+                                $allocationEntity->setMontantPrevu($formattedPlanned);
+                            }
+
+                            $keptAllocations[] = $allocationEntity;
+                        }
+
+                        foreach ($depenseMission->getParticipantAllocations() as $allocationEntity) {
+                            if (!in_array($allocationEntity, $keptAllocations, true)) {
+                                $entityManager->remove($allocationEntity);
+                            }
+                        }
+
+                        if ($depenseMission->getMontantReel() !== null) {
+                            $expected = (float) $depenseMission->getMontantReel();
+                            if ($allocationTotal === 0.0) {
+                                throw new \InvalidArgumentException(sprintf(
+                                    "La dépense \"%s\" possède un montant réel de %s FCFA mais aucune répartition n'a été fournie.",
+                                    $depenseMission->getCategorie()->getLibelle(),
+                                    number_format($expected, 0, ',', ' ')
+                                ));
+                            }
+
+                            if (abs($allocationTotal - $expected) > 0.5) {
+                                throw new \InvalidArgumentException(sprintf(
+                                    "Les montants répartis (%s FCFA) pour la dépense \"%s\" ne correspondent pas au montant réel (%s FCFA).",
+                                    number_format($allocationTotal, 0, ',', ' '),
+                                    $depenseMission->getCategorie()->getLibelle(),
+                                    number_format($expected, 0, ',', ' ')
+                                ));
+                            }
                         }
                     }
                 }
@@ -1076,5 +1349,241 @@ class MissionController extends AbstractController
         }
 
         return $this->json($data);
+    }
+
+    /**
+     * Prépare les données d'affichage pour les répartitions de dépenses par participant.
+     *
+     * @return array{0: array<int, array<string, mixed>>, 1: array<int, array<string, mixed>>, 2: array<int, string>}
+     */
+    private function buildMissionAllocationViewData(MissionSession $missionSession): array
+    {
+        $participantStats = [];
+        foreach ($missionSession->getUserMissions() as $userMission) {
+            $user = $userMission->getUser();
+            $participantStats[$userMission->getId()] = [
+                'userMissionId' => $userMission->getId(),
+                'nom' => $user?->getNom(),
+                'prenom' => $user?->getPrenom(),
+                'matricule' => $user?->getMatricule(),
+                'email' => $user?->getEmail(),
+                'statut' => $userMission->getStatutParticipation()?->getLibelle(),
+                'statutCouleur' => $userMission->getStatutParticipation()?->getCouleur() ?: 'secondary',
+                'totalPrevu' => 0.0,
+                'totalReel' => 0.0,
+                'details' => [],
+            ];
+        }
+
+        $depenseAllocations = [];
+        $alerts = [];
+
+        foreach ($missionSession->getDepenseMissions() as $depense) {
+            $allocations = [];
+            $totalReparti = 0.0;
+            $totalRepartiPrevu = 0.0;
+
+            foreach ($depense->getParticipantAllocations() as $allocation) {
+                $userMission = $allocation->getUserMission();
+                if (!$userMission) {
+                    continue;
+                }
+
+                $user = $userMission->getUser();
+                $montantPrevu = $allocation->getMontantPrevu() !== null ? (float) $allocation->getMontantPrevu() : null;
+                $montantReel = $allocation->getMontantReel() !== null ? (float) $allocation->getMontantReel() : null;
+
+                $allocData = [
+                    'allocationId' => $allocation->getId(),
+                    'userMissionId' => $userMission->getId(),
+                    'nom' => $user?->getNom(),
+                    'prenom' => $user?->getPrenom(),
+                    'matricule' => $user?->getMatricule(),
+                    'montantPrevu' => $montantPrevu,
+                    'montantReel' => $montantReel,
+                ];
+                $allocations[] = $allocData;
+
+                if ($montantReel !== null) {
+                    $totalReparti += $montantReel;
+                }
+                if ($montantPrevu !== null) {
+                    $totalRepartiPrevu += $montantPrevu;
+                }
+
+                $statKey = $userMission->getId();
+                if ($statKey && isset($participantStats[$statKey])) {
+                    if ($montantPrevu !== null) {
+                        $participantStats[$statKey]['totalPrevu'] += $montantPrevu;
+                    }
+                    if ($montantReel !== null) {
+                        $participantStats[$statKey]['totalReel'] += $montantReel;
+                    }
+                    $participantStats[$statKey]['details'][] = [
+                        'allocationId' => $allocation->getId(),
+                        'categorie' => $depense->getCategorie()->getLibelle(),
+                        'montantPrevu' => $montantPrevu,
+                        'montantReel' => $montantReel,
+                    ];
+                }
+            }
+
+            $montantReel = $depense->getMontantReel() ? (float) $depense->getMontantReel() : 0.0;
+            $isBalanced = $montantReel === 0.0 || abs($montantReel - $totalReparti) < 0.5;
+
+            if ($montantReel > 0 && !$isBalanced) {
+                $alerts[] = sprintf(
+                    'La dépense « %s » présente %s FCFA répartis pour %s FCFA de montant réel.',
+                    $depense->getCategorie()->getLibelle(),
+                    number_format($totalReparti, 0, ',', ' '),
+                    number_format($montantReel, 0, ',', ' ')
+                );
+            }
+
+            $depenseAllocations[$depense->getId()] = [
+                'items' => $allocations,
+                'totalReparti' => $totalReparti,
+                'totalRepartiPrevu' => $totalRepartiPrevu,
+                'montantReel' => $montantReel,
+                'isBalanced' => $isBalanced,
+            ];
+        }
+
+        foreach ($participantStats as &$stat) {
+            $stat['totalPrevu'] = round($stat['totalPrevu'], 2);
+            $stat['totalReel'] = round($stat['totalReel'], 2);
+            $stat['ecart'] = round($stat['totalReel'] - $stat['totalPrevu'], 2);
+        }
+        unset($stat);
+
+        usort($participantStats, static function (array $a, array $b): int {
+            return strcmp(trim(($a['nom'] ?? '') . ' ' . ($a['prenom'] ?? '')), trim(($b['nom'] ?? '') . ' ' . ($b['prenom'] ?? '')));
+        });
+
+        return [$participantStats, $depenseAllocations, $alerts];
+    }
+
+    /**
+     * Prépare les données nécessaires aux sélecteurs (participants et index d'allocations existantes).
+     *
+     * @return array{0: array<int, array{id:int,label:string}>, 1: array<int, int[]>}
+     */
+    private function buildMissionParticipantSelectData(MissionSession $missionSession): array
+    {
+        $participantOptionsData = [];
+        foreach ($missionSession->getUserMissions() as $userMission) {
+            $user = $userMission->getUser();
+            $labelParts = [];
+            if ($user?->getNom()) {
+                $labelParts[] = $user->getNom();
+            }
+            if ($user?->getPrenom()) {
+                $labelParts[] = $user->getPrenom();
+            }
+            $label = trim(implode(' ', $labelParts));
+            if ($user?->getEmail()) {
+                $label .= sprintf(' (%s)', $user->getEmail());
+            }
+            $participantOptionsData[] = [
+                'id' => $userMission->getId(),
+                'label' => $label !== '' ? $label : sprintf('Participant #%d', $userMission->getId()),
+            ];
+        }
+
+        $allocationIndexData = [];
+        foreach ($missionSession->getDepenseMissions() as $depense) {
+            $categorie = $depense->getCategorie();
+            if (!$categorie) {
+                continue;
+            }
+            foreach ($depense->getParticipantAllocations() as $allocation) {
+                $userMission = $allocation->getUserMission();
+                if (!$userMission) {
+                    continue;
+                }
+                $categorieId = $categorie->getId();
+                if (!$categorieId) {
+                    continue;
+                }
+                $allocationIndexData[$categorieId] ??= [];
+                if (!in_array($userMission->getId(), $allocationIndexData[$categorieId], true)) {
+                    $allocationIndexData[$categorieId][] = $userMission->getId();
+                }
+            }
+        }
+
+        return [$participantOptionsData, $allocationIndexData];
+    }
+
+    #[Route('/allocation/{id}', name: 'app_mission_allocation_show', methods: ['GET'])]
+    public function getMissionAllocation(int $id, EntityManagerInterface $entityManager): JsonResponse
+    {
+        $allocation = $entityManager->getRepository(DepenseMissionParticipant::class)->find($id);
+        if (!$allocation) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Allocation introuvable',
+            ], 404);
+        }
+
+        return $this->json([
+            'success' => true,
+            'montantPrevu' => $allocation->getMontantPrevu(),
+        ]);
+    }
+
+    #[Route('/allocation/{id}', name: 'app_mission_allocation_update', methods: ['PUT'])]
+    public function updateMissionAllocation(int $id, Request $request, EntityManagerInterface $entityManager): JsonResponse
+    {
+        $allocation = $entityManager->getRepository(DepenseMissionParticipant::class)->find($id);
+        if (!$allocation) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Allocation introuvable',
+            ], 404);
+        }
+
+        $data = json_decode($request->getContent(), true);
+        $montant = isset($data['montant']) ? (float) $data['montant'] : null;
+        if ($montant === null || $montant <= 0) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Montant invalide',
+            ], 400);
+        }
+
+        $diff = $montant - (float) ($allocation->getMontantPrevu() ?? 0);
+        $depenseMission = $allocation->getDepenseMission();
+        $depenseMission->setMontantPrevu(number_format((float) $depenseMission->getMontantPrevu() + $diff, 2, '.', ''));
+        $allocation->setMontantPrevu(number_format($montant, 2, '.', ''));
+
+        $entityManager->flush();
+
+        return $this->json([
+            'success' => true,
+            'message' => 'Montant mis à jour avec succès',
+        ]);
+    }
+
+    #[Route('/allocation/{id}', name: 'app_mission_allocation_delete', methods: ['DELETE'])]
+    public function deleteMissionAllocation(int $id, EntityManagerInterface $entityManager): JsonResponse
+    {
+        $allocation = $entityManager->getRepository(DepenseMissionParticipant::class)->find($id);
+        if (!$allocation) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Allocation introuvable',
+            ], 404);
+        }
+
+        $depenseMission = $allocation->getDepenseMission();
+        $depenseMission->setMontantPrevu(number_format((float) $depenseMission->getMontantPrevu() - (float) $allocation->getMontantPrevu(), 2, '.', ''));
+        $entityManager->remove($allocation);
+        $entityManager->flush();
+
+        return $this->json([
+            'success' => true,
+            'message' => 'Ligne supprimée avec succès',
+        ]);
     }
 }

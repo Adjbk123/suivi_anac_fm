@@ -120,28 +120,77 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 function deleteMissionModele(id) {
-	if (!confirm('Confirmez-vous la suppression de ce modèle de mission ?')) {
+	const url = "{{ path('app_mission_modele_delete', { id: 'ID_PLACEHOLDER' }) }}".replace('ID_PLACEHOLDER', id);
+
+	const executeDeletion = () => {
+		if (typeof Swal !== 'undefined') {
+			Swal.fire({
+				title: 'Suppression en cours...',
+				allowOutsideClick: false,
+				showConfirmButton: false,
+				didOpen: () => {
+					Swal.showLoading();
+				}
+			});
+		}
+
+		fetch(url, {
+			method: 'DELETE',
+			headers: {
+				'X-Requested-With': 'XMLHttpRequest'
+			}
+		})
+		.then(response => response.json().then(data => ({ ok: response.ok, data })))
+		.then(({ ok, data }) => {
+			if (!ok) {
+				throw new Error(data.message || 'La suppression a échoué.');
+			}
+
+			if (typeof Swal !== 'undefined') {
+				Swal.fire({
+					icon: 'success',
+					title: 'Modèle supprimé',
+					text: data.message ?? 'Le modèle a été supprimé avec succès.'
+				}).then(() => window.location.reload());
+			} else {
+				alert(data.message ?? 'Modèle supprimé.');
+				window.location.reload();
+			}
+		})
+		.catch(error => {
+			console.error('Erreur de suppression du modèle de mission :', error);
+			if (typeof Swal !== 'undefined') {
+				Swal.fire({
+					icon: 'error',
+					title: 'Erreur',
+					text: error.message || 'Une erreur est survenue lors de la suppression.'
+				});
+			} else {
+				alert(error.message);
+			}
+		});
+	};
+
+	if (typeof Swal === 'undefined') {
+		if (confirm('Confirmez-vous la suppression de ce modèle de mission ?')) {
+			executeDeletion();
+		}
 		return;
 	}
 
-	const url = "{{ path('app_mission_modele_delete', { id: 'ID_PLACEHOLDER' }) }}".replace('ID_PLACEHOLDER', id);
-
-	fetch(url, {
-		method: 'DELETE',
-		headers: {
-			'X-Requested-With': 'XMLHttpRequest'
+	Swal.fire({
+		title: 'Supprimer ce modèle ?',
+		text: 'Cette action est irréversible.',
+		icon: 'warning',
+		showCancelButton: true,
+		confirmButtonColor: '#d33',
+		cancelButtonText: 'Annuler',
+		confirmButtonText: 'Oui, supprimer',
+		reverseButtons: true
+	}).then(result => {
+		if (result.isConfirmed) {
+			executeDeletion();
 		}
-	})
-	.then(response => response.json().then(data => ({ ok: response.ok, data })))
-	.then(({ ok, data }) => {
-		if (!ok) {
-			throw new Error(data.message || 'La suppression a échoué.');
-		}
-		window.location.reload();
-	})
-	.catch(error => {
-		console.error('Erreur de suppression du modèle de mission :', error);
-		alert(error.message);
 	});
 }
 </script>

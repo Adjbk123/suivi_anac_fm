@@ -3,6 +3,8 @@
 namespace App\Entity;
 
 use App\Repository\UserFormationRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
@@ -28,6 +30,14 @@ class UserFormation
 
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $remarques = null;
+
+    #[ORM\OneToMany(mappedBy: 'userFormation', targetEntity: DepenseFormationParticipant::class, cascade: ['remove'], orphanRemoval: true)]
+    private Collection $depenseAllocations;
+
+    public function __construct()
+    {
+        $this->depenseAllocations = new ArrayCollection();
+    }
 
     public function getId(): ?int
     {
@@ -83,6 +93,35 @@ class UserFormation
     public function setRemarques(?string $remarques): static
     {
         $this->remarques = $remarques;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, DepenseFormationParticipant>
+     */
+    public function getDepenseAllocations(): Collection
+    {
+        return $this->depenseAllocations;
+    }
+
+    public function addDepenseAllocation(DepenseFormationParticipant $allocation): static
+    {
+        if (!$this->depenseAllocations->contains($allocation)) {
+            $this->depenseAllocations->add($allocation);
+            $allocation->setUserFormation($this);
+        }
+
+        return $this;
+    }
+
+    public function removeDepenseAllocation(DepenseFormationParticipant $allocation): static
+    {
+        if ($this->depenseAllocations->removeElement($allocation)) {
+            if ($allocation->getUserFormation() === $this) {
+                $allocation->setUserFormation(null);
+            }
+        }
 
         return $this;
     }

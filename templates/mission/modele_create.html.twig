@@ -91,7 +91,15 @@ function submitMissionModele(event) {
 		return;
 	}
 
-	fetch("{{ path('app_mission_modele_store') }}", {
+	const form = document.getElementById('missionModeleForm');
+	const submitBtn = form ? form.querySelector('button[type=\"submit\"]') : null;
+	const originalHtml = submitBtn ? submitBtn.innerHTML : null;
+	if (submitBtn) {
+		submitBtn.disabled = true;
+		submitBtn.innerHTML = '<i class=\"fa fa-spinner fa-spin me-1\"></i>Enregistrement...';
+	}
+
+	fetch(\"{{ path('app_mission_modele_store') }}\", {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
@@ -105,17 +113,23 @@ function submitMissionModele(event) {
 	.then(response => response.json().then(data => ({ ok: response.ok, data })))
 	.then(({ ok, data }) => {
 		if (!ok) {
-			throw new Error(data.message || "Impossible d'enregistrer le modèle.");
+			throw new Error(data.message || \"Impossible d'enregistrer le modèle.\");
 		}
 
 		showModeleToast(data.message ?? 'Modèle enregistré avec succès.');
 		setTimeout(() => {
-			window.location.href = "{{ path('app_mission_modele_index') }}";
+			window.location.href = \"{{ path('app_mission_modele_index') }}\";
 		}, 800);
 	})
 	.catch(error => {
 		console.error('Erreur lors de la création du modèle de mission :', error);
 		showModeleToast(error.message, false);
+	})
+	.finally(() => {
+		if (submitBtn && originalHtml !== null) {
+			submitBtn.disabled = false;
+			submitBtn.innerHTML = originalHtml;
+		}
 	});
 }
 </script>

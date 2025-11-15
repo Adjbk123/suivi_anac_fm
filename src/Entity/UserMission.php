@@ -3,6 +3,8 @@
 namespace App\Entity;
 
 use App\Repository\UserMissionRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
@@ -28,6 +30,14 @@ class UserMission
 
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $remarques = null;
+
+    #[ORM\OneToMany(mappedBy: 'userMission', targetEntity: DepenseMissionParticipant::class, cascade: ['remove'], orphanRemoval: true)]
+    private Collection $depenseAllocations;
+
+    public function __construct()
+    {
+        $this->depenseAllocations = new ArrayCollection();
+    }
 
     public function getId(): ?int
     {
@@ -95,6 +105,35 @@ class UserMission
     public function setRemarques(?string $remarques): static
     {
         $this->remarques = $remarques;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, DepenseMissionParticipant>
+     */
+    public function getDepenseAllocations(): Collection
+    {
+        return $this->depenseAllocations;
+    }
+
+    public function addDepenseAllocation(DepenseMissionParticipant $allocation): static
+    {
+        if (!$this->depenseAllocations->contains($allocation)) {
+            $this->depenseAllocations->add($allocation);
+            $allocation->setUserMission($this);
+        }
+
+        return $this;
+    }
+
+    public function removeDepenseAllocation(DepenseMissionParticipant $allocation): static
+    {
+        if ($this->depenseAllocations->removeElement($allocation)) {
+            if ($allocation->getUserMission() === $this) {
+                $allocation->setUserMission(null);
+            }
+        }
 
         return $this;
     }

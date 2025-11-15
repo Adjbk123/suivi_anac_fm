@@ -83,9 +83,9 @@ class UserController extends AbstractController
         
         $service = null;
         if (isset($data['service_id']) && $data['service_id']) {
-            $service = $serviceRepository->find($data['service_id']);
-            if (!$service) {
-                return $this->json(['success' => false, 'message' => 'Service introuvable'], 404);
+        $service = $serviceRepository->find($data['service_id']);
+        if (!$service) {
+            return $this->json(['success' => false, 'message' => 'Service introuvable'], 404);
             }
         }
         
@@ -175,9 +175,9 @@ class UserController extends AbstractController
         
         $service = null;
         if (isset($data['service_id']) && $data['service_id']) {
-            $service = $serviceRepository->find($data['service_id']);
-            if (!$service) {
-                return $this->json(['success' => false, 'message' => 'Service introuvable'], 404);
+        $service = $serviceRepository->find($data['service_id']);
+        if (!$service) {
+            return $this->json(['success' => false, 'message' => 'Service introuvable'], 404);
             }
         }
         
@@ -259,7 +259,7 @@ class UserController extends AbstractController
             // Filtrer les services par direction
             $services = $serviceRepository->findBy(['direction' => $directionId]);
         } else {
-            $services = $serviceRepository->findAll();
+        $services = $serviceRepository->findAll();
         }
         
         $data = [];

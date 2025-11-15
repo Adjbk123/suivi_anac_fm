@@ -1,11 +1,13 @@
 {% extends 'base.html.twig' %}
 
+{% set session = missionSession %}
+
 {% block title %}Modifier la Mission{% endblock %}
 
 {% block breadcrumb %}
 <ul class="breadcrumb">
 	<li class="breadcrumb-item"><a href="{{ path('app_mission_index') }}">MISSIONS</a></li>
-	<li class="breadcrumb-item"><a href="{{ path('app_mission_show', {'id': mission.id}) }}">DÉTAIL</a></li>
+	<li class="breadcrumb-item"><a href="{{ path('app_mission_show', {'id': session.id}) }}">DÉTAIL</a></li>
 	<li class="breadcrumb-item active">MODIFIER</li>
 </ul>
 {% endblock %}
@@ -18,7 +20,7 @@
 
 {% block buttons %}
 <div class="d-flex gap-2">
-	<a href="{{ path('app_mission_show', {'id': mission.id}) }}" class="btn btn-secondary btn-sm">
+	<a href="{{ path('app_mission_show', {'id': session.id}) }}" class="btn btn-secondary btn-sm">
 		<i class="fa fa-arrow-left"></i> Retour
 	</a>
 </div>
@@ -37,8 +39,11 @@
 						<div class="row">
 							<div class="col-md-6">
 								<div class="mb-3">
-									<label for="titre" class="form-label">Titre de la mission *</label>
-									<input type="text" class="form-control" id="titre" name="titre" required value="{{ mission.titre }}" placeholder="Ex: Mission d'audit sécurité">
+									<label for="missionModeleId" class="form-label">Modèle de mission *</label>
+									<select class="form-select" id="missionModeleId" name="missionModeleId" required>
+										<option value="">Sélectionner un modèle</option>
+										<option value="{{ mission.id }}" selected>{{ mission.titre }}</option>
+									</select>
 								</div>
 							</div>
 							<div class="col-md-6">
@@ -63,7 +68,7 @@
 							<div class="col-md-6">
 								<div class="mb-3">
 									<label for="lieuPrevu" class="form-label">Lieu prévu *</label>
-									<input type="text" class="form-control" id="lieuPrevu" name="lieuPrevu" required value="{{ mission.lieuPrevu }}" placeholder="Ex: Cotonou, Bénin">
+									<input type="text" class="form-control" id="lieuPrevu" name="lieuPrevu" required value="{{ session.lieuPrevu }}" placeholder="Ex: Cotonou, Bénin">
 								</div>
 							</div>
 						</div>
@@ -72,19 +77,19 @@
 							<div class="col-md-6">
 								<div class="mb-3">
 									<label for="datePrevueDebut" class="form-label">Date de début *</label>
-									<input type="date" class="form-control" id="datePrevueDebut" name="datePrevueDebut" required value="{{ mission.datePrevueDebut ? mission.datePrevueDebut|date('Y-m-d') : '' }}">
+									<input type="date" class="form-control" id="datePrevueDebut" name="datePrevueDebut" required value="{{ session.datePrevueDebut ? session.datePrevueDebut|date('Y-m-d') : '' }}">
 								</div>
 							</div>
 							<div class="col-md-6">
 								<div class="mb-3">
 									<label for="datePrevueFin" class="form-label">Date de fin *</label>
-									<input type="date" class="form-control" id="datePrevueFin" name="datePrevueFin" required value="{{ mission.datePrevueFin ? mission.datePrevueFin|date('Y-m-d') : '' }}">
+									<input type="date" class="form-control" id="datePrevueFin" name="datePrevueFin" required value="{{ session.datePrevueFin ? session.datePrevueFin|date('Y-m-d') : '' }}">
 								</div>
 							</div>
 						</div>
 
-						<input type="hidden" id="dureePrevue" name="dureePrevu" value="{{ mission.dureePrevue }}">
-						<input type="hidden" id="budgetPrevu" name="budgetPrevu" value="{{ mission.budgetPrevu }}">
+						<input type="hidden" id="dureePrevue" name="dureePrevu" value="{{ session.dureePrevue }}">
+						<input type="hidden" id="budgetPrevu" name="budgetPrevu" value="{{ session.budgetPrevu }}">
 
 						<div class="mb-3">
 							<label for="description" class="form-label">Description</label>
@@ -101,7 +106,7 @@
 
 					<!-- Boutons -->
 					<div class="d-flex justify-content-end gap-2">
-						<a href="{{ path('app_mission_show', {'id': mission.id}) }}" class="btn btn-secondary">
+						<a href="{{ path('app_mission_show', {'id': session.id}) }}" class="btn btn-secondary">
 							<i class="fa fa-times"></i> Annuler
 						</a>
 						<button type="submit" class="btn btn-primary">
@@ -119,10 +124,39 @@
 <script>
 // Initialisation au chargement de la page
 document.addEventListener('DOMContentLoaded', function() {
+    loadMissionModels();
     loadServices();
     loadFonds();
     loadStatutsActivite();
     loadDirections();
+function loadMissionModels() {
+    fetch('/api/missions')
+        .then(response => response.json())
+        .then(data => {
+            const select = document.getElementById('missionModeleId');
+            if (!select) {
+                return;
+            }
+            select.innerHTML = '<option value="">Sélectionner un modèle</option>';
+
+            const currentId = {{ mission.id }};
+            const currentTitle = '{{ mission.titre|e('js') }}';
+            const currentItem = data.find(item => item.id == currentId);
+            if (currentItem) {
+                select.innerHTML += `<option value="${currentItem.id}" selected>${currentItem.titre}</option>`;
+            } else {
+                select.innerHTML += `<option value="${currentId}" selected>${currentTitle}</option>`;
+            }
+
+            data
+                .filter(item => item.id != currentId)
+                .forEach(item => {
+                    select.innerHTML += `<option value="${item.id}">${item.titre}</option>`;
+                });
+        })
+        .catch(error => console.error('Erreur lors du chargement des modèles :', error));
+}
+
     setupEventListeners();
     calculateDuration();
 });
@@ -146,7 +180,7 @@ function loadFonds() {
             const select = document.getElementById('fondsId');
             select.innerHTML = '<option value="">Choisir le type de fonds</option>';
             data.forEach(fond => {
-                const selected = fond.id == {{ mission.fonds ? mission.fonds.id : 'null' }} ? 'selected' : '';
+            const selected = fond.id == {{ session.fonds ? session.fonds.id : 'null' }} ? 'selected' : '';
                 select.innerHTML += `<option value="${fond.id}" ${selected}>${fond.libelle}</option>`;
             });
         })
@@ -161,7 +195,7 @@ function loadStatutsActivite() {
             const select = document.getElementById('statutActivite');
             select.innerHTML = '<option value="">Choisir un statut</option>';
             data.forEach(statut => {
-                const selected = statut.id == {{ mission.statutActivite ? mission.statutActivite.id : 'null' }} ? 'selected' : '';
+            const selected = statut.id == {{ session.statutActivite ? session.statutActivite.id : 'null' }} ? 'selected' : '';
                 select.innerHTML += `<option value="${statut.id}" ${selected}>${statut.libelle}</option>`;
             });
         })
@@ -176,7 +210,7 @@ function loadDirections() {
             const select = document.getElementById('directionId');
             select.innerHTML = '<option value="">Choisir une direction</option>';
             data.forEach(direction => {
-                const selected = direction.id == {{ mission.direction ? mission.direction.id : 'null' }} ? 'selected' : '';
+                const selected = direction.id == {{ session.direction ? session.direction.id : 'null' }} ? 'selected' : '';
                 select.innerHTML += `<option value="${direction.id}" ${selected}>${direction.libelle}</option>`;
             });
         })
@@ -219,7 +253,7 @@ document.getElementById('missionEditForm').addEventListener('submit', function(e
     
     // Préparer les données
     const formData = {
-        titre: document.getElementById('titre').value,
+        missionModeleId: document.getElementById('missionModeleId').value,
         directionId: document.getElementById('directionId').value,
         fondsId: document.getElementById('fondsId').value,
         lieuPrevu: document.getElementById('lieuPrevu').value,
@@ -228,11 +262,11 @@ document.getElementById('missionEditForm').addEventListener('submit', function(e
         dureePrevue: document.getElementById('dureePrevue').value,
         budgetPrevu: document.getElementById('budgetPrevu').value,
         description: document.getElementById('description').value,
-        statut: document.getElementById('statut').value
+        statutActiviteId: document.getElementById('statutActivite').value
     };
     
     // Envoyer les données
-    fetch('{{ path('app_mission_update', {'id': mission.id}) }}', {
+    fetch('{{ path('app_mission_update', {'id': session.id}) }}', {
         method: 'PUT',
         headers: {
             'Content-Type': 'application/json',

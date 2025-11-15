@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\Entity\DepenseFormationParticipant;
 use App\Entity\Formation;
 use App\Entity\FormationSession;
 use App\Entity\User;
@@ -379,6 +380,7 @@ class FormationController extends AbstractController
         $entityManager->flush();
         
         // 3. Ajouter les participants
+        $userFormationsByUserId = [];
         if (isset($data['participants']) && is_array($data['participants'])) {
             foreach ($data['participants'] as $userId) {
                 $user = $entityManager->getRepository(User::class)->find($userId);
@@ -390,22 +392,90 @@ class FormationController extends AbstractController
                     $statutParticipation = $entityManager->getRepository(\App\Entity\StatutParticipation::class)->findOneBy(['code' => 'inscrit']);
                     $userFormation->setStatutParticipation($statutParticipation);
                     $entityManager->persist($userFormation);
+                    $userFormationsByUserId[$user->getId()] = $userFormation;
                 }
             }
         }
         
-        // 4. Ajouter les dépenses prévues
+        // 4. Ajouter les dépenses prévues et répartitions
         $totalBudgetPrevu = 0;
-        if (isset($data['depenses']) && is_array($data['depenses'])) {
+        $depenseEntitiesByCategory = [];
+        $participantDepensesPayload = isset($data['participantDepenses']) && is_array($data['participantDepenses'])
+            ? $data['participantDepenses']
+            : [];
+
+        if (!empty($participantDepensesPayload)) {
+            $allocationsByCategory = [];
+
+            foreach ($participantDepensesPayload as $row) {
+                $participantId = (int) ($row['participantId'] ?? 0);
+                $categorieId = (int) ($row['categorieId'] ?? 0);
+                $montant = isset($row['montant']) ? (float) $row['montant'] : 0;
+
+                if ($participantId <= 0 || $categorieId <= 0 || $montant <= 0) {
+                    continue;
+                }
+
+                $allocationsByCategory[$categorieId][] = [
+                    'participantId' => $participantId,
+                    'montant' => $montant,
+                ];
+            }
+
+            foreach ($allocationsByCategory as $categorieId => $allocations) {
+                $categorie = $entityManager->getRepository(\App\Entity\CategorieDepense::class)->find($categorieId);
+                if (!$categorie) {
+                    continue;
+                }
+
+                $montantTotal = array_reduce($allocations, static function (float $carry, array $item): float {
+                    return $carry + ($item['montant'] ?? 0);
+                }, 0.0);
+
+                if ($montantTotal <= 0) {
+                    continue;
+                }
+
+                $depenseFormation = new \App\Entity\DepenseFormation();
+                $depenseFormation->setFormationSession($formationSession);
+                $depenseFormation->setCategorie($categorie);
+                $depenseFormation->setMontantPrevu(number_format($montantTotal, 2, '.', ''));
+                $entityManager->persist($depenseFormation);
+
+                $depenseEntitiesByCategory[$categorieId] = $depenseFormation;
+                $totalBudgetPrevu += $montantTotal;
+            }
+
+            foreach ($allocationsByCategory as $categorieId => $allocations) {
+                $depenseFormation = $depenseEntitiesByCategory[$categorieId] ?? null;
+                if (!$depenseFormation) {
+                    continue;
+                }
+
+                foreach ($allocations as $allocation) {
+                    $participantId = $allocation['participantId'] ?? 0;
+                    $userFormation = $userFormationsByUserId[$participantId] ?? null;
+                    if (!$userFormation) {
+                        continue;
+                    }
+
+                    $allocationEntity = new DepenseFormationParticipant();
+                    $allocationEntity->setDepenseFormation($depenseFormation);
+                    $allocationEntity->setUserFormation($userFormation);
+                    $allocationEntity->setMontantPrevu(number_format($allocation['montant'], 2, '.', ''));
+                    $entityManager->persist($allocationEntity);
+                }
+            }
+        } elseif (isset($data['depenses']) && is_array($data['depenses'])) {
             foreach ($data['depenses'] as $depense) {
                 $categorie = $entityManager->getRepository(\App\Entity\CategorieDepense::class)->find($depense['categorieId']);
                 if ($categorie) {
                     $depenseFormation = new \App\Entity\DepenseFormation();
                     $depenseFormation->setFormationSession($formationSession);
                     $depenseFormation->setCategorie($categorie);
-                    $depenseFormation->setMontantPrevu($depense['montant']);
+                    $depenseFormation->setMontantPrevu(number_format((float) $depense['montant'], 2, '.', ''));
                     $entityManager->persist($depenseFormation);
-                    $totalBudgetPrevu += (float)$depense['montant'];
+                    $totalBudgetPrevu += (float) $depense['montant'];
                 }
             }
         }
@@ -462,9 +532,18 @@ class FormationController extends AbstractController
     #[Route('/session/{id}', name: 'app_formation_session_show', methods: ['GET'])]
     public function showSession(FormationSession $formationSession): Response
     {
+        [$participantStats, $depenseAllocations, $allocationAlerts] = $this->buildFormationAllocationViewData($formationSession);
+
+        [$participantOptionsData, $allocationIndexData] = $this->buildParticipantSelectData($formationSession);
+
         return $this->render('formation/show.html.twig', [
             'formationSession' => $formationSession,
-            'formation' => $formationSession->getFormation()
+            'formation' => $formationSession->getFormation(),
+            'participantExpenseStats' => $participantStats,
+            'depenseAllocationsView' => $depenseAllocations,
+            'allocationAlerts' => $allocationAlerts,
+            'participantOptionsData' => $participantOptionsData,
+            'allocationIndexData' => $allocationIndexData,
         ]);
     }
     
@@ -474,9 +553,18 @@ class FormationController extends AbstractController
         // Chercher d'abord une FormationSession avec cet ID
         $formationSession = $formationSessionRepository->find($id);
         if ($formationSession) {
+            [$participantStats, $depenseAllocations, $allocationAlerts] = $this->buildFormationAllocationViewData($formationSession);
+
+            [$participantOptionsData, $allocationIndexData] = $this->buildParticipantSelectData($formationSession);
+
             return $this->render('formation/show.html.twig', [
                 'formationSession' => $formationSession,
-                'formation' => $formationSession->getFormation()
+                'formation' => $formationSession->getFormation(),
+                'participantExpenseStats' => $participantStats,
+                'depenseAllocationsView' => $depenseAllocations,
+                'allocationAlerts' => $allocationAlerts,
+                'participantOptionsData' => $participantOptionsData,
+                'allocationIndexData' => $allocationIndexData,
             ]);
         }
         
@@ -534,11 +622,20 @@ class FormationController extends AbstractController
         
         $data = json_decode($request->getContent(), true);
         
-        // Mettre à jour la Formation (modèle) si nécessaire
+        // Possibilité de rattacher un autre modèle de formation
         $formation = $formationSession->getFormation();
-        if (isset($data['titre'])) {
-            $formation->setTitre($data['titre']);
+        if (!empty($data['formationId']) && (int)$data['formationId'] !== $formation->getId()) {
+            $nouvelleFormation = $entityManager->getRepository(Formation::class)->find((int)$data['formationId']);
+            if (!$nouvelleFormation) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Modèle de formation introuvable.'
+                ], 404);
+            }
+            $formationSession->setFormation($nouvelleFormation);
+            $formation = $nouvelleFormation;
         }
+        
         if (isset($data['description'])) {
             $formation->setDescription($data['description']);
         }
@@ -573,6 +670,13 @@ class FormationController extends AbstractController
             $fonds = $entityManager->getRepository(\App\Entity\TypeFonds::class)->find($data['fondsId']);
             if ($fonds) {
                 $formationSession->setFonds($fonds);
+            }
+        }
+        
+        if (!empty($data['statutActiviteId'])) {
+            $statut = $entityManager->getRepository(\App\Entity\StatutActivite::class)->find($data['statutActiviteId']);
+            if ($statut) {
+                $formationSession->setStatutActivite($statut);
             }
         }
         
@@ -701,14 +805,30 @@ class FormationController extends AbstractController
         
         $data = json_decode($request->getContent(), true);
         
-        if (!isset($data['categorieId']) || !isset($data['montant'])) {
+        if (!isset($data['categorieId']) || !isset($data['montant']) || !isset($data['participantId'])) {
             return $this->json([
                 'success' => false,
-                'message' => 'Catégorie et montant requis'
+                'message' => 'Catégorie, participant et montant requis'
             ], 400);
         }
         
         try {
+            $montant = (float) $data['montant'];
+            if ($montant <= 0) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Le montant doit être supérieur à zéro.'
+                ], 400);
+            }
+
+            $userFormation = $entityManager->getRepository(UserFormation::class)->find($data['participantId']);
+            if (!$userFormation || $userFormation->getFormationSession()->getId() !== $formationSession->getId()) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Participant invalide pour cette session.'
+                ], 400);
+            }
+            
             // Récupérer la catégorie
             $categorie = $entityManager->getRepository(\App\Entity\CategorieDepense::class)->find($data['categorieId']);
             if (!$categorie) {
@@ -718,13 +838,40 @@ class FormationController extends AbstractController
                 ], 404);
             }
             
-            // Créer l'entité DepenseFormation
-            $depenseFormation = new \App\Entity\DepenseFormation();
-            $depenseFormation->setFormationSession($formationSession);
-            $depenseFormation->setCategorie($categorie);
-            $depenseFormation->setMontantPrevu($data['montant']);
+            $depenseFormation = $entityManager->getRepository(\App\Entity\DepenseFormation::class)->findOneBy([
+                'formationSession' => $formationSession,
+                'categorie' => $categorie,
+            ]);
+
+            if (!$depenseFormation) {
+                $depenseFormation = new \App\Entity\DepenseFormation();
+                $depenseFormation->setFormationSession($formationSession);
+                $depenseFormation->setCategorie($categorie);
+                $depenseFormation->setMontantPrevu(number_format(0, 2, '.', ''));
+                $entityManager->persist($depenseFormation);
+            }
             
-            $entityManager->persist($depenseFormation);
+            $existingAllocation = $entityManager->getRepository(DepenseFormationParticipant::class)->findOneBy([
+                'depenseFormation' => $depenseFormation,
+                'userFormation' => $userFormation,
+            ]);
+
+            if ($existingAllocation) {
+                return $this->json([
+                    'success' => false,
+                    'message' => 'Ce participant possède déjà une dépense pour cette catégorie.'
+                ], 400);
+            }
+
+            $currentMontant = (float) ($depenseFormation->getMontantPrevu() ?? 0);
+            $depenseFormation->setMontantPrevu(number_format($currentMontant + $montant, 2, '.', ''));
+
+            $allocation = new DepenseFormationParticipant();
+            $allocation->setDepenseFormation($depenseFormation);
+            $allocation->setUserFormation($userFormation);
+            $allocation->setMontantPrevu(number_format($montant, 2, '.', ''));
+            $entityManager->persist($allocation);
+            
             $entityManager->flush();
             
             // Recalculer le budget prévu de la session
@@ -926,17 +1073,39 @@ class FormationController extends AbstractController
             $montantPrevu = (float)$depense->getMontantPrevu();
             $montantReel = $depense->getMontantReel() ? (float)$depense->getMontantReel() : 0;
             $ecart = $montantReel - $montantPrevu;
-            
+
             $totalPrevu += $montantPrevu;
             $totalReel += $montantReel;
-            
+
+            $allocations = [];
+            $totalAllocationReelle = 0;
+
+            foreach ($depense->getParticipantAllocations() as $allocation) {
+                $userFormation = $allocation->getUserFormation();
+                $user = $userFormation?->getUser();
+                $montantAllocation = $allocation->getMontantReel() ? (float)$allocation->getMontantReel() : 0;
+                $totalAllocationReelle += $montantAllocation;
+
+                $allocations[] = [
+                    'id' => $allocation->getId(),
+                    'userFormationId' => $userFormation?->getId(),
+                    'userId' => $user?->getId(),
+                    'nom' => $user?->getNom(),
+                    'prenom' => $user?->getPrenom(),
+                    'montantPrevu' => $allocation->getMontantPrevu() ? (float)$allocation->getMontantPrevu() : null,
+                    'montantReel' => $montantAllocation,
+                ];
+            }
+
             $depenses[] = [
                 'id' => $depense->getId(),
                 'categorie' => $depense->getCategorie()->getLibelle(),
                 'categorieId' => $depense->getCategorie()->getId(),
                 'montantPrevu' => $montantPrevu,
                 'montantReel' => $montantReel,
-                'ecart' => $ecart
+                'ecart' => $ecart,
+                'allocations' => $allocations,
+                'allocationReelleTotale' => $totalAllocationReelle,
             ];
         }
         
@@ -964,6 +1133,17 @@ class FormationController extends AbstractController
         $data = json_decode($request->getContent(), true);
         
         try {
+            $sessionUserFormationsById = [];
+            $sessionUserFormationsByUserId = [];
+
+            foreach ($formationSession->getUserFormations() as $existingUserFormation) {
+                $sessionUserFormationsById[$existingUserFormation->getId()] = $existingUserFormation;
+                $user = $existingUserFormation->getUser();
+                if ($user) {
+                    $sessionUserFormationsByUserId[$user->getId()] = $existingUserFormation;
+                }
+            }
+
             // 1. Mettre à jour les informations de la session
             if (isset($data['dateReelleDebut'])) {
                 $formationSession->setDateReelleDebut(new \DateTime($data['dateReelleDebut']));
@@ -1017,6 +1197,11 @@ class FormationController extends AbstractController
                         $userFormation->setUser($user);
                         $userFormation->setStatutParticipation($statutNonPrevusParticipe);
                         $entityManager->persist($userFormation);
+
+                        $sessionUserFormationsByUserId[$user->getId()] = $userFormation;
+                        if ($userFormation->getId()) {
+                            $sessionUserFormationsById[$userFormation->getId()] = $userFormation;
+                        }
                     }
                 }
             }
@@ -1040,6 +1225,96 @@ class FormationController extends AbstractController
                             $depenseFormation->setCategorie($categorie);
                             $depenseFormation->setMontantReel($depenseData['montant']);
                             $entityManager->persist($depenseFormation);
+                        }
+
+                        $existingAllocations = [];
+                        foreach ($depenseFormation->getParticipantAllocations() as $allocationEntity) {
+                            $userFormation = $allocationEntity->getUserFormation();
+                            if ($userFormation && $userFormation->getId()) {
+                                $existingAllocations[$userFormation->getId()] = $allocationEntity;
+                            }
+                        }
+
+                        $allocationPayloads = $depenseData['allocations'] ?? [];
+                        $keptAllocations = [];
+                        $allocationTotal = 0.0;
+
+                        foreach ($allocationPayloads as $allocationPayload) {
+                            $allocationAmount = $allocationPayload['montant'] ?? $allocationPayload['montantReel'] ?? null;
+                            if ($allocationAmount === null) {
+                                continue;
+                            }
+
+                            $userFormation = null;
+                            if (!empty($allocationPayload['userFormationId'])) {
+                                $userFormationId = (int) $allocationPayload['userFormationId'];
+                                $userFormation = $sessionUserFormationsById[$userFormationId] ?? $entityManager->getRepository(\App\Entity\UserFormation::class)->find($userFormationId);
+                                if ($userFormation) {
+                                    $sessionUserFormationsById[$userFormation->getId()] = $userFormation;
+                                    $user = $userFormation->getUser();
+                                    if ($user) {
+                                        $sessionUserFormationsByUserId[$user->getId()] = $userFormation;
+                                    }
+                                }
+                            } elseif (!empty($allocationPayload['userId'])) {
+                                $userId = (int) $allocationPayload['userId'];
+                                $userFormation = $sessionUserFormationsByUserId[$userId] ?? null;
+                            }
+
+                            if (!$userFormation) {
+                                throw new \InvalidArgumentException('Participant invalide détecté dans la répartition des dépenses.');
+                            }
+
+                            $allocationEntity = null;
+                            $userFormationId = $userFormation->getId();
+
+                            if ($userFormationId && isset($existingAllocations[$userFormationId])) {
+                                $allocationEntity = $existingAllocations[$userFormationId];
+                            } else {
+                                $allocationEntity = new DepenseFormationParticipant();
+                                $allocationEntity->setDepenseFormation($depenseFormation);
+                                $allocationEntity->setUserFormation($userFormation);
+                                $entityManager->persist($allocationEntity);
+                            }
+
+                            $formattedAmount = number_format((float)$allocationAmount, 2, '.', '');
+                            $allocationEntity->setMontantReel($formattedAmount);
+                            $allocationTotal += (float) $formattedAmount;
+
+                            if (array_key_exists('montantPrevu', $allocationPayload)) {
+                                $formattedPlanned = $allocationPayload['montantPrevu'] === null
+                                    ? null
+                                    : number_format((float)$allocationPayload['montantPrevu'], 2, '.', '');
+                                $allocationEntity->setMontantPrevu($formattedPlanned);
+                            }
+
+                            $keptAllocations[] = $allocationEntity;
+                        }
+
+                        foreach ($depenseFormation->getParticipantAllocations() as $allocationEntity) {
+                            if (!in_array($allocationEntity, $keptAllocations, true)) {
+                                $entityManager->remove($allocationEntity);
+                            }
+                        }
+
+                        if ($depenseFormation->getMontantReel() !== null) {
+                            $expected = (float) $depenseFormation->getMontantReel();
+                            if ($allocationTotal === 0.0) {
+                                throw new \InvalidArgumentException(sprintf(
+                                    "La dépense \"%s\" possède un montant réel de %s FCFA mais aucune répartition n'a été fournie.",
+                                    $depenseFormation->getCategorie()->getLibelle(),
+                                    number_format($expected, 0, ',', ' ')
+                                ));
+                            }
+
+                            if (abs($allocationTotal - $expected) > 0.5) {
+                                throw new \InvalidArgumentException(sprintf(
+                                    "Les montants répartis (%s FCFA) pour la dépense \"%s\" ne correspondent pas au montant réel (%s FCFA).",
+                                    number_format($allocationTotal, 0, ',', ' '),
+                                    $depenseFormation->getCategorie()->getLibelle(),
+                                    number_format($expected, 0, ',', ' ')
+                                ));
+                            }
                         }
                     }
                 }
@@ -1154,5 +1429,231 @@ class FormationController extends AbstractController
         return $response;
     }
 
+    /**
+     * @return array{0: array<int, array<string, mixed>>, 1: array<int, array<string, mixed>>, 2: array<int, string>}
+     */
+    private function buildFormationAllocationViewData(FormationSession $formationSession): array
+    {
+        $participantStats = [];
+        foreach ($formationSession->getUserFormations() as $userFormation) {
+            $user = $userFormation->getUser();
+            $participantStats[$userFormation->getId()] = [
+                'userFormationId' => $userFormation->getId(),
+                'nom' => $user?->getNom(),
+                'prenom' => $user?->getPrenom(),
+                'matricule' => $user?->getMatricule(),
+                'email' => $user?->getEmail(),
+                'statut' => $userFormation->getStatutParticipation()?->getLibelle(),
+                'statutCouleur' => $userFormation->getStatutParticipation()?->getCouleur() ?: 'secondary',
+                'totalPrevu' => 0.0,
+                'totalReel' => 0.0,
+                'details' => [],
+            ];
+        }
 
+        $depenseAllocations = [];
+        $alerts = [];
+
+        foreach ($formationSession->getDepenseFormations() as $depense) {
+            $allocations = [];
+            $totalReparti = 0.0;
+            $totalRepartiPrevu = 0.0;
+
+            foreach ($depense->getParticipantAllocations() as $allocation) {
+                $userFormation = $allocation->getUserFormation();
+                if (!$userFormation) {
+                    continue;
+                }
+
+                $user = $userFormation->getUser();
+                $montantPrevu = $allocation->getMontantPrevu() !== null ? (float) $allocation->getMontantPrevu() : null;
+                $montantReel = $allocation->getMontantReel() !== null ? (float) $allocation->getMontantReel() : null;
+
+                $allocData = [
+                    'allocationId' => $allocation->getId(),
+                    'userFormationId' => $userFormation->getId(),
+                    'nom' => $user?->getNom(),
+                    'prenom' => $user?->getPrenom(),
+                    'matricule' => $user?->getMatricule(),
+                    'montantPrevu' => $montantPrevu,
+                    'montantReel' => $montantReel,
+                ];
+                $allocations[] = $allocData;
+
+                if ($montantReel !== null) {
+                    $totalReparti += $montantReel;
+                }
+                if ($montantPrevu !== null) {
+                    $totalRepartiPrevu += $montantPrevu;
+                }
+
+                $statKey = $userFormation->getId();
+                if ($statKey && isset($participantStats[$statKey])) {
+                    if ($montantPrevu !== null) {
+                        $participantStats[$statKey]['totalPrevu'] += $montantPrevu;
+                    }
+                    if ($montantReel !== null) {
+                        $participantStats[$statKey]['totalReel'] += $montantReel;
+                    }
+                    $participantStats[$statKey]['details'][] = [
+                        'allocationId' => $allocation->getId(),
+                        'categorie' => $depense->getCategorie()->getLibelle(),
+                        'montantPrevu' => $montantPrevu,
+                        'montantReel' => $montantReel,
+                    ];
+                }
+            }
+
+            $montantReel = $depense->getMontantReel() ? (float) $depense->getMontantReel() : 0.0;
+            $isBalanced = $montantReel === 0.0 || abs($montantReel - $totalReparti) < 0.5;
+
+            if ($montantReel > 0 && !$isBalanced) {
+                $alerts[] = sprintf(
+                    'La dépense « %s » présente %s FCFA répartis pour %s FCFA de montant réel.',
+                    $depense->getCategorie()->getLibelle(),
+                    number_format($totalReparti, 0, ',', ' '),
+                    number_format($montantReel, 0, ',', ' ')
+                );
+            }
+
+            $depenseAllocations[$depense->getId()] = [
+                'items' => $allocations,
+                'totalReparti' => $totalReparti,
+                'totalRepartiPrevu' => $totalRepartiPrevu,
+                'montantReel' => $montantReel,
+                'isBalanced' => $isBalanced,
+            ];
+        }
+
+        foreach ($participantStats as &$stat) {
+            $stat['totalPrevu'] = round($stat['totalPrevu'], 2);
+            $stat['totalReel'] = round($stat['totalReel'], 2);
+            $stat['ecart'] = round($stat['totalReel'] - $stat['totalPrevu'], 2);
+        }
+        unset($stat);
+
+        usort($participantStats, static function (array $a, array $b): int {
+            return strcmp(trim(($a['nom'] ?? '') . ' ' . ($a['prenom'] ?? '')), trim(($b['nom'] ?? '') . ' ' . ($b['prenom'] ?? '')));
+        });
+
+        return [$participantStats, $depenseAllocations, $alerts];
+    }
+
+    /**
+     * Prépare les données nécessaires aux sélecteurs (participants et index d'allocations existantes).
+     */
+    private function buildParticipantSelectData(FormationSession $formationSession): array
+    {
+        $participantOptionsData = [];
+        foreach ($formationSession->getUserFormations() as $userFormation) {
+            $user = $userFormation->getUser();
+            $labelParts = [];
+            if ($user?->getNom()) {
+                $labelParts[] = $user->getNom();
+            }
+            if ($user?->getPrenom()) {
+                $labelParts[] = $user->getPrenom();
+            }
+            $label = trim(implode(' ', $labelParts));
+            if ($user?->getEmail()) {
+                $label .= sprintf(' (%s)', $user->getEmail());
+            }
+            $participantOptionsData[] = [
+                'id' => $userFormation->getId(),
+                'label' => $label ?: sprintf('Participant #%d', $userFormation->getId()),
+            ];
+        }
+
+        $allocationIndexData = [];
+        foreach ($formationSession->getDepenseFormations() as $depense) {
+            $categorie = $depense->getCategorie();
+            if (!$categorie) {
+                continue;
+            }
+            foreach ($depense->getParticipantAllocations() as $allocation) {
+                $userFormation = $allocation->getUserFormation();
+                if (!$userFormation) {
+                    continue;
+                }
+                $allocationIndexData[$categorie->getId()] ??= [];
+                if (!in_array($userFormation->getId(), $allocationIndexData[$categorie->getId()], true)) {
+                    $allocationIndexData[$categorie->getId()][] = $userFormation->getId();
+                }
+            }
+        }
+
+        return [$participantOptionsData, $allocationIndexData];
+    }
+
+    #[Route('/allocation/{id}', name: 'app_formation_allocation_show', methods: ['GET'])]
+    public function getAllocation(int $id, EntityManagerInterface $entityManager): JsonResponse
+    {
+        $allocation = $entityManager->getRepository(\App\Entity\DepenseFormationParticipant::class)->find($id);
+        if (!$allocation) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Allocation introuvable',
+            ], 404);
+        }
+
+        return $this->json([
+            'success' => true,
+            'montantPrevu' => $allocation->getMontantPrevu(),
+        ]);
+    }
+
+    #[Route('/allocation/{id}', name: 'app_formation_allocation_update', methods: ['PUT'])]
+    public function updateAllocation(int $id, Request $request, EntityManagerInterface $entityManager): JsonResponse
+    {
+        $allocation = $entityManager->getRepository(\App\Entity\DepenseFormationParticipant::class)->find($id);
+        if (!$allocation) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Allocation introuvable',
+            ], 404);
+        }
+
+        $data = json_decode($request->getContent(), true);
+        $montant = isset($data['montant']) ? (float) $data['montant'] : null;
+        if ($montant === null || $montant <= 0) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Montant invalide',
+            ], 400);
+        }
+
+        $diff = $montant - (float) ($allocation->getMontantPrevu() ?? 0);
+        $depenseFormation = $allocation->getDepenseFormation();
+        $depenseFormation->setMontantPrevu(number_format((float) $depenseFormation->getMontantPrevu() + $diff, 2, '.', ''));
+        $allocation->setMontantPrevu(number_format($montant, 2, '.', ''));
+
+        $entityManager->flush();
+
+        return $this->json([
+            'success' => true,
+            'message' => 'Montant mis à jour avec succès',
+        ]);
+    }
+
+    #[Route('/allocation/{id}', name: 'app_formation_allocation_delete', methods: ['DELETE'])]
+    public function deleteAllocation(int $id, EntityManagerInterface $entityManager): JsonResponse
+    {
+        $allocation = $entityManager->getRepository(\App\Entity\DepenseFormationParticipant::class)->find($id);
+        if (!$allocation) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Allocation introuvable',
+            ], 404);
+        }
+
+        $depenseFormation = $allocation->getDepenseFormation();
+        $depenseFormation->setMontantPrevu(number_format((float) $depenseFormation->getMontantPrevu() - (float) $allocation->getMontantPrevu(), 2, '.', ''));
+        $entityManager->remove($allocation);
+        $entityManager->flush();
+
+        return $this->json([
+            'success' => true,
+            'message' => 'Ligne supprimée avec succès',
+        ]);
+    }
 }
