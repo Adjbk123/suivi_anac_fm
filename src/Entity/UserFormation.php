@@ -68,6 +68,21 @@ class UserFormation
         return $this;
     }
 
+    public function getFormation(): ?Formation
+    {
+        return $this->formationSession?->getFormation();
+    }
+
+    public function setFormation(?Formation $formation): static
+    {
+        if ($formation) {
+            // Note: Ne peut pas créer automatiquement une session ici, doit utiliser setFormationSession
+            // Cette méthode est principalement pour compatibilité
+        }
+
+        return $this;
+    }
+
     public function getStatutParticipation(): ?StatutParticipation
     {
         return $this->statutParticipation;

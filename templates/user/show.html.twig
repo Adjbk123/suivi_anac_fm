@@ -113,7 +113,7 @@
                                                          <thead>
                                  <tr>
                                      <th>Formation</th>
-                                     <th>Service</th>
+                                     <th>Direction</th>
                                      <th>Statuts</th>
                                      <th>Date prévue</th>
                                      <th>Actions</th>
@@ -121,21 +121,23 @@
                              </thead>
                             <tbody>
                                 {% for userFormation in user.userFormations %}
+                                {% set formationSession = userFormation.formationSession %}
+                                {% set formation = formationSession ? formationSession.formation : null %}
                                 <tr>
                                     <td>
-                                        <strong>{{ userFormation.formation.titre }}</strong>
-                                        {% if userFormation.formation.description %}
-                                            <br><small class="text-muted">{{ userFormation.formation.description|slice(0, 100) }}{% if userFormation.formation.description|length > 100 %}...{% endif %}</small>
+                                        <strong>{{ formation ? formation.titre : '-' }}</strong>
+                                        {% if formation and formation.description %}
+                                            <br><small class="text-muted">{{ formation.description|slice(0, 100) }}{% if formation.description|length > 100 %}...{% endif %}</small>
                                         {% endif %}
                                     </td>
-                                    <td>{{ userFormation.formation.service ? userFormation.formation.service.libelle : '-' }}</td>
+                                    <td>{{ formationSession and formationSession.direction ? formationSession.direction.libelle : '-' }}</td>
                                     <td>
                                                                                  <div class="d-flex flex-column gap-1">
                                              <!-- Statut de l'activité -->
                                              <div class="d-flex align-items-center gap-1">
                                                  <small class="text-muted">Activité:</small>
-                                                 <span class="badge bg-{{ userFormation.formation.statutActivite ? userFormation.formation.statutActivite.couleur : 'secondary' }}">
-                                                     {{ userFormation.formation.statutActivite ? userFormation.formation.statutActivite.libelle : 'Non défini' }}
+                                                 <span class="badge bg-{{ formationSession and formationSession.statutActivite ? formationSession.statutActivite.couleur : 'secondary' }}">
+                                                     {{ formationSession and formationSession.statutActivite ? formationSession.statutActivite.libelle : 'Non défini' }}
                                                  </span>
                                              </div>
                                              <!-- Statut de participation -->
@@ -147,9 +149,9 @@
                                              </div>
                                          </div>
                                     </td>
-                                    <td>{{ userFormation.formation.datePrevueDebut ? userFormation.formation.datePrevueDebut|date('d/m/Y') : '-' }}</td>
+                                    <td>{{ formationSession and formationSession.datePrevueDebut ? formationSession.datePrevueDebut|date('d/m/Y') : '-' }}</td>
                                     <td>
-                                        <a href="{{ path('app_formation_show', {'id': userFormation.formation.id}) }}" class="btn btn-sm btn-outline-primary">
+                                        <a href="{{ path('app_formation_show', {'id': formationSession ? formationSession.id : '#'}) }}" class="btn btn-sm btn-outline-primary">
                                             <i class="fa fa-eye"></i> Voir
                                         </a>
                                     </td>
@@ -186,21 +188,23 @@
                              </thead>
                             <tbody>
                                 {% for userMission in user.userMissions %}
+                                {% set missionSession = userMission.missionSession %}
+                                {% set mission = userMission.mission %}
                                 <tr>
                                     <td>
-                                        <strong>{{ userMission.mission.titre }}</strong>
-                                        {% if userMission.mission.description %}
-                                            <br><small class="text-muted">{{ userMission.mission.description|slice(0, 100) }}{% if userMission.mission.description|length > 100 %}...{% endif %}</small>
+                                        <strong>{{ mission ? mission.titre : '-' }}</strong>
+                                        {% if mission and mission.description %}
+                                            <br><small class="text-muted">{{ mission.description|slice(0, 100) }}{% if mission.description|length > 100 %}...{% endif %}</small>
                                         {% endif %}
                                     </td>
-                                    <td>{{ userMission.mission.direction ? userMission.mission.direction.libelle : '-' }}</td>
+                                    <td>{{ missionSession and missionSession.direction ? missionSession.direction.libelle : '-' }}</td>
                                     <td>
                                                                                  <div class="d-flex flex-column gap-1">
                                              <!-- Statut de l'activité -->
                                              <div class="d-flex align-items-center gap-1">
                                                  <small class="text-muted">Activité:</small>
-                                                 <span class="badge bg-{{ userMission.mission.statutActivite ? userMission.mission.statutActivite.couleur : 'secondary' }}">
-                                                     {{ userMission.mission.statutActivite ? userMission.mission.statutActivite.libelle : 'Non défini' }}
+                                                 <span class="badge bg-{{ missionSession and missionSession.statutActivite ? missionSession.statutActivite.couleur : 'secondary' }}">
+                                                     {{ missionSession and missionSession.statutActivite ? missionSession.statutActivite.libelle : 'Non défini' }}
                                                  </span>
                                              </div>
                                              <!-- Statut de participation -->
@@ -212,9 +216,9 @@
                                              </div>
                                          </div>
                                     </td>
-                                    <td>{{ userMission.mission.datePrevueDebut ? userMission.mission.datePrevueDebut|date('d/m/Y') : '-' }}</td>
+                                    <td>{{ missionSession and missionSession.datePrevueDebut ? missionSession.datePrevueDebut|date('d/m/Y') : '-' }}</td>
                                     <td>
-                                        <a href="{{ path('app_mission_show', {'id': userMission.mission.id}) }}" class="btn btn-sm btn-outline-success">
+                                        <a href="{{ path('app_mission_show', {'id': missionSession ? missionSession.id : '#'}) }}" class="btn btn-sm btn-outline-success">
                                             <i class="fa fa-eye"></i> Voir
                                         </a>
                                     </td>

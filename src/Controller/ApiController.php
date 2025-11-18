@@ -286,41 +286,47 @@ class ApiController extends AbstractController
         
         // Récupérer toutes les formations de l'utilisateur
         foreach ($user->getUserFormations() as $userFormation) {
+            $formationSession = $userFormation->getFormationSession();
             $formation = $userFormation->getFormation();
+            
+            if (!$formationSession || !$formation) {
+                continue;
+            }
             
             // Calculer les dépenses réelles
             $depensesReelles = 0;
-            foreach ($formation->getDepenseFormations() as $depense) {
-                $depensesReelles += $depense->getMontantReel() ?? 0;
+            foreach ($formationSession->getDepenseFormations() as $depense) {
+                $depensesReelles += (float)($depense->getMontantReel() ?? 0);
             }
             
             $data[] = [
-                'id' => $formation->getId(),
+                'id' => $formationSession->getId(),
+                'formationId' => $formation->getId(),
                 'titre' => $formation->getTitre(),
                 'description' => $formation->getDescription(),
-                'lieuPrevu' => $formation->getLieuPrevu(),
-                'lieuReel' => $formation->getLieuReel(),
-                'datePrevueDebut' => $formation->getDatePrevueDebut() ? $formation->getDatePrevueDebut()->format('d/m/Y') : null,
-                'datePrevueFin' => $formation->getDatePrevueFin() ? $formation->getDatePrevueFin()->format('d/m/Y') : null,
-                'dateReelleDebut' => $formation->getDateReelleDebut() ? $formation->getDateReelleDebut()->format('d/m/Y') : null,
-                'dateReelleFin' => $formation->getDateReelleFin() ? $formation->getDateReelleFin()->format('d/m/Y') : null,
-                'dureePrevue' => $formation->getDureePrevue(),
-                'dureeReelle' => $formation->getDureeReelle(),
-                'budgetPrevu' => $formation->getBudgetPrevu(),
+                'lieuPrevu' => $formationSession->getLieuPrevu(),
+                'lieuReel' => $formationSession->getLieuReel(),
+                'datePrevueDebut' => $formationSession->getDatePrevueDebut() ? $formationSession->getDatePrevueDebut()->format('d/m/Y') : null,
+                'datePrevueFin' => $formationSession->getDatePrevueFin() ? $formationSession->getDatePrevueFin()->format('d/m/Y') : null,
+                'dateReelleDebut' => $formationSession->getDateReelleDebut() ? $formationSession->getDateReelleDebut()->format('d/m/Y') : null,
+                'dateReelleFin' => $formationSession->getDateReelleFin() ? $formationSession->getDateReelleFin()->format('d/m/Y') : null,
+                'dureePrevue' => $formationSession->getDureePrevue(),
+                'dureeReelle' => $formationSession->getDureeReelle(),
+                'budgetPrevu' => $formationSession->getBudgetPrevu(),
                 'depensesReelles' => $depensesReelles,
-                'direction' => $formation->getDirection() ? [
-                    'id' => $formation->getDirection()->getId(),
-                    'libelle' => $formation->getDirection()->getLibelle()
+                'direction' => $formationSession->getDirection() ? [
+                    'id' => $formationSession->getDirection()->getId(),
+                    'libelle' => $formationSession->getDirection()->getLibelle()
                 ] : null,
-                'fonds' => $formation->getFonds() ? [
-                    'id' => $formation->getFonds()->getId(),
-                    'libelle' => $formation->getFonds()->getLibelle()
+                'fonds' => $formationSession->getFonds() ? [
+                    'id' => $formationSession->getFonds()->getId(),
+                    'libelle' => $formationSession->getFonds()->getLibelle()
                 ] : null,
-                'statutActivite' => $formation->getStatutActivite() ? [
-                    'id' => $formation->getStatutActivite()->getId(),
-                    'code' => $formation->getStatutActivite()->getCode(),
-                    'libelle' => $formation->getStatutActivite()->getLibelle(),
-                    'couleur' => $formation->getStatutActivite()->getCouleur()
+                'statutActivite' => $formationSession->getStatutActivite() ? [
+                    'id' => $formationSession->getStatutActivite()->getId(),
+                    'code' => $formationSession->getStatutActivite()->getCode(),
+                    'libelle' => $formationSession->getStatutActivite()->getLibelle(),
+                    'couleur' => $formationSession->getStatutActivite()->getCouleur()
                 ] : null,
                 'statutParticipation' => $userFormation->getStatutParticipation() ? [
                     'id' => $userFormation->getStatutParticipation()->getId(),
@@ -328,7 +334,7 @@ class ApiController extends AbstractController
                     'libelle' => $userFormation->getStatutParticipation()->getLibelle(),
                     'couleur' => $userFormation->getStatutParticipation()->getCouleur()
                 ] : null,
-                'notes' => $formation->getNotes()
+                'notes' => $formationSession->getNotes()
             ];
         }
         
@@ -348,41 +354,47 @@ class ApiController extends AbstractController
         
         // Récupérer toutes les missions de l'utilisateur
         foreach ($user->getUserMissions() as $userMission) {
+            $missionSession = $userMission->getMissionSession();
             $mission = $userMission->getMission();
+            
+            if (!$missionSession || !$mission) {
+                continue;
+            }
             
             // Calculer les dépenses réelles
             $depensesReelles = 0;
-            foreach ($mission->getDepenseMissions() as $depense) {
-                $depensesReelles += $depense->getMontantReel() ?? 0;
+            foreach ($missionSession->getDepenseMissions() as $depense) {
+                $depensesReelles += (float)($depense->getMontantReel() ?? 0);
             }
             
             $data[] = [
-                'id' => $mission->getId(),
+                'id' => $missionSession->getId(),
+                'missionId' => $mission->getId(),
                 'titre' => $mission->getTitre(),
                 'description' => $mission->getDescription(),
-                'lieuPrevu' => $mission->getLieuPrevu(),
-                'lieuReel' => $mission->getLieuReel(),
-                'datePrevueDebut' => $mission->getDatePrevueDebut() ? $mission->getDatePrevueDebut()->format('d/m/Y') : null,
-                'datePrevueFin' => $mission->getDatePrevueFin() ? $mission->getDatePrevueFin()->format('d/m/Y') : null,
-                'dateReelleDebut' => $mission->getDateReelleDebut() ? $mission->getDateReelleDebut()->format('d/m/Y') : null,
-                'dateReelleFin' => $mission->getDateReelleFin() ? $mission->getDateReelleFin()->format('d/m/Y') : null,
-                'dureePrevue' => $mission->getDureePrevue(),
-                'dureeReelle' => $mission->getDureeReelle(),
-                'budgetPrevu' => $mission->getBudgetPrevu(),
+                'lieuPrevu' => $missionSession->getLieuPrevu(),
+                'lieuReel' => $missionSession->getLieuReel(),
+                'datePrevueDebut' => $missionSession->getDatePrevueDebut() ? $missionSession->getDatePrevueDebut()->format('d/m/Y') : null,
+                'datePrevueFin' => $missionSession->getDatePrevueFin() ? $missionSession->getDatePrevueFin()->format('d/m/Y') : null,
+                'dateReelleDebut' => $missionSession->getDateReelleDebut() ? $missionSession->getDateReelleDebut()->format('d/m/Y') : null,
+                'dateReelleFin' => $missionSession->getDateReelleFin() ? $missionSession->getDateReelleFin()->format('d/m/Y') : null,
+                'dureePrevue' => $missionSession->getDureePrevue(),
+                'dureeReelle' => $missionSession->getDureeReelle(),
+                'budgetPrevu' => $missionSession->getBudgetPrevu(),
                 'depensesReelles' => $depensesReelles,
-                'direction' => $mission->getDirection() ? [
-                    'id' => $mission->getDirection()->getId(),
-                    'libelle' => $mission->getDirection()->getLibelle()
+                'direction' => $missionSession->getDirection() ? [
+                    'id' => $missionSession->getDirection()->getId(),
+                    'libelle' => $missionSession->getDirection()->getLibelle()
                 ] : null,
-                'fonds' => $mission->getFonds() ? [
-                    'id' => $mission->getFonds()->getId(),
-                    'libelle' => $mission->getFonds()->getLibelle()
+                'fonds' => $missionSession->getFonds() ? [
+                    'id' => $missionSession->getFonds()->getId(),
+                    'libelle' => $missionSession->getFonds()->getLibelle()
                 ] : null,
-                'statutActivite' => $mission->getStatutActivite() ? [
-                    'id' => $mission->getStatutActivite()->getId(),
-                    'code' => $mission->getStatutActivite()->getCode(),
-                    'libelle' => $mission->getStatutActivite()->getLibelle(),
-                    'couleur' => $mission->getStatutActivite()->getCouleur()
+                'statutActivite' => $missionSession->getStatutActivite() ? [
+                    'id' => $missionSession->getStatutActivite()->getId(),
+                    'code' => $missionSession->getStatutActivite()->getCode(),
+                    'libelle' => $missionSession->getStatutActivite()->getLibelle(),
+                    'couleur' => $missionSession->getStatutActivite()->getCouleur()
                 ] : null,
                 'statutParticipation' => $userMission->getStatutParticipation() ? [
                     'id' => $userMission->getStatutParticipation()->getId(),
@@ -390,7 +402,7 @@ class ApiController extends AbstractController
                     'libelle' => $userMission->getStatutParticipation()->getLibelle(),
                     'couleur' => $userMission->getStatutParticipation()->getCouleur()
                 ] : null,
-                'notes' => $mission->getNotes()
+                'notes' => $missionSession->getNotes()
             ];
         }
         

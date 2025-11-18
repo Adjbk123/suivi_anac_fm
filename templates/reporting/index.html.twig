@@ -292,7 +292,7 @@
                                     <thead>
                                         <tr>
                                             <th>Titre</th>
-                                            <th>Service</th>
+                                            <th>Direction</th>
                                             <th>Dates</th>
                                             <th>Statut</th>
                                             <th>Budget</th>
@@ -321,7 +321,7 @@
                                     <thead>
                                         <tr>
                                             <th>Titre</th>
-                                            <th>Service</th>
+                                            <th>Direction</th>
                                             <th>Dates</th>
                                             <th>Statut</th>
                                             <th>Budget</th>
@@ -762,7 +762,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 html += `
                     <tr>
                         <td>${formation.titre || '-'}</td>
-                        <td>${formation.service ? formation.service.libelle : '-'}</td>
+                        <td>${formation.direction ? formation.direction.libelle : '-'}</td>
                         <td>${dates}</td>
                         <td><span class="badge bg-${formation.statutActivite ? formation.statutActivite.couleur : 'secondary'}">${formation.statutActivite ? formation.statutActivite.libelle : '-'}</span></td>
                         <td>${budget}</td>
@@ -814,7 +814,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 html += `
                     <tr>
                         <td>${mission.titre || '-'}</td>
-                        <td>${mission.service ? mission.service.libelle : '-'}</td>
+                        <td>${mission.direction ? mission.direction.libelle : '-'}</td>
                         <td>${dates}</td>
                         <td><span class="badge bg-${mission.statutActivite ? mission.statutActivite.couleur : 'secondary'}">${mission.statutActivite ? mission.statutActivite.libelle : '-'}</span></td>
                         <td>${budget}</td>

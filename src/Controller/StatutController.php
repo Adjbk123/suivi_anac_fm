@@ -47,9 +47,9 @@ class StatutController extends AbstractController
                 'libelle' => $statut->getLibelle(),
                 'description' => $statut->getDescription(),
                 'couleur' => $statut->getCouleur(),
-                'formations_count' => count($statut->getFormations()),
+                'formations_count' => count($statut->getFormationSessions()),
                 'isUsed' => $statut->isUsed(),
-                'missions_count' => count($statut->getMissions())
+                'missions_count' => count($statut->getMissionSessions())
             ];
         }
         

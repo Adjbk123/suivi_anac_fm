@@ -3,7 +3,7 @@
 namespace App\Controller;
 
 use App\Repository\FormationSessionRepository;
-use App\Repository\MissionRepository;
+use App\Repository\MissionSessionRepository;
 use App\Repository\ServiceRepository;
 use App\Repository\DirectionRepository;
 use App\Repository\StatutActiviteRepository;
@@ -42,20 +42,20 @@ class ReportingController extends AbstractController
     public function getData(
         Request $request,
         FormationSessionRepository $formationSessionRepository,
-        MissionRepository $missionRepository,
+        MissionSessionRepository $missionSessionRepository,
         EntityManagerInterface $entityManager
     ): JsonResponse {
         $filters = $request->request->all();
         
         // Préparer les données filtrées
         $data = [
-            'resume' => $this->getResumeGlobal($filters, $formationSessionRepository, $missionRepository),
+            'resume' => $this->getResumeGlobal($filters, $formationSessionRepository, $missionSessionRepository),
             'formations' => $this->getFormationsData($filters, $formationSessionRepository),
-            'missions' => $this->getMissionsData($filters, $missionRepository),
-            'parDirection' => $this->getDataParDirection($filters, $formationSessionRepository, $missionRepository),
-            'parPeriode' => $this->getDataParPeriode($filters, $formationSessionRepository, $missionRepository),
-            'statuts' => $this->getStatutsActivites($filters, $formationSessionRepository, $missionRepository),
-            'indicateurs' => $this->getIndicateursClés($filters, $formationSessionRepository, $missionRepository),
+            'missions' => $this->getMissionsData($filters, $missionSessionRepository),
+            'parDirection' => $this->getDataParDirection($filters, $formationSessionRepository, $missionSessionRepository),
+            'parPeriode' => $this->getDataParPeriode($filters, $formationSessionRepository, $missionSessionRepository),
+            'statuts' => $this->getStatutsActivites($filters, $formationSessionRepository, $missionSessionRepository),
+            'indicateurs' => $this->getIndicateursClés($filters, $formationSessionRepository, $missionSessionRepository),
         ];
 
         return new JsonResponse($data);
@@ -65,10 +65,10 @@ class ReportingController extends AbstractController
     public function getResumeData(
         Request $request,
         FormationSessionRepository $formationSessionRepository,
-        MissionRepository $missionRepository
+        MissionSessionRepository $missionSessionRepository
     ): JsonResponse {
         $filters = $request->request->all();
-        return new JsonResponse($this->getResumeGlobal($filters, $formationSessionRepository, $missionRepository));
+        return new JsonResponse($this->getResumeGlobal($filters, $formationSessionRepository, $missionSessionRepository));
     }
 
     #[Route('/data/formations', name: 'app_reporting_data_formations', methods: ['POST'])]
@@ -83,56 +83,56 @@ class ReportingController extends AbstractController
     #[Route('/data/missions', name: 'app_reporting_data_missions', methods: ['POST'])]
     public function getMissionsDataEndpoint(
         Request $request,
-        MissionRepository $missionRepository
+        MissionSessionRepository $missionSessionRepository
     ): JsonResponse {
         $filters = $request->request->all();
-        return new JsonResponse($this->getMissionsData($filters, $missionRepository));
+        return new JsonResponse($this->getMissionsData($filters, $missionSessionRepository));
     }
 
     #[Route('/data/directions', name: 'app_reporting_data_directions', methods: ['POST'])]
     public function getDirectionsData(
         Request $request,
         FormationSessionRepository $formationSessionRepository,
-        MissionRepository $missionRepository
+        MissionSessionRepository $missionSessionRepository
     ): JsonResponse {
         $filters = $request->request->all();
-        return new JsonResponse($this->getDataParDirection($filters, $formationSessionRepository, $missionRepository));
+        return new JsonResponse($this->getDataParDirection($filters, $formationSessionRepository, $missionSessionRepository));
     }
 
     #[Route('/data/periodes', name: 'app_reporting_data_periodes', methods: ['POST'])]
     public function getPeriodesData(
         Request $request,
         FormationSessionRepository $formationSessionRepository,
-        MissionRepository $missionRepository
+        MissionSessionRepository $missionSessionRepository
     ): JsonResponse {
         $filters = $request->request->all();
-        return new JsonResponse($this->getDataParPeriode($filters, $formationSessionRepository, $missionRepository));
+        return new JsonResponse($this->getDataParPeriode($filters, $formationSessionRepository, $missionSessionRepository));
     }
 
     #[Route('/data/statuts', name: 'app_reporting_data_statuts', methods: ['POST'])]
     public function getStatutsData(
         Request $request,
         FormationSessionRepository $formationSessionRepository,
-        MissionRepository $missionRepository
+        MissionSessionRepository $missionSessionRepository
     ): JsonResponse {
         $filters = $request->request->all();
-        return new JsonResponse($this->getStatutsActivites($filters, $formationSessionRepository, $missionRepository));
+        return new JsonResponse($this->getStatutsActivites($filters, $formationSessionRepository, $missionSessionRepository));
     }
 
     #[Route('/data/indicateurs', name: 'app_reporting_data_indicateurs', methods: ['POST'])]
     public function getIndicateursData(
         Request $request,
         FormationSessionRepository $formationSessionRepository,
-        MissionRepository $missionRepository
+        MissionSessionRepository $missionSessionRepository
     ): JsonResponse {
         $filters = $request->request->all();
-        return new JsonResponse($this->getIndicateursClés($filters, $formationSessionRepository, $missionRepository));
+        return new JsonResponse($this->getIndicateursClés($filters, $formationSessionRepository, $missionSessionRepository));
     }
 
     #[Route('/api/filters-data', name: 'app_reporting_api_filters', methods: ['GET'])]
     public function getFiltersData(
         FormationSessionRepository $formationSessionRepository,
-        MissionRepository $missionRepository,
+        MissionSessionRepository $missionSessionRepository,
         ServiceRepository $serviceRepository,
         DirectionRepository $directionRepository,
         StatutActiviteRepository $statutActiviteRepository,
@@ -141,7 +141,7 @@ class ReportingController extends AbstractController
         // Récupérer les années disponibles depuis les sessions de formation et missions
         try {
             $yearsFormations = $formationSessionRepository->getAvailableYears();
-            $yearsMissions = $missionRepository->getAvailableYears();
+            $yearsMissions = $missionSessionRepository->getAvailableYears();
             
             // Debug: voir ce qui est retourné
             error_log('Years Formations: ' . print_r($yearsFormations, true));
@@ -216,18 +216,18 @@ class ReportingController extends AbstractController
     public function exportPdf(
         Request $request,
         FormationSessionRepository $formationSessionRepository,
-        MissionRepository $missionRepository
+        MissionSessionRepository $missionSessionRepository
     ): Response {
         $filters = $request->request->all();
         
         // Récupérer les données
         $data = [
-            'resume' => $this->getResumeGlobal($filters, $formationSessionRepository, $missionRepository),
+            'resume' => $this->getResumeGlobal($filters, $formationSessionRepository, $missionSessionRepository),
             'formations' => $this->getFormationsData($filters, $formationSessionRepository),
-            'missions' => $this->getMissionsData($filters, $missionRepository),
-            'parDirection' => $this->getDataParDirection($filters, $formationSessionRepository, $missionRepository),
-            'statuts' => $this->getStatutsActivites($filters, $formationSessionRepository, $missionRepository),
-            'indicateurs' => $this->getIndicateursClés($filters, $formationSessionRepository, $missionRepository),
+            'missions' => $this->getMissionsData($filters, $missionSessionRepository),
+            'parDirection' => $this->getDataParDirection($filters, $formationSessionRepository, $missionSessionRepository),
+            'statuts' => $this->getStatutsActivites($filters, $formationSessionRepository, $missionSessionRepository),
+            'indicateurs' => $this->getIndicateursClés($filters, $formationSessionRepository, $missionSessionRepository),
             'filters' => $filters,
         ];
 
@@ -255,17 +255,17 @@ class ReportingController extends AbstractController
         );
     }
 
-    private function getResumeGlobal(array $filters, FormationSessionRepository $formationSessionRepository, MissionRepository $missionRepository): array
+    private function getResumeGlobal(array $filters, FormationSessionRepository $formationSessionRepository, MissionSessionRepository $missionSessionRepository): array
     {
         $year = $filters['annee'] ?? date('Y');
         
         return [
-            'missions_prevues' => $missionRepository->countPlannedByYear($year),
-            'missions_realisees' => $missionRepository->countExecutedByYear($year),
+            'missions_prevues' => $missionSessionRepository->countPlannedByYear($year),
+            'missions_realisees' => $missionSessionRepository->countExecutedByYear($year),
             'formations_prevues' => $formationSessionRepository->countPlannedByYear($year),
             'formations_realisees' => $formationSessionRepository->countExecutedByYear($year),
-            'budget_total_prevu' => $formationSessionRepository->getTotalBudgetByYear($year) + $missionRepository->getTotalBudgetByYear($year),
-            'budget_total_realise' => $formationSessionRepository->getTotalRealExpensesByYear($year) + $missionRepository->getTotalRealExpensesByYear($year),
+            'budget_total_prevu' => $formationSessionRepository->getTotalBudgetByYear($year) + $missionSessionRepository->getTotalBudgetByYear($year),
+            'budget_total_realise' => $formationSessionRepository->getTotalRealExpensesByYear($year) + $missionSessionRepository->getTotalRealExpensesByYear($year),
         ];
     }
 
@@ -365,68 +365,82 @@ class ReportingController extends AbstractController
         ];
     }
 
-    private function getMissionsData(array $filters, MissionRepository $missionRepository): array
+    private function getMissionsData(array $filters, MissionSessionRepository $missionSessionRepository): array
     {
         $year = $filters['annee'] ?? date('Y');
-        $month = $filters['mois'] ?? date('n');
         
-        // Construire les critères de filtrage
-        $criteria = [];
-        
-        if (!empty($filters['type_activite']) && $filters['type_activite'] !== 'all') {
-            // Filtre par type d'activité (toujours 'mission' ici)
-        }
+        // Construire les filtres pour MissionSession
+        $sessionFilters = [];
         
         if (!empty($filters['direction_id'])) {
-            $criteria['direction.id'] = $filters['direction_id'];
+            $sessionFilters['direction'] = $filters['direction_id'];
         }
         
         if (!empty($filters['statut_id'])) {
-            $criteria['statutActivite.id'] = $filters['statut_id'];
+            $sessionFilters['statut'] = $filters['statut_id'];
         }
         
         if (!empty($filters['type_fonds_id'])) {
-            $criteria['fonds.id'] = $filters['type_fonds_id'];
+            // Note: Le filtrage par type_fonds doit être géré dans findWithFilters
         }
         
-        if (!empty($filters['lieu'])) {
-            $criteria['lieuPrevu'] = $filters['lieu'];
-        }
+        // Récupérer les sessions de mission avec les filtres
+        $missionSessions = $missionSessionRepository->findWithFilters($sessionFilters);
         
-        // Récupérer les missions avec les filtres
-        $missions = $missionRepository->findMissionsWithFilters($year, $month, $criteria);
+        // Filtrer par année et mois si nécessaire
+        $missionSessions = array_filter($missionSessions, function($session) use ($year, $filters) {
+            if (!$session->getDatePrevueDebut()) {
+                return false;
+            }
+            if ($session->getDatePrevueDebut()->format('Y') != $year) {
+                return false;
+            }
+            if (!empty($filters['mois']) && $session->getDatePrevueDebut()->format('n') != $filters['mois']) {
+                return false;
+            }
+            if (!empty($filters['type_fonds_id']) && $session->getFonds() && $session->getFonds()->getId() != $filters['type_fonds_id']) {
+                return false;
+            }
+            if (!empty($filters['lieu']) && $session->getLieuPrevu() != $filters['lieu']) {
+                return false;
+            }
+            return true;
+        });
         
         // Convertir les entités en tableaux pour la sérialisation JSON
         $missionsArray = [];
         $totalBudget = 0;
+        $totalParticipants = 0;
         
-        foreach ($missions as $mission) {
-            $totalBudget += $mission->getBudgetPrevu() ?? 0;
+        foreach ($missionSessions as $session) {
+            $mission = $session->getMission();
+            $totalBudget += (float)$session->getBudgetPrevu();
+            $totalParticipants += $session->getUserMissions()->count();
             
             $missionsArray[] = [
-                'id' => $mission->getId(),
-                'titre' => $mission->getTitre(),
-                'description' => $mission->getDescription(),
-                'lieuPrevu' => $mission->getLieuPrevu(),
-                'lieuReel' => $mission->getLieuReel(),
-                'datePrevueDebut' => $mission->getDatePrevueDebut() ? $mission->getDatePrevueDebut()->format('Y-m-d') : null,
-                'datePrevueFin' => $mission->getDatePrevueFin() ? $mission->getDatePrevueFin()->format('Y-m-d') : null,
-                'dateReelleDebut' => $mission->getDateReelleDebut() ? $mission->getDateReelleDebut()->format('Y-m-d') : null,
-                'dateReelleFin' => $mission->getDateReelleFin() ? $mission->getDateReelleFin()->format('Y-m-d') : null,
-                'budgetPrevu' => $mission->getBudgetPrevu(),
-                'statutActivite' => $mission->getStatutActivite() ? [
-                    'id' => $mission->getStatutActivite()->getId(),
-                    'libelle' => $mission->getStatutActivite()->getLibelle(),
-                    'code' => $mission->getStatutActivite()->getCode(),
-                    'couleur' => $mission->getStatutActivite()->getCouleur(),
+                'id' => $session->getId(),
+                'titre' => $mission ? $mission->getTitre() : '',
+                'description' => $mission ? $mission->getDescription() : null,
+                'lieuPrevu' => $session->getLieuPrevu(),
+                'lieuReel' => $session->getLieuReel(),
+                'datePrevueDebut' => $session->getDatePrevueDebut() ? $session->getDatePrevueDebut()->format('Y-m-d') : null,
+                'datePrevueFin' => $session->getDatePrevueFin() ? $session->getDatePrevueFin()->format('Y-m-d') : null,
+                'dateReelleDebut' => $session->getDateReelleDebut() ? $session->getDateReelleDebut()->format('Y-m-d') : null,
+                'dateReelleFin' => $session->getDateReelleFin() ? $session->getDateReelleFin()->format('Y-m-d') : null,
+                'budgetPrevu' => (float)$session->getBudgetPrevu(),
+                'statutActivite' => $session->getStatutActivite() ? [
+                    'id' => $session->getStatutActivite()->getId(),
+                    'libelle' => $session->getStatutActivite()->getLibelle(),
+                    'code' => $session->getStatutActivite()->getCode(),
+                    'couleur' => $session->getStatutActivite()->getCouleur(),
                 ] : null,
-                'direction' => $mission->getDirection() ? [
-                    'id' => $mission->getDirection()->getId(),
-                    'libelle' => $mission->getDirection()->getLibelle(),
+                'direction' => $session->getDirection() ? [
+                    'id' => $session->getDirection()->getId(),
+                    'libelle' => $session->getDirection()->getLibelle(),
                 ] : null,
-                'fonds' => $mission->getFonds() ? [
-                    'id' => $mission->getFonds()->getId(),
-                    'libelle' => $mission->getFonds()->getLibelle(),
+                'fonds' => $session->getFonds() ? [
+                    'id' => $session->getFonds()->getId(),
+                    'libelle' => $session->getFonds()->getLibelle(),
                 ] : null,
             ];
         }
@@ -434,50 +448,51 @@ class ReportingController extends AbstractController
         return [
             'liste' => $missionsArray,
             'stats' => [
-                'total' => count($missions),
+                'total' => count($missionsArray),
                 'budget_total' => $totalBudget,
+                'participants_total' => $totalParticipants,
             ]
         ];
     }
 
-    private function getDataParDirection(array $filters, FormationSessionRepository $formationSessionRepository, MissionRepository $missionRepository): array
+    private function getDataParDirection(array $filters, FormationSessionRepository $formationSessionRepository, MissionSessionRepository $missionSessionRepository): array
     {
         $year = $filters['annee'] ?? date('Y');
         
         return [
             'formations' => $formationSessionRepository->getExecutionRateByDirection($year),
-            'missions' => $missionRepository->getExecutionRateByDirection($year),
+            'missions' => $missionSessionRepository->getExecutionRateByDirection($year),
         ];
     }
 
-    private function getDataParPeriode(array $filters, FormationSessionRepository $formationSessionRepository, MissionRepository $missionRepository): array
+    private function getDataParPeriode(array $filters, FormationSessionRepository $formationSessionRepository, MissionSessionRepository $missionSessionRepository): array
     {
         $year = $filters['annee'] ?? date('Y');
         
         return [
             'formations' => $formationSessionRepository->getMonthlyStatsByYear($year),
-            'missions' => $missionRepository->getMonthlyStatsByYear($year),
+            'missions' => $missionSessionRepository->getMonthlyStatsByYear($year),
         ];
     }
 
-    private function getStatutsActivites(array $filters, FormationSessionRepository $formationSessionRepository, MissionRepository $missionRepository): array
+    private function getStatutsActivites(array $filters, FormationSessionRepository $formationSessionRepository, MissionSessionRepository $missionSessionRepository): array
     {
         $year = $filters['annee'] ?? date('Y');
         
         return [
             'formations' => $formationSessionRepository->getStatusDistributionByYear($year),
-            'missions' => $missionRepository->getStatusDistributionByYear($year),
+            'missions' => $missionSessionRepository->getStatusDistributionByYear($year),
         ];
     }
 
-    private function getIndicateursClés(array $filters, FormationSessionRepository $formationSessionRepository, MissionRepository $missionRepository): array
+    private function getIndicateursClés(array $filters, FormationSessionRepository $formationSessionRepository, MissionSessionRepository $missionSessionRepository): array
     {
         $year = $filters['annee'] ?? date('Y');
         
         $budgetPrevuFormations = $formationSessionRepository->getTotalBudgetByYear($year);
         $budgetReelFormations = $formationSessionRepository->getTotalRealExpensesByYear($year);
-        $budgetPrevuMissions = $missionRepository->getTotalBudgetByYear($year);
-        $budgetReelMissions = $missionRepository->getTotalRealExpensesByYear($year);
+        $budgetPrevuMissions = $missionSessionRepository->getTotalBudgetByYear($year);
+        $budgetReelMissions = $missionSessionRepository->getTotalRealExpensesByYear($year);
         
         $budgetPrevuTotal = $budgetPrevuFormations + $budgetPrevuMissions;
         $budgetReelTotal = $budgetReelFormations + $budgetReelMissions;
