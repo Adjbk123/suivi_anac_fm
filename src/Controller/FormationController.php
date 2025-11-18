@@ -72,6 +72,150 @@ class FormationController extends AbstractController
         return $excelExportService->exportFormationBudgetReport($formationSessions, $filters);
     }
 
+    #[Route('/create-executed', name: 'app_formation_create_executed', methods: ['GET'])]
+    #[IsGranted('ROLE_EDITEUR')]
+    public function createExecuted(): Response
+    {
+        return $this->render('formation/create_executed.html.twig');
+    }
+
+    #[Route('/create-executed', name: 'app_formation_create_executed_post', methods: ['POST'])]
+    #[IsGranted('ROLE_EDITEUR')]
+    public function createExecutedPost(Request $request, EntityManagerInterface $entityManager): JsonResponse
+    {
+        // Récupérer les données JSON
+        $data = json_decode($request->get('data'), true);
+        
+        // 1. Créer ou récupérer la Formation (modèle)
+        $formation = null;
+        if (isset($data['formationId']) && $data['formationId']) {
+            $formation = $entityManager->getRepository(Formation::class)->find($data['formationId']);
+        }
+        
+        if (!$formation) {
+            // Créer une nouvelle formation (modèle)
+            $formation = new Formation();
+            $formation->setTitre($data['titre']);
+            $formation->setDescription($data['description'] ?? null);
+            $entityManager->persist($formation);
+        }
+        
+        // 2. Créer la FormationSession (session) - NON PRÉVUE MAIS EXÉCUTÉE
+        $formationSession = new FormationSession();
+        $formationSession->setFormation($formation);
+        
+        // Dates réelles (obligatoires pour une formation exécutée)
+        $formationSession->setDateReelleDebut(new \DateTime($data['dateReelleDebut']));
+        $formationSession->setDateReelleFin(new \DateTime($data['dateReelleFin']));
+        
+        // Dates prévues = dates réelles (pas de prévision, mais nécessaire pour la structure)
+        $formationSession->setDatePrevueDebut(new \DateTime($data['dateReelleDebut']));
+        $formationSession->setDatePrevueFin(new \DateTime($data['dateReelleFin']));
+        
+        // Calculer la durée réelle
+        $dateDebut = new \DateTime($data['dateReelleDebut']);
+        $dateFin = new \DateTime($data['dateReelleFin']);
+        $dureeReelle = $dateDebut->diff($dateFin)->days + 1;
+        $formationSession->setDureeReelle($dureeReelle);
+        $formationSession->setDureePrevue($dureeReelle); // Prévu = réel
+        
+        // Lieu réel
+        $formationSession->setLieuReel($data['lieuReel']);
+        $formationSession->setLieuPrevu($data['lieuReel']); // Prévu = réel
+        
+        // Récupérer le statut "non prévue mais exécutée"
+        $statutActivite = $entityManager->getRepository(\App\Entity\StatutActivite::class)->findOneBy(['code' => 'non_prevue_executee']);
+        if (!$statutActivite) {
+            return $this->json(['success' => false, 'message' => "Statut d'activité 'non_prevue_executee' introuvable"], 500);
+        }
+        $formationSession->setStatutActivite($statutActivite);
+        
+        // Direction et fonds
+        $direction = $entityManager->getRepository(\App\Entity\Direction::class)->find($data['directionId']);
+        $formationSession->setDirection($direction);
+        
+        $fonds = $entityManager->getRepository(\App\Entity\TypeFonds::class)->find($data['fondsId']);
+        $formationSession->setFonds($fonds);
+        
+        // Budget initialisé à 0 (sera mis à jour avec les dépenses)
+        $formationSession->setBudgetPrevu('0');
+        $formationSession->setBudgetReel('0');
+        $formationSession->setNotes($data['notes'] ?? null);
+        
+        $entityManager->persist($formationSession);
+        $entityManager->flush();
+        
+        // 3. Ajouter les participants
+        $userFormationsByUserId = [];
+        if (isset($data['participants']) && is_array($data['participants'])) {
+            $statutParticipe = $entityManager->getRepository(\App\Entity\StatutParticipation::class)->findOneBy(['code' => 'participe']);
+            if (!$statutParticipe) {
+                $statutParticipe = $entityManager->getRepository(\App\Entity\StatutParticipation::class)->findOneBy(['code' => 'non_prevus_participe']);
+            }
+            
+            foreach ($data['participants'] as $userId) {
+                $user = $entityManager->getRepository(User::class)->find($userId);
+                if ($user) {
+                    $userFormation = new UserFormation();
+                    $userFormation->setUser($user);
+                    $userFormation->setFormationSession($formationSession);
+                    $userFormation->setStatutParticipation($statutParticipe);
+                    $entityManager->persist($userFormation);
+                    $userFormationsByUserId[$user->getId()] = $userFormation;
+                }
+            }
+        }
+        
+        // 4. Ajouter les dépenses réelles (prévu = réel pour une formation non prévue)
+        $totalBudgetReel = 0;
+        if (isset($data['depensesReelles']) && is_array($data['depensesReelles'])) {
+            foreach ($data['depensesReelles'] as $depenseData) {
+                $categorie = $entityManager->getRepository(\App\Entity\CategorieDepense::class)->find($depenseData['categorieId']);
+                if ($categorie) {
+                    $depenseFormation = new \App\Entity\DepenseFormation();
+                    $depenseFormation->setFormationSession($formationSession);
+                    $depenseFormation->setCategorie($categorie);
+                    // Prévu = réel pour une formation non prévue
+                    $montant = $depenseData['montant'];
+                    $depenseFormation->setMontantPrevu($montant);
+                    $depenseFormation->setMontantReel($montant);
+                    $entityManager->persist($depenseFormation);
+                    
+                    $totalBudgetReel += (float)$montant;
+                    
+                    // Ajouter les allocations aux participants
+                    if (isset($depenseData['allocations']) && is_array($depenseData['allocations'])) {
+                        foreach ($depenseData['allocations'] as $allocationData) {
+                            $userId = $allocationData['userId'];
+                            if (isset($userFormationsByUserId[$userId])) {
+                                $userFormation = $userFormationsByUserId[$userId];
+                                $allocation = new DepenseFormationParticipant();
+                                $allocation->setDepenseFormation($depenseFormation);
+                                $allocation->setUserFormation($userFormation);
+                                $montantAllocation = $allocationData['montant'];
+                                $allocation->setMontantPrevu($montantAllocation);
+                                $allocation->setMontantReel($montantAllocation);
+                                $entityManager->persist($allocation);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Mettre à jour le budget
+        $formationSession->setBudgetPrevu((string)$totalBudgetReel);
+        $formationSession->setBudgetReel((string)$totalBudgetReel);
+        
+        $entityManager->flush();
+        
+        return $this->json([
+            'success' => true,
+            'message' => 'Formation exécutée (non prévue) créée avec succès',
+            'id' => $formationSession->getId()
+        ]);
+    }
+
     #[Route('/create', name: 'app_formation_create', methods: ['GET'])]
     #[IsGranted('ROLE_EDITEUR')]
     public function create(): Response
@@ -1218,11 +1362,24 @@ class FormationController extends AbstractController
                         
                         if ($depenseFormation) {
                             $depenseFormation->setMontantReel($depenseData['montant']);
+                            // Mettre à jour le montant prévu si nécessaire (pour les nouveaux participants)
+                            if (!isset($depenseData['montantPrevu'])) {
+                                $montantPrevu = (float)($depenseFormation->getMontantPrevu() ?? 0);
+                                // Si le montant prévu est inférieur au montant réel, on le met à jour
+                                if ($montantPrevu < (float)$depenseData['montant']) {
+                                    $depenseFormation->setMontantPrevu($depenseData['montant']);
+                                }
+                            } else {
+                                $depenseFormation->setMontantPrevu($depenseData['montantPrevu']);
+                            }
                         } else {
                             // Créer une nouvelle dépense si elle n'existe pas
                             $depenseFormation = new \App\Entity\DepenseFormation();
                             $depenseFormation->setFormationSession($formationSession);
                             $depenseFormation->setCategorie($categorie);
+                            // Pour les nouvelles dépenses, prévu = réel (cas des participants non prévus)
+                            $montantPrevu = isset($depenseData['montantPrevu']) ? $depenseData['montantPrevu'] : $depenseData['montant'];
+                            $depenseFormation->setMontantPrevu($montantPrevu);
                             $depenseFormation->setMontantReel($depenseData['montant']);
                             $entityManager->persist($depenseFormation);
                         }

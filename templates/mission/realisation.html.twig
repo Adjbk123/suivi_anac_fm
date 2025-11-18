@@ -200,8 +200,11 @@
 								</select>
 							</div>
 							<div class="col-md-4">
-								<button type="button" class="btn btn-success" onclick="ajouterParticipant()">
-									<i class="fa fa-plus"></i> Ajouter
+								<button type="button" class="btn btn-success" onclick="showAddParticipantModal()">
+									<i class="fa fa-plus"></i> Ajouter avec dépenses
+								</button>
+								<button type="button" class="btn btn-outline-success mt-2" onclick="ajouterParticipant()" style="width: 100%;">
+									<i class="fa fa-plus"></i> Ajouter sans dépenses
 								</button>
 							</div>
 						</div>
@@ -355,6 +358,44 @@
 				<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
 				<button type="button" class="btn btn-success" onclick="addDepense()">
 					<i class="fa fa-plus"></i> Ajouter
+				</button>
+			</div>
+		</div>
+	</div>
+</div>
+
+<!-- Modal pour ajouter un participant avec dépenses -->
+<div class="modal fade" id="addParticipantModal" tabindex="-1" aria-labelledby="addParticipantModalLabel" aria-hidden="true">
+	<div class="modal-dialog modal-lg">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="addParticipantModalLabel">
+					<i class="fa fa-user-plus text-success"></i> Ajouter un participant avec dépenses
+				</h5>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body">
+				<form id="addParticipantForm">
+					<div class="mb-3">
+						<label for="participantSelect" class="form-label">Participant *</label>
+						<select class="form-select" id="participantSelect" required>
+							<option value="">Sélectionner un participant...</option>
+						</select>
+					</div>
+					<hr>
+					<h6 class="mb-3">Dépenses du participant</h6>
+					<div id="participantDepensesList">
+						<!-- Les dépenses seront ajoutées dynamiquement -->
+					</div>
+					<button type="button" class="btn btn-outline-primary btn-sm" onclick="addParticipantDepenseRow()">
+						<i class="fa fa-plus"></i> Ajouter une dépense
+					</button>
+				</form>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+				<button type="button" class="btn btn-success" onclick="ajouterParticipantAvecDepenses()">
+					<i class="fa fa-check"></i> Ajouter le participant
 				</button>
 			</div>
 		</div>
@@ -1218,7 +1259,8 @@ function validerRealisation() {
             .map(d => {
                 const payload = {
                     categorieId: d.categorieId,
-                    montant: parseFloat(d.montantReel)
+                    montant: parseFloat(d.montantReel),
+                    montantPrevu: d.montantPrevu ? parseFloat(d.montantPrevu) : parseFloat(d.montantReel)
                 };
 
                 const allocationsPayload = getAllocationPayload(d.id);
@@ -1269,6 +1311,196 @@ function validerRealisation() {
 
 // Variables globales pour les catégories de dépenses
 let categoriesDepenses = [];
+let participantDepensesRows = 0;
+
+function showAddParticipantModal() {
+    // Charger les catégories de dépenses si pas encore fait
+    if (categoriesDepenses.length === 0) {
+        loadCategoriesDepenses().then(() => {
+            showAddParticipantModalInternal();
+        });
+    } else {
+        showAddParticipantModalInternal();
+    }
+}
+
+function showAddParticipantModalInternal() {
+    // Réinitialiser le formulaire
+    document.getElementById('addParticipantForm').reset();
+    document.getElementById('participantDepensesList').innerHTML = '';
+    participantDepensesRows = 0;
+    
+    // Remplir la liste des participants disponibles
+    const select = document.getElementById('participantSelect');
+    select.innerHTML = '<option value="">Sélectionner un participant...</option>';
+    
+    if (participantsData.disponibles && Array.isArray(participantsData.disponibles)) {
+        participantsData.disponibles.forEach(user => {
+            const option = document.createElement('option');
+            option.value = user.id;
+            option.textContent = `${user.nom} ${user.prenom} (${user.matricule || 'N/A'})`;
+            select.appendChild(option);
+        });
+    }
+    
+    // Afficher le modal
+    const modal = new bootstrap.Modal(document.getElementById('addParticipantModal'));
+    modal.show();
+}
+
+function addParticipantDepenseRow() {
+    const container = document.getElementById('participantDepensesList');
+    const rowId = 'depenseRow_' + participantDepensesRows++;
+    
+    const row = document.createElement('div');
+    row.className = 'row mb-3 border-bottom pb-3';
+    row.id = rowId;
+    row.innerHTML = `
+        <div class="col-md-5">
+            <label class="form-label">Catégorie de dépense *</label>
+            <select class="form-select depense-categorie" required>
+                <option value="">Sélectionner...</option>
+                ${categoriesDepenses.map(cat => `<option value="${cat.id}">${cat.libelle}</option>`).join('')}
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Montant (prévu = réel) *</label>
+            <div class="input-group">
+                <input type="number" class="form-control depense-montant" min="0" step="1000" required>
+                <span class="input-group-text">FCFA</span>
+            </div>
+        </div>
+        <div class="col-md-3 d-flex align-items-end">
+            <button type="button" class="btn btn-danger btn-sm" onclick="removeParticipantDepenseRow('${rowId}')">
+                <i class="fa fa-times"></i> Supprimer
+            </button>
+        </div>
+    `;
+    container.appendChild(row);
+}
+
+function removeParticipantDepenseRow(rowId) {
+    const row = document.getElementById(rowId);
+    if (row) {
+        row.remove();
+    }
+}
+
+function ajouterParticipantAvecDepenses() {
+    const participantId = document.getElementById('participantSelect').value;
+    
+    if (!participantId) {
+        showToast('Veuillez sélectionner un participant', 'error');
+        return;
+    }
+    
+    // Récupérer les dépenses saisies
+    const depensesRows = document.querySelectorAll('#participantDepensesList .row');
+    const depenses = [];
+    
+    for (const row of depensesRows) {
+        const categorieId = row.querySelector('.depense-categorie').value;
+        const montant = row.querySelector('.depense-montant').value;
+        
+        if (categorieId && montant) {
+            depenses.push({
+                categorieId: parseInt(categorieId),
+                montant: parseFloat(montant)
+            });
+        }
+    }
+    
+    // Ajouter le participant
+    const user = participantsData.disponibles.find(u => u.id == participantId);
+    if (!user) {
+        showToast('Participant introuvable', 'error');
+        return;
+    }
+    
+    // Ajouter à la liste des nouveaux participants
+    if (!participantsData.nouveaux) {
+        participantsData.nouveaux = [];
+    }
+    
+    if (participantsData.nouveaux.find(u => u.id == participantId)) {
+        showToast('Ce participant a déjà été ajouté', 'warning');
+        return;
+    }
+    
+    participantsData.nouveaux.push(user);
+    
+    // Ajouter les dépenses pour ce participant
+    if (depenses.length > 0) {
+        depenses.forEach(depense => {
+            // Trouver ou créer la dépense dans depensesData
+            let depenseData = depensesData.find(d => d.categorieId == depense.categorieId);
+            
+            if (!depenseData) {
+                // Créer une nouvelle dépense
+                const categorie = categoriesDepenses.find(c => c.id == depense.categorieId);
+                depenseData = {
+                    id: 'new_' + Date.now() + '_' + Math.random(),
+                    categorieId: depense.categorieId,
+                    categorie: categorie ? categorie.libelle : '',
+                    montantPrevu: depense.montant,
+                    montantReel: depense.montant,
+                    allocations: []
+                };
+                depensesData.push(depenseData);
+                depenseAllocations[depenseData.id] = {};
+            } else {
+                // Mettre à jour les montants
+                const currentPrevu = parseFloat(depenseData.montantPrevu || 0);
+                const currentReel = parseFloat(depenseData.montantReel || 0);
+                depenseData.montantPrevu = currentPrevu + depense.montant;
+                depenseData.montantReel = currentReel + depense.montant;
+            }
+            
+            // Ajouter l'allocation pour ce participant
+            const key = getAllocationKey(null, participantId);
+            if (!depenseAllocations[depenseData.id][key]) {
+                depenseAllocations[depenseData.id][key] = {
+                    userMissionId: null,
+                    userId: participantId,
+                    montantPrevu: depense.montant,
+                    montantReel: depense.montant
+                };
+            } else {
+                // Ajouter au montant existant
+                const existing = depenseAllocations[depenseData.id][key];
+                existing.montantPrevu = (parseFloat(existing.montantPrevu || 0) + depense.montant).toString();
+                existing.montantReel = (parseFloat(existing.montantReel || 0) + depense.montant).toString();
+            }
+        });
+    }
+    
+    // Mettre à jour l'affichage
+    updateNouveauxParticipantsList();
+    const key = getAllocationKey(null, user.id);
+    participantLookup[key] = {
+        userMissionId: null,
+        userId: user.id,
+        nom: user.nom,
+        prenom: user.prenom,
+        statut: 'Ajouté'
+    };
+    renderParticipantExpensesUI();
+    
+    // Retirer de la liste des disponibles
+    const select = document.getElementById('nouveauxParticipants');
+    const option = select.querySelector(`option[value="${participantId}"]`);
+    if (option) {
+        option.remove();
+    }
+    
+    // Fermer le modal
+    const modal = bootstrap.Modal.getInstance(document.getElementById('addParticipantModal'));
+    if (modal) {
+        modal.hide();
+    }
+    
+    showToast('Participant ajouté avec ses dépenses', 'success');
+}
 
 function showAddDepenseModal() {
     // Charger les catégories de dépenses si pas encore fait
@@ -1285,23 +1517,26 @@ function showAddDepenseModal() {
 }
 
 function loadCategoriesDepenses() {
-    fetch('/api/categories-depenses')
+    return fetch('/api/categories-depenses')
         .then(response => response.json())
         .then(data => {
             categoriesDepenses = data;
             const select = document.getElementById('depenseCategorie');
-            select.innerHTML = '<option value="">Sélectionner une catégorie...</option>';
-            
-            data.forEach(categorie => {
-                const option = document.createElement('option');
-                option.value = categorie.id;
-                option.textContent = categorie.libelle;
-                select.appendChild(option);
-            });
+            if (select) {
+                select.innerHTML = '<option value="">Sélectionner une catégorie...</option>';
+                data.forEach(categorie => {
+                    const option = document.createElement('option');
+                    option.value = categorie.id;
+                    option.textContent = categorie.libelle;
+                    select.appendChild(option);
+                });
+            }
+            return data;
         })
         .catch(error => {
             console.error('Erreur lors du chargement des catégories:', error);
             showToast('Erreur lors du chargement des catégories', 'error');
+            throw error;
         });
 }
 

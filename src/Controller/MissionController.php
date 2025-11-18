@@ -73,6 +73,150 @@ class MissionController extends AbstractController
         return $excelExportService->exportMissionBudgetReport($missionSessions, $filters);
     }
 
+    #[Route('/create-executed', name: 'app_mission_create_executed', methods: ['GET'])]
+    #[IsGranted('ROLE_EDITEUR')]
+    public function createExecuted(): Response
+    {
+        return $this->render('mission/create_executed.html.twig');
+    }
+
+    #[Route('/create-executed', name: 'app_mission_create_executed_post', methods: ['POST'])]
+    #[IsGranted('ROLE_EDITEUR')]
+    public function createExecutedPost(Request $request, EntityManagerInterface $entityManager): JsonResponse
+    {
+        // Récupérer les données JSON
+        $data = json_decode($request->get('data'), true);
+        
+        // 1. Créer ou récupérer la Mission (modèle)
+        $mission = null;
+        if (isset($data['missionId']) && $data['missionId']) {
+            $mission = $entityManager->getRepository(Mission::class)->find($data['missionId']);
+        }
+        
+        if (!$mission) {
+            // Créer une nouvelle mission (modèle)
+            $mission = new Mission();
+            $mission->setTitre($data['titre']);
+            $mission->setDescription($data['description'] ?? null);
+            $entityManager->persist($mission);
+        }
+        
+        // 2. Créer la MissionSession (session) - NON PRÉVUE MAIS EXÉCUTÉE
+        $missionSession = new MissionSession();
+        $missionSession->setMission($mission);
+        
+        // Dates réelles (obligatoires pour une mission exécutée)
+        $missionSession->setDateReelleDebut(new \DateTime($data['dateReelleDebut']));
+        $missionSession->setDateReelleFin(new \DateTime($data['dateReelleFin']));
+        
+        // Dates prévues = dates réelles (pas de prévision, mais nécessaire pour la structure)
+        $missionSession->setDatePrevueDebut(new \DateTime($data['dateReelleDebut']));
+        $missionSession->setDatePrevueFin(new \DateTime($data['dateReelleFin']));
+        
+        // Calculer la durée réelle
+        $dateDebut = new \DateTime($data['dateReelleDebut']);
+        $dateFin = new \DateTime($data['dateReelleFin']);
+        $dureeReelle = $dateDebut->diff($dateFin)->days + 1;
+        $missionSession->setDureeReelle($dureeReelle);
+        $missionSession->setDureePrevue($dureeReelle); // Prévu = réel
+        
+        // Lieu réel
+        $missionSession->setLieuReel($data['lieuReel']);
+        $missionSession->setLieuPrevu($data['lieuReel']); // Prévu = réel
+        
+        // Récupérer le statut "non prévue mais exécutée"
+        $statutActivite = $entityManager->getRepository(\App\Entity\StatutActivite::class)->findOneBy(['code' => 'non_prevue_executee']);
+        if (!$statutActivite) {
+            return $this->json(['success' => false, 'message' => "Statut d'activité 'non_prevue_executee' introuvable"], 500);
+        }
+        $missionSession->setStatutActivite($statutActivite);
+        
+        // Direction et fonds
+        $direction = $entityManager->getRepository(\App\Entity\Direction::class)->find($data['directionId']);
+        $missionSession->setDirection($direction);
+        
+        $fonds = $entityManager->getRepository(\App\Entity\TypeFonds::class)->find($data['fondsId']);
+        $missionSession->setFonds($fonds);
+        
+        // Budget initialisé à 0 (sera mis à jour avec les dépenses)
+        $missionSession->setBudgetPrevu('0');
+        $missionSession->setBudgetReel('0');
+        $missionSession->setNotes($data['notes'] ?? null);
+        
+        $entityManager->persist($missionSession);
+        $entityManager->flush();
+        
+        // 3. Ajouter les participants
+        $userMissionsByUserId = [];
+        if (isset($data['participants']) && is_array($data['participants'])) {
+            $statutParticipe = $entityManager->getRepository(\App\Entity\StatutParticipation::class)->findOneBy(['code' => 'participe']);
+            if (!$statutParticipe) {
+                $statutParticipe = $entityManager->getRepository(\App\Entity\StatutParticipation::class)->findOneBy(['code' => 'non_prevus_participe']);
+            }
+            
+            foreach ($data['participants'] as $userId) {
+                $user = $entityManager->getRepository(User::class)->find($userId);
+                if ($user) {
+                    $userMission = new UserMission();
+                    $userMission->setUser($user);
+                    $userMission->setMissionSession($missionSession);
+                    $userMission->setStatutParticipation($statutParticipe);
+                    $entityManager->persist($userMission);
+                    $userMissionsByUserId[$user->getId()] = $userMission;
+                }
+            }
+        }
+        
+        // 4. Ajouter les dépenses réelles (prévu = réel pour une mission non prévue)
+        $totalBudgetReel = 0;
+        if (isset($data['depensesReelles']) && is_array($data['depensesReelles'])) {
+            foreach ($data['depensesReelles'] as $depenseData) {
+                $categorie = $entityManager->getRepository(\App\Entity\CategorieDepense::class)->find($depenseData['categorieId']);
+                if ($categorie) {
+                    $depenseMission = new \App\Entity\DepenseMission();
+                    $depenseMission->setMissionSession($missionSession);
+                    $depenseMission->setCategorie($categorie);
+                    // Prévu = réel pour une mission non prévue
+                    $montant = $depenseData['montant'];
+                    $depenseMission->setMontantPrevu($montant);
+                    $depenseMission->setMontantReel($montant);
+                    $entityManager->persist($depenseMission);
+                    
+                    $totalBudgetReel += (float)$montant;
+                    
+                    // Ajouter les allocations aux participants
+                    if (isset($depenseData['allocations']) && is_array($depenseData['allocations'])) {
+                        foreach ($depenseData['allocations'] as $allocationData) {
+                            $userId = $allocationData['userId'];
+                            if (isset($userMissionsByUserId[$userId])) {
+                                $userMission = $userMissionsByUserId[$userId];
+                                $allocation = new \App\Entity\DepenseMissionParticipant();
+                                $allocation->setDepenseMission($depenseMission);
+                                $allocation->setUserMission($userMission);
+                                $montantAllocation = $allocationData['montant'];
+                                $allocation->setMontantPrevu($montantAllocation);
+                                $allocation->setMontantReel($montantAllocation);
+                                $entityManager->persist($allocation);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Mettre à jour le budget
+        $missionSession->setBudgetPrevu((string)$totalBudgetReel);
+        $missionSession->setBudgetReel((string)$totalBudgetReel);
+        
+        $entityManager->flush();
+        
+        return $this->json([
+            'success' => true,
+            'message' => 'Mission exécutée (non prévue) créée avec succès',
+            'id' => $missionSession->getId()
+        ]);
+    }
+
     #[Route('/create', name: 'app_mission_create', methods: ['GET'])]
     #[IsGranted('ROLE_EDITEUR')]
     public function create(): Response
@@ -1124,14 +1268,27 @@ class MissionController extends AbstractController
                             'missionSession' => $missionSession,
                             'categorie' => $categorie
                         ]);
-
+                        
                         if ($depenseMission) {
                             $depenseMission->setMontantReel($depenseData['montant']);
+                            // Mettre à jour le montant prévu si nécessaire (pour les nouveaux participants)
+                            if (!isset($depenseData['montantPrevu'])) {
+                                $montantPrevu = (float)($depenseMission->getMontantPrevu() ?? 0);
+                                // Si le montant prévu est inférieur au montant réel, on le met à jour
+                                if ($montantPrevu < (float)$depenseData['montant']) {
+                                    $depenseMission->setMontantPrevu($depenseData['montant']);
+                                }
+                            } else {
+                                $depenseMission->setMontantPrevu($depenseData['montantPrevu']);
+                            }
                         } else {
                             // Créer une nouvelle dépense si elle n'existe pas
                             $depenseMission = new \App\Entity\DepenseMission();
                             $depenseMission->setMissionSession($missionSession);
                             $depenseMission->setCategorie($categorie);
+                            // Pour les nouvelles dépenses, prévu = réel (cas des participants non prévus)
+                            $montantPrevu = isset($depenseData['montantPrevu']) ? $depenseData['montantPrevu'] : $depenseData['montant'];
+                            $depenseMission->setMontantPrevu($montantPrevu);
                             $depenseMission->setMontantReel($depenseData['montant']);
                             $entityManager->persist($depenseMission);
                         }
