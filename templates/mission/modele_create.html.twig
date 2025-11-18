@@ -1,25 +1,25 @@
 ﻿{% extends 'base.html.twig' %}
 
-{% block title %}Nouveau modèle de mission{% endblock %}
+{% block title %}Nouveau modÃ¨le de mission{% endblock %}
 
 {% block breadcrumb %}
 <ul class="breadcrumb">
 	<li class="breadcrumb-item"><a href="{{ path('app_mission_index') }}">MISSIONS</a></li>
-	<li class="breadcrumb-item"><a href="{{ path('app_mission_modele_index') }}">Modèles</a></li>
+	<li class="breadcrumb-item"><a href="{{ path('app_mission_modele_index') }}">ModÃ¨les</a></li>
 	<li class="breadcrumb-item active">Nouveau</li>
 </ul>
 {% endblock %}
 
 {% block page_title %}
 <h1 class="page-header">
-	Créer un modèle de mission <small>Définissez le titre et la description</small>
+	CrÃ©er un modÃ¨le de mission <small>DÃ©finissez le titre et la description</small>
 </h1>
 {% endblock %}
 
 {% block buttons %}
 <div class="d-flex gap-2">
 	<a href="{{ path('app_mission_modele_index') }}" class="btn btn-outline-secondary btn-sm">
-		<i class="fa fa-arrow-left"></i> Retour à la liste
+		<i class="fa fa-arrow-left"></i> Retour Ã  la liste
 	</a>
 </div>
 {% endblock %}
@@ -36,19 +36,14 @@
 					</div>
 					<div class="mb-3">
 						<label for="modeleDescription" class="form-label">Description</label>
-						<textarea class="form-control" id="modeleDescription" name="description" rows="6" placeholder="Décrivez brièvement le contexte ou les objectifs de la mission"></textarea>
+						<textarea class="form-control" id="modeleDescription" name="description" rows="6" placeholder="DÃ©crivez briÃ¨vement le contexte ou les objectifs de la mission"></textarea>
 					</div>
 					<div class="d-flex justify-content-end gap-2">
 						<button type="reset" class="btn btn-outline-secondary btn-sm">
-							<i class="fa fa-ban"></i> Réinitialiser
+							<i class="fa fa-ban"></i> RÃ©initialiser
 						</button>
 						<button type="submit" class="btn btn-primary btn-sm">
-							<span class="btn-text">
-								<i class="fa fa-save"></i> Enregistrer
-							</span>
-							<span class="btn-spinner d-none">
-								<i class="fa fa-spinner fa-spin me-1"></i> Enregistrement...
-							</span>
+							<i class="fa fa-save"></i> Enregistrer
 						</button>
 					</div>
 				</form>
@@ -61,7 +56,7 @@
 	<div id="modeleToast" class="toast align-items-center text-bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
 		<div class="d-flex">
 			<div class="toast-body" id="modeleToastMessage">
-				Opération effectuée.
+				OpÃ©ration effectuÃ©e.
 			</div>
 			<button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Fermer"></button>
 		</div>
@@ -69,78 +64,82 @@
 </div>
 {% endblock %}
 
+
 {% block javascripts %}
 <script>
 function showModeleToast(message, success = true) {
-	const toastEl = document.getElementById('modeleToast');
-	const toastMessage = document.getElementById('modeleToastMessage');
-	if (!toastEl || !toastMessage) {
-		alert(message);
-		return;
-	}
-	toastMessage.textContent = message;
-	toastEl.classList.toggle('text-bg-danger', !success);
-	toastEl.classList.toggle('text-bg-success', success);
-	const toast = new bootstrap.Toast(toastEl);
-	toast.show();
+    const toastEl = document.getElementById('modeleToast');
+    const toastMessage = document.getElementById('modeleToastMessage');
+
+    if (!toastEl || !toastMessage) {
+        alert(message);
+        return;
+    }
+
+    toastMessage.textContent = message;
+    toastEl.classList.toggle('text-bg-danger', !success);
+    toastEl.classList.toggle('text-bg-success', success);
+
+    if (typeof bootstrap !== 'undefined' && bootstrap.Toast) {
+        new bootstrap.Toast(toastEl).show();
+    }
 }
 
 function submitMissionModele(event) {
-	event.preventDefault();
+    event?.preventDefault();
 
-	const titre = document.getElementById('modeleTitre').value.trim();
-	const description = document.getElementById('modeleDescription').value.trim();
+    const titre = document.getElementById('modeleTitre')?.value.trim() || '';
+    const description = document.getElementById('modeleDescription')?.value.trim() || '';
 
-	if (!titre) {
-		showModeleToast('Le titre est obligatoire.', false);
-		return;
-	}
+    if (!titre) {
+        showModeleToast('Le titre est obligatoire.', false);
+        return;
+    }
 
-	const form = document.getElementById('missionModeleForm');
-	const submitBtn = form ? form.querySelector('button[type="submit"]') : null;
-	const btnText = submitBtn ? submitBtn.querySelector('.btn-text') : null;
-	const btnSpinner = submitBtn ? submitBtn.querySelector('.btn-spinner') : null;
-	const toggleButtonState = (isLoading) => {
-		if (!submitBtn || !btnText || !btnSpinner) {
-			return;
-		}
-		submitBtn.disabled = isLoading;
-		btnText.classList.toggle('d-none', isLoading);
-		btnSpinner.classList.toggle('d-none', !isLoading);
-	};
+    const form = document.getElementById('missionModeleForm');
+    const submitBtn = form?.querySelector('button[type="submit"]');
+    const originalHtml = submitBtn?.innerHTML;
 
-	toggleButtonState(true);
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fa fa-spinner fa-spin me-1"></i>Enregistrement...';
+    }
 
-	fetch("{{ path('app_mission_modele_store') }}", {
-		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			'X-Requested-With': 'XMLHttpRequest'
-		},
-		body: JSON.stringify({
-			titre,
-			description: description || null
-		})
-	})
-	.then(response => response.json().then(data => ({ ok: response.ok, data })))
-	.then(({ ok, data }) => {
-		if (!ok) {
-			throw new Error(data.message || "Impossible d'enregistrer le modèle.");
-		}
+    fetch(`{{ path('app_mission_modele_store') }}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({
+            titre,
+            description: description || null
+        })
+    })
+    .then(response => response.json().then(data => ({ ok: response.ok, data })))
+    .then(({ ok, data }) => {
+        if (!ok) throw new Error(data.message || "Impossible d'enregistrer le modèle.");
 
-		const successMessage = data && data.message ? data.message : 'Modèle enregistré avec succès.';
-		showModeleToast(successMessage);
-		setTimeout(() => {
-			window.location.href = "{{ path('app_mission_modele_index') }}";
-		}, 800);
-	})
-	.catch(error => {
-		console.error('Erreur lors de la création du modèle de mission :', error);
-		showModeleToast(error.message, false);
-	})
-	.finally(() => {
-		toggleButtonState(false);
-	});
+        showModeleToast(data.message || 'Modèle enregistré avec succès.');
+        
+        setTimeout(() => {
+            window.location.href = `{{ path('app_mission_modele_index') }}`;
+        }, 800);
+    })
+    .catch(error => {
+        console.error('Erreur lors de la création du modèle de mission :', error);
+        showModeleToast(error.message, false);
+    })
+    .finally(() => {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalHtml;
+        }
+    });
 }
 </script>
+
 {% endblock %}
+
+
+
