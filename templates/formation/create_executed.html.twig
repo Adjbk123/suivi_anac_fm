@@ -36,12 +36,24 @@
 					</div>
 				</div>
 
+				<!-- Étapes de progression -->
+				<div class="mb-4">
+					<div class="progress" style="height: 4px;">
+						<div class="progress-bar" id="progressBar" role="progressbar" style="width: 33%;" aria-valuenow="33" aria-valuemin="0" aria-valuemax="100"></div>
+					</div>
+					<div class="d-flex justify-content-between mt-2">
+						<span class="step-indicator active" data-step="1">1. Informations générales</span>
+						<span class="step-indicator" data-step="2">2. Participants & Dépenses</span>
+						<span class="step-indicator" data-step="3">3. Récapitulatif</span>
+					</div>
+				</div>
+
 				<form id="formationExecutedForm" novalidate>
 					<input type="hidden" id="formationId" name="formationId">
 					
-					<!-- Informations générales -->
-					<div class="mb-4">
-						<h5 class="mb-3"><i class="fa fa-info-circle text-primary"></i> Informations générales</h5>
+					<!-- Étape 1 : Informations générales -->
+					<div class="step-content" id="step1">
+						<h4 class="mb-3"><i class="fa fa-info-circle text-primary"></i> Informations générales</h4>
 						
 						<div class="row">
 							<div class="col-md-6">
@@ -59,6 +71,7 @@
 									<select class="form-select" id="directionId" required>
 										<option value="">Choisir une direction</option>
 									</select>
+									<div class="form-text text-muted">Sélectionnez une direction pour voir ses utilisateurs à l'étape suivante</div>
 								</div>
 							</div>
 						</div>
@@ -100,44 +113,63 @@
 							<textarea class="form-control" id="notes" rows="3"></textarea>
 						</div>
 					</div>
-					
-					<hr>
-					
-					<!-- Participants -->
-					<div class="mb-4">
-						<h5 class="mb-3"><i class="fa fa-users text-primary"></i> Participants</h5>
-						<div class="mb-3">
-							<label for="participantsSelect" class="form-label">Participants <span class="text-danger">*</span></label>
-							<select class="form-select" id="participantsSelect" multiple size="8" required>
-								<option value="">Chargement...</option>
-							</select>
-							<div class="form-text text-muted">Maintenez Ctrl (Windows) ou Cmd (Mac) pour sélectionner plusieurs participants</div>
+
+					<!-- Étape 2 : Participants avec dépenses -->
+					<div class="step-content d-none" id="step2">
+						<h4 class="mb-3"><i class="fa fa-users text-primary"></i> Participants & Dépenses</h4>
+
+						<div class="alert alert-info mb-3">
+							<i class="fa fa-info-circle me-2"></i>
+							Les collaborateurs proposés proviennent de la direction sélectionnée à l'étape précédente. Sélectionnez les participants et renseignez leurs dépenses par catégorie.
 						</div>
-						<div id="selectedParticipantsList" class="mb-3">
-							<!-- Liste des participants sélectionnés -->
+
+						<div class="table-responsive">
+							<table class="table table-hover align-middle" id="participantsTable">
+								<thead class="table-secondary">
+									<tr>
+										<th width="60">Sélection</th>
+										<th>Nom &amp; prénom</th>
+										<th>Email</th>
+										<th>Service</th>
+									</tr>
+								</thead>
+								<tbody>
+									<tr>
+										<td colspan="4" class="text-center text-muted">Sélectionnez une direction à l'étape précédente pour charger les participants disponibles.</td>
+									</tr>
+								</tbody>
+							</table>
+						</div>
+
+						<div class="mt-3 mb-4">
+							<span class="badge bg-secondary" id="participantsCount">0 participant(s) sélectionné(s)</span>
+						</div>
+
+						<!-- Budget par participant -->
+						<div id="participantBudgetContainer" class="d-flex flex-column gap-3"></div>
+					</div>
+
+					<!-- Étape 3 : Récapitulatif -->
+					<div class="step-content d-none" id="step3">
+						<h4 class="mb-3"><i class="fa fa-check-circle text-primary"></i> Récapitulatif</h4>
+						<div id="recapContent" class="bg-light rounded p-3">
+							<!-- Contenu généré dynamiquement -->
 						</div>
 					</div>
-					
-					<hr>
-					
-					<!-- Dépenses réelles -->
-					<div class="mb-4">
-						<div class="d-flex justify-content-between align-items-center mb-3">
-							<h5 class="mb-0"><i class="fa fa-money-bill text-primary"></i> Dépenses réelles</h5>
-							<button type="button" class="btn btn-success btn-sm" onclick="addDepenseRow()">
-								<i class="fa fa-plus"></i> Ajouter une dépense
+
+					<!-- Boutons navigation -->
+					<div class="d-flex justify-content-between mt-4">
+						<button type="button" class="btn btn-secondary" id="prevBtn" onclick="previousStep()" style="display:none;">
+							<i class="fa fa-arrow-left"></i> Précédent
+						</button>
+						<div class="ms-auto">
+							<button type="button" class="btn btn-primary" id="nextBtn" onclick="nextStep()">
+								Suivant <i class="fa fa-arrow-right"></i>
+							</button>
+							<button type="button" class="btn btn-success" id="submitBtn" style="display:none;" onclick="submitForm()">
+								<i class="fa fa-check"></i> Créer la formation exécutée
 							</button>
 						</div>
-						<div id="depensesList">
-							<!-- Les dépenses seront ajoutées dynamiquement -->
-						</div>
-					</div>
-					
-					<div class="d-flex justify-content-end gap-2">
-						<a href="{{ path('app_formation_index') }}" class="btn btn-secondary">Annuler</a>
-						<button type="button" class="btn btn-success" onclick="submitForm()">
-							<i class="fa fa-check"></i> Créer la formation exécutée
-						</button>
 					</div>
 				</form>
 			</div>
@@ -146,28 +178,60 @@
 </div>
 {% endblock %}
 
+{% block stylesheets %}
+<style>
+.step-indicator {
+    font-size: 0.9rem;
+    color: #6c757d;
+    cursor: pointer;
+    padding: 5px 10px;
+    border-radius: 15px;
+    transition: all 0.3s ease;
+}
+
+.step-indicator.active {
+    background-color: #007bff;
+    color: white;
+}
+
+.step-indicator.completed {
+    background-color: #28a745;
+    color: white;
+}
+
+.step-content {
+    min-height: 400px;
+}
+</style>
+{% endblock %}
+
 {% block javascripts %}
 <script>
+let currentStep = 1;
+const totalSteps = 3;
 let formationModeles = [];
 let directions = [];
 let fonds = [];
 let categoriesDepenses = [];
-let users = [];
-let depensesRows = 0;
+let participantsDisponibles = [];
+let selectedParticipants = new Map();
+let participantBudgets = new Map(); // Map<userId, Map<categorieId, montant>>
 
-document.addEventListener('DOMContentLoaded', function() {
-	Promise.all([
-		loadFormationModeles(),
-		loadDirections(),
-		loadFonds(),
-		loadCategoriesDepenses(),
-		loadUsers()
-	]).then(() => {
-		populateSelects();
-	}).catch(error => {
-		console.error('Erreur lors du chargement:', error);
-		showToast('Erreur lors du chargement des données', 'error');
-	});
+document.addEventListener('DOMContentLoaded', async function() {
+	try {
+		await Promise.all([
+			loadFormationModeles(),
+			loadDirections(),
+			loadFonds(),
+			loadCategoriesDepenses()
+		]);
+	} catch (error) {
+		console.error('Erreur de chargement des données de base :', error);
+		showToast('Impossible de charger certaines données initiales.', 'error');
+	}
+
+	setupEventListeners();
+	updateStepDisplay();
 });
 
 function loadFormationModeles() {
@@ -175,6 +239,15 @@ function loadFormationModeles() {
 		.then(response => response.json())
 		.then(data => {
 			formationModeles = data || [];
+			const select = document.getElementById('formationModeleId');
+			if (!select) return;
+			select.innerHTML = '<option value="">Sélectionner une formation</option>';
+			formationModeles.forEach(formation => {
+				const option = document.createElement('option');
+				option.value = formation.id;
+				option.textContent = formation.titre;
+				select.appendChild(option);
+			});
 		});
 }
 
@@ -183,6 +256,15 @@ function loadDirections() {
 		.then(response => response.json())
 		.then(data => {
 			directions = data || [];
+			const select = document.getElementById('directionId');
+			if (!select) return;
+			select.innerHTML = '<option value="">Choisir une direction</option>';
+			directions.forEach(direction => {
+				const option = document.createElement('option');
+				option.value = direction.id;
+				option.textContent = direction.libelle;
+				select.appendChild(option);
+			});
 		});
 }
 
@@ -191,6 +273,15 @@ function loadFonds() {
 		.then(response => response.json())
 		.then(data => {
 			fonds = data || [];
+			const select = document.getElementById('fondsId');
+			if (!select) return;
+			select.innerHTML = '<option value="">Choisir le type de fonds</option>';
+			fonds.forEach(fond => {
+				const option = document.createElement('option');
+				option.value = fond.id;
+				option.textContent = fond.libelle;
+				select.appendChild(option);
+			});
 		});
 }
 
@@ -202,283 +293,537 @@ function loadCategoriesDepenses() {
 		});
 }
 
-function loadUsers() {
-	return fetch('/api/users')
+function setupEventListeners() {
+	const directionSelect = document.getElementById('directionId');
+	if (directionSelect) {
+		directionSelect.addEventListener('change', handleDirectionChange);
+	}
+
+	document.querySelectorAll('.step-indicator').forEach(indicator => {
+		indicator.addEventListener('click', () => {
+			const target = parseInt(indicator.getAttribute('data-step'), 10);
+			if (!isNaN(target) && target <= currentStep) {
+				currentStep = target;
+				updateStepDisplay();
+				// Si on passe à l'étape 2, charger les participants si une direction est sélectionnée
+				if (target === 2) {
+					const directionId = document.getElementById('directionId').value;
+					if (directionId) {
+						loadParticipantsForDirection(directionId);
+					}
+				}
+			}
+		});
+	});
+}
+
+function handleDirectionChange(event) {
+	const directionId = event.target.value;
+	
+	// Si on est à l'étape 2, recharger les participants
+	if (currentStep === 2) {
+		selectedParticipants.clear();
+		participantBudgets.clear();
+		updateParticipantsCount();
+		renderParticipantBudgets();
+
+		if (!directionId) {
+			participantsDisponibles = [];
+			renderParticipantsTable();
+			return;
+		}
+
+		renderParticipantsTable('loading');
+		loadParticipantsForDirection(directionId);
+	}
+}
+
+function loadParticipantsForDirection(directionId) {
+	return fetch(`/api/users-by-direction/${directionId}?pageSize=200`)
 		.then(response => response.json())
 		.then(data => {
-			users = data || [];
+			participantsDisponibles = Array.isArray(data.users) ? data.users : [];
+			renderParticipantsTable();
+		})
+		.catch(error => {
+			console.error('Erreur lors du chargement des participants :', error);
+			participantsDisponibles = [];
+			renderParticipantsTable('error');
+			showToast('Impossible de charger les participants pour cette direction.', 'error');
 		});
 }
 
-function populateSelects() {
-	const formationSelect = document.getElementById('formationModeleId');
-	formationSelect.innerHTML = '<option value="">Sélectionner une formation</option>';
-	formationModeles.forEach(formation => {
-		const option = document.createElement('option');
-		option.value = formation.id;
-		option.textContent = formation.titre;
-		formationSelect.appendChild(option);
-	});
-	
-	const directionSelect = document.getElementById('directionId');
-	directionSelect.innerHTML = '<option value="">Choisir une direction</option>';
-	directions.forEach(direction => {
-		const option = document.createElement('option');
-		option.value = direction.id;
-		option.textContent = direction.libelle;
-		directionSelect.appendChild(option);
-	});
-	
-	const fondsSelect = document.getElementById('fondsId');
-	fondsSelect.innerHTML = '<option value="">Choisir le type de fonds</option>';
-	fonds.forEach(fond => {
-		const option = document.createElement('option');
-		option.value = fond.id;
-		option.textContent = fond.libelle;
-		fondsSelect.appendChild(option);
-	});
-	
-	const participantsSelect = document.getElementById('participantsSelect');
-	participantsSelect.innerHTML = '';
-	users.forEach(user => {
-		const option = document.createElement('option');
-		option.value = user.id;
-		option.textContent = `${user.nom} ${user.prenom} (${user.matricule || 'N/A'})`;
-		participantsSelect.appendChild(option);
-	});
-	
-	participantsSelect.addEventListener('change', updateSelectedParticipantsList);
-}
+function renderParticipantsTable(state = null) {
+	const tbody = document.querySelector('#participantsTable tbody');
+	if (!tbody) return;
 
-function updateSelectedParticipantsList() {
-	const select = document.getElementById('participantsSelect');
-	const selected = Array.from(select.selectedOptions).map(opt => opt.value);
-	const container = document.getElementById('selectedParticipantsList');
-	
-	if (selected.length === 0) {
-		container.innerHTML = '';
+	if (state === 'loading') {
+		tbody.innerHTML = `
+			<tr>
+				<td colspan="4" class="text-center text-muted">
+					<i class="fa fa-spinner fa-spin me-2"></i>Chargement des participants...
+				</td>
+			</tr>
+		`;
 		return;
 	}
-	
-	container.innerHTML = '<div class="d-flex flex-wrap gap-2"><strong>Participants sélectionnés :</strong> ' +
-		selected.map(userId => {
-			const user = users.find(u => u.id == userId);
-			return user ? `<span class="badge bg-primary">${user.nom} ${user.prenom}</span>` : '';
-		}).filter(Boolean).join(' ') + '</div>';
+
+	const directionSelect = document.getElementById('directionId');
+	const directionId = directionSelect ? directionSelect.value : '';
+
+	if (!directionId) {
+		tbody.innerHTML = `
+			<tr>
+				<td colspan="4" class="text-center text-muted">
+					Sélectionnez une direction pour afficher les participants disponibles.
+				</td>
+			</tr>
+		`;
+		updateParticipantsCount();
+		return;
+	}
+
+	if (state === 'error') {
+		tbody.innerHTML = `
+			<tr>
+				<td colspan="4" class="text-center text-danger">
+					Une erreur est survenue lors du chargement des participants.
+				</td>
+			</tr>
+		`;
+		updateParticipantsCount();
+		return;
+	}
+
+	if (!participantsDisponibles.length) {
+		tbody.innerHTML = `
+			<tr>
+				<td colspan="4" class="text-center text-muted">
+					Aucun collaborateur disponible pour cette direction.
+				</td>
+			</tr>
+		`;
+		updateParticipantsCount();
+		return;
+	}
+
+	const rows = participantsDisponibles.map(user => {
+		const userId = Number(user.id);
+		const checkboxId = `participant-${userId}`;
+		const nom = [user.nom, user.prenom].filter(Boolean).join(' ') || '-';
+		const email = user.email || '-';
+		const service = user.service || '-';
+		const isChecked = selectedParticipants.has(userId);
+
+		return `
+			<tr>
+				<td>
+					<div class="form-check">
+						<input class="form-check-input participant-checkbox" type="checkbox" value="${userId}" id="${checkboxId}" ${isChecked ? 'checked' : ''}>
+					</div>
+				</td>
+				<td>
+					<label class="form-check-label" for="${checkboxId}">
+						${nom}
+					</label>
+				</td>
+				<td>${email}</td>
+				<td>${service}</td>
+			</tr>
+		`;
+	}).join('');
+
+	tbody.innerHTML = rows;
+
+	// Attacher les événements
+	document.querySelectorAll('.participant-checkbox').forEach(checkbox => {
+		checkbox.addEventListener('change', handleParticipantToggle);
+	});
+
+	updateParticipantsCount();
+	renderParticipantBudgets();
 }
 
-function addDepenseRow() {
-	const container = document.getElementById('depensesList');
-	const rowId = 'depenseRow_' + depensesRows++;
-	
-	const row = document.createElement('div');
-	row.className = 'card mb-3';
-	row.id = rowId;
-	row.innerHTML = `
-		<div class="card-body">
-			<div class="row align-items-end">
-				<div class="col-md-5">
-					<label class="form-label">Catégorie de dépense *</label>
-					<select class="form-select depense-categorie" required>
-						<option value="">Sélectionner...</option>
-						${categoriesDepenses.map(cat => `<option value="${cat.id}">${cat.libelle}</option>`).join('')}
-					</select>
+function handleParticipantToggle(event) {
+	const userId = Number(event.target.value);
+	const isChecked = event.target.checked;
+
+	if (isChecked) {
+		selectedParticipants.set(userId, participantsDisponibles.find(u => Number(u.id) === userId));
+		if (!participantBudgets.has(userId)) {
+			participantBudgets.set(userId, new Map());
+		}
+	} else {
+		selectedParticipants.delete(userId);
+		participantBudgets.delete(userId);
+	}
+
+	updateParticipantsCount();
+	renderParticipantBudgets();
+}
+
+function updateParticipantsCount() {
+	const count = selectedParticipants.size;
+	const badge = document.getElementById('participantsCount');
+	if (badge) {
+		badge.textContent = `${count} participant(s) sélectionné(s)`;
+		badge.className = count > 0 ? 'badge bg-success' : 'badge bg-secondary';
+	}
+}
+
+function renderParticipantBudgets() {
+	const container = document.getElementById('participantBudgetContainer');
+	if (!container) return;
+
+	if (selectedParticipants.size === 0) {
+		container.innerHTML = '<div class="alert alert-info">Sélectionnez des participants pour définir leurs dépenses.</div>';
+		return;
+	}
+
+	if (categoriesDepenses.length === 0) {
+		container.innerHTML = '<div class="alert alert-warning">Chargement des catégories de dépenses...</div>';
+		return;
+	}
+
+	let html = '<h5 class="mb-3">Dépenses par participant</h5>';
+
+	selectedParticipants.forEach((user, userId) => {
+		const userBudgets = participantBudgets.get(userId) || new Map();
+		const nom = [user.nom, user.prenom].filter(Boolean).join(' ') || 'Utilisateur';
+
+		html += `
+			<div class="card mb-3">
+				<div class="card-header bg-primary text-white">
+					<strong>${nom}</strong>
 				</div>
-				<div class="col-md-4">
-					<label class="form-label">Montant réel *</label>
-					<div class="input-group">
-						<input type="number" class="form-control depense-montant" min="0" step="1000" required>
-						<span class="input-group-text">FCFA</span>
-					</div>
-				</div>
-				<div class="col-md-3">
-					<button type="button" class="btn btn-danger btn-sm w-100" onclick="removeDepenseRow('${rowId}')">
-						<i class="fa fa-times"></i> Supprimer
-					</button>
-				</div>
-			</div>
-			<div class="row mt-3">
-				<div class="col-12">
-					<label class="form-label">Répartition par participant</label>
+				<div class="card-body">
 					<div class="table-responsive">
-						<table class="table table-sm table-bordered">
+						<table class="table table-sm">
 							<thead>
 								<tr>
-									<th>Participant</th>
-									<th>Montant</th>
+									<th>Catégorie de dépense</th>
+									<th width="200">Montant (prévu = réel)</th>
 								</tr>
 							</thead>
-							<tbody id="depenseAllocations_${rowId}">
-								<!-- Les allocations seront ajoutées dynamiquement -->
+							<tbody id="budgetRows_${userId}">
+								${categoriesDepenses.map(cat => {
+									const montant = userBudgets.get(Number(cat.id)) || '';
+									return `
+										<tr>
+											<td>${cat.libelle}</td>
+											<td>
+												<div class="input-group input-group-sm">
+													<input type="number" class="form-control budget-input" 
+														data-user-id="${userId}" 
+														data-categorie-id="${cat.id}" 
+														value="${montant}" 
+														min="0" step="1000" 
+														placeholder="0">
+													<span class="input-group-text">FCFA</span>
+												</div>
+											</td>
+										</tr>
+									`;
+								}).join('')}
 							</tbody>
 						</table>
-						<button type="button" class="btn btn-outline-primary btn-sm mt-2" onclick="addAllocationRow('${rowId}')">
-							<i class="fa fa-plus"></i> Ajouter une répartition
-						</button>
 					</div>
 				</div>
 			</div>
-		</div>
-	`;
-	container.appendChild(row);
-}
-
-function addAllocationRow(depenseRowId) {
-	const container = document.getElementById('depenseAllocations_' + depenseRowId);
-	const participantsSelect = document.getElementById('participantsSelect');
-	const selectedParticipants = Array.from(participantsSelect.selectedOptions).map(opt => ({
-		id: opt.value,
-		nom: opt.textContent.split('(')[0].trim()
-	}));
-	
-	if (selectedParticipants.length === 0) {
-		showToast('Veuillez d\'abord sélectionner des participants', 'warning');
-		return;
-	}
-	
-	const row = document.createElement('tr');
-	const allocationId = 'allocation_' + Date.now() + '_' + Math.random();
-	row.id = allocationId;
-	
-	let optionsHtml = '<option value="">Sélectionner...</option>';
-	selectedParticipants.forEach(participant => {
-		optionsHtml += `<option value="${participant.id}">${participant.nom}</option>`;
+		`;
 	});
-	
-	row.innerHTML = `
-		<td>
-			<select class="form-select form-select-sm allocation-participant" required>
-				${optionsHtml}
-			</select>
-		</td>
-		<td>
-			<div class="input-group input-group-sm">
-				<input type="number" class="form-control allocation-montant" min="0" step="1000" required>
-				<span class="input-group-text">FCFA</span>
+
+	container.innerHTML = html;
+
+	// Attacher les événements
+	document.querySelectorAll('.budget-input').forEach(input => {
+		input.addEventListener('input', handleBudgetChange);
+	});
+}
+
+function handleBudgetChange(event) {
+	const userId = Number(event.target.dataset.userId);
+	const categorieId = Number(event.target.dataset.categorieId);
+	const montant = parseFloat(event.target.value) || 0;
+
+	if (!participantBudgets.has(userId)) {
+		participantBudgets.set(userId, new Map());
+	}
+
+	const userBudgets = participantBudgets.get(userId);
+	if (montant > 0) {
+		userBudgets.set(categorieId, montant);
+	} else {
+		userBudgets.delete(categorieId);
+	}
+}
+
+function nextStep() {
+	if (currentStep === 1) {
+		if (!validateStep1()) {
+			return;
+		}
+		// Charger les participants de la direction sélectionnée avant de passer à l'étape 2
+		const directionId = document.getElementById('directionId').value;
+		if (directionId) {
+			renderParticipantsTable('loading');
+			loadParticipantsForDirection(directionId).then(() => {
+				currentStep++;
+				updateStepDisplay();
+			});
+		} else {
+			currentStep++;
+			updateStepDisplay();
+		}
+	} else if (currentStep === 2) {
+		if (!validateStep2()) {
+			return;
+		}
+		updateRecap();
+		currentStep++;
+		updateStepDisplay();
+	}
+}
+
+function previousStep() {
+	if (currentStep > 1) {
+		currentStep--;
+		updateStepDisplay();
+	}
+}
+
+function validateStep1() {
+	const formationId = document.getElementById('formationModeleId').value;
+	const directionId = document.getElementById('directionId').value;
+	const fondsId = document.getElementById('fondsId').value;
+	const lieuReel = document.getElementById('lieuReel').value;
+	const dateReelleDebut = document.getElementById('dateReelleDebut').value;
+	const dateReelleFin = document.getElementById('dateReelleFin').value;
+
+	if (!formationId) {
+		showToast('Veuillez sélectionner une formation', 'error');
+		return false;
+	}
+
+	if (!directionId) {
+		showToast('Veuillez sélectionner une direction', 'error');
+		return false;
+	}
+
+	if (!fondsId) {
+		showToast('Veuillez sélectionner un type de fonds', 'error');
+		return false;
+	}
+
+	if (!lieuReel) {
+		showToast('Veuillez renseigner le lieu réel', 'error');
+		return false;
+	}
+
+	if (!dateReelleDebut || !dateReelleFin) {
+		showToast('Veuillez renseigner les dates réelles', 'error');
+		return false;
+	}
+
+	if (new Date(dateReelleDebut) > new Date(dateReelleFin)) {
+		showToast('La date de début ne peut pas être postérieure à la date de fin', 'error');
+		return false;
+	}
+
+	return true;
+}
+
+function validateStep2() {
+	if (selectedParticipants.size === 0) {
+		showToast('Veuillez sélectionner au moins un participant', 'error');
+		return false;
+	}
+
+	return true;
+}
+
+function updateStepDisplay() {
+	// Masquer toutes les étapes
+	for (let i = 1; i <= totalSteps; i++) {
+		const stepContent = document.getElementById(`step${i}`);
+		const stepIndicator = document.querySelector(`.step-indicator[data-step="${i}"]`);
+		
+		if (stepContent) {
+			stepContent.classList.toggle('d-none', i !== currentStep);
+		}
+		
+		if (stepIndicator) {
+			stepIndicator.classList.remove('active', 'completed');
+			if (i < currentStep) {
+				stepIndicator.classList.add('completed');
+			} else if (i === currentStep) {
+				stepIndicator.classList.add('active');
+			}
+		}
+	}
+
+	// Mettre à jour la barre de progression
+	const progressBar = document.getElementById('progressBar');
+	if (progressBar) {
+		const progress = (currentStep / totalSteps) * 100;
+		progressBar.style.width = progress + '%';
+		progressBar.setAttribute('aria-valuenow', progress);
+	}
+
+	// Afficher/masquer les boutons
+	const prevBtn = document.getElementById('prevBtn');
+	const nextBtn = document.getElementById('nextBtn');
+	const submitBtn = document.getElementById('submitBtn');
+
+	if (prevBtn) {
+		prevBtn.style.display = currentStep > 1 ? 'block' : 'none';
+	}
+
+	if (nextBtn) {
+		nextBtn.style.display = currentStep < totalSteps ? 'block' : 'none';
+	}
+
+	if (submitBtn) {
+		submitBtn.style.display = currentStep === totalSteps ? 'block' : 'none';
+	}
+}
+
+function updateRecap() {
+	const container = document.getElementById('recapContent');
+	if (!container) return;
+
+	const directionId = document.getElementById('directionId').value;
+	const direction = directions.find(d => d.id == directionId);
+	const formationId = document.getElementById('formationModeleId').value;
+	const formation = formationModeles.find(f => f.id == formationId);
+	const fondsId = document.getElementById('fondsId').value;
+	const fondsSelected = fonds.find(f => f.id == fondsId);
+	const lieuReel = document.getElementById('lieuReel').value;
+	const dateReelleDebut = document.getElementById('dateReelleDebut').value;
+	const dateReelleFin = document.getElementById('dateReelleFin').value;
+	const notes = document.getElementById('notes').value;
+
+	// Calculer le total des dépenses
+	let totalDepenses = 0;
+	participantBudgets.forEach((userBudgets) => {
+		userBudgets.forEach((montant) => {
+			totalDepenses += montant;
+		});
+	});
+
+	// Calculer la durée
+	let duree = 0;
+	if (dateReelleDebut && dateReelleFin) {
+		const debut = new Date(dateReelleDebut);
+		const fin = new Date(dateReelleFin);
+		duree = Math.ceil((fin - debut) / (1000 * 60 * 60 * 24)) + 1;
+	}
+
+	container.innerHTML = `
+		<div class="row">
+			<div class="col-md-6">
+				<h6>Formation</h6>
+				<p><strong>Modèle :</strong> ${formation ? formation.titre : 'Non sélectionné'}</p>
+				<p><strong>Direction :</strong> ${direction ? direction.libelle : 'Non sélectionnée'}</p>
+				<p><strong>Type de fonds :</strong> ${fondsSelected ? fondsSelected.libelle : 'Non sélectionné'}</p>
 			</div>
-		</td>
-		<td>
-			<button type="button" class="btn btn-danger btn-sm" onclick="removeAllocationRow('${allocationId}')">
-				<i class="fa fa-times"></i>
-			</button>
-		</td>
+			<div class="col-md-6">
+				<h6>Dates & Lieu</h6>
+				<p><strong>Date début :</strong> ${dateReelleDebut || 'Non renseigné'}</p>
+				<p><strong>Date fin :</strong> ${dateReelleFin || 'Non renseigné'}</p>
+				<p><strong>Durée :</strong> ${duree} jour(s)</p>
+				<p><strong>Lieu réel :</strong> ${lieuReel || 'Non renseigné'}</p>
+			</div>
+		</div>
+		<hr>
+		<div class="row">
+			<div class="col-md-6">
+				<h6>Participants</h6>
+				<p><strong>Nombre :</strong> ${selectedParticipants.size}</p>
+				<ul>
+					${Array.from(selectedParticipants.values()).map(user => 
+						`<li>${[user.nom, user.prenom].filter(Boolean).join(' ')}</li>`
+					).join('')}
+				</ul>
+			</div>
+			<div class="col-md-6">
+				<h6>Budget</h6>
+				<p><strong>Total dépenses :</strong> <span class="text-primary fs-5">${formatNumber(totalDepenses)} FCFA</span></p>
+			</div>
+		</div>
+		${notes ? `<hr><div><h6>Notes</h6><p>${notes}</p></div>` : ''}
 	`;
-	container.appendChild(row);
 }
 
-function removeAllocationRow(allocationId) {
-	const row = document.getElementById(allocationId);
-	if (row) {
-		row.remove();
-	}
-}
-
-function removeDepenseRow(rowId) {
-	const row = document.getElementById(rowId);
-	if (row) {
-		row.remove();
-	}
+function formatNumber(num) {
+	return new Intl.NumberFormat('fr-FR').format(num);
 }
 
 function submitForm() {
-	const form = document.getElementById('formationExecutedForm');
-	if (!form.checkValidity()) {
-		form.reportValidity();
+	if (!validateStep2()) {
 		return;
 	}
-	
+
 	const formationId = document.getElementById('formationModeleId').value;
 	const formation = formationModeles.find(f => f.id == formationId);
-	
-	if (!formation) {
-		showToast('Veuillez sélectionner une formation', 'error');
-		return;
-	}
-	
 	const directionId = document.getElementById('directionId').value;
 	const fondsId = document.getElementById('fondsId').value;
 	const lieuReel = document.getElementById('lieuReel').value;
 	const dateReelleDebut = document.getElementById('dateReelleDebut').value;
 	const dateReelleFin = document.getElementById('dateReelleFin').value;
 	const notes = document.getElementById('notes').value;
+
+	// Construire les dépenses par catégorie avec allocations
+	const depensesByCategorie = new Map();
 	
-	if (!dateReelleDebut || !dateReelleFin) {
-		showToast('Veuillez renseigner les dates réelles', 'error');
-		return;
-	}
-	
-	if (new Date(dateReelleDebut) > new Date(dateReelleFin)) {
-		showToast('La date de début ne peut pas être postérieure à la date de fin', 'error');
-		return;
-	}
-	
-	const participantsSelect = document.getElementById('participantsSelect');
-	const participants = Array.from(participantsSelect.selectedOptions).map(opt => parseInt(opt.value));
-	
-	if (participants.length === 0) {
-		showToast('Veuillez sélectionner au moins un participant', 'error');
-		return;
-	}
-	
-	// Récupérer les dépenses
-	const depensesRows = document.querySelectorAll('#depensesList .card');
-	const depensesReelles = [];
-	
-	for (const depenseRow of depensesRows) {
-		const categorieId = depenseRow.querySelector('.depense-categorie').value;
-		const montant = depenseRow.querySelector('.depense-montant').value;
-		
-		if (!categorieId || !montant) {
-			continue;
-		}
-		
-		const depense = {
-			categorieId: parseInt(categorieId),
-			montant: parseFloat(montant).toFixed(2),
-			allocations: []
-		};
-		
-		// Récupérer les allocations
-		const allocationsTable = depenseRow.querySelector('tbody');
-		if (allocationsTable) {
-			const allocationRows = allocationsTable.querySelectorAll('tr');
-			for (const allocationRow of allocationRows) {
-				const participantId = allocationRow.querySelector('.allocation-participant').value;
-				const allocationMontant = allocationRow.querySelector('.allocation-montant').value;
-				
-				if (participantId && allocationMontant) {
-					depense.allocations.push({
-						userId: parseInt(participantId),
-						montant: parseFloat(allocationMontant).toFixed(2)
-					});
-				}
+	participantBudgets.forEach((userBudgets, userId) => {
+		userBudgets.forEach((montant, categorieId) => {
+			if (!depensesByCategorie.has(categorieId)) {
+				depensesByCategorie.set(categorieId, {
+					categorieId: categorieId,
+					montant: 0,
+					allocations: []
+				});
 			}
-		}
-		
-		depensesReelles.push(depense);
-	}
-	
+			const depense = depensesByCategorie.get(categorieId);
+			depense.montant += montant;
+			depense.allocations.push({
+				userId: userId,
+				montant: montant
+			});
+		});
+	});
+
+	const depensesReelles = Array.from(depensesByCategorie.values()).map(d => ({
+		categorieId: d.categorieId,
+		montant: d.montant.toFixed(2),
+		allocations: d.allocations.map(a => ({
+			userId: a.userId,
+			montant: a.montant.toFixed(2)
+		}))
+	}));
+
 	const formData = {
 		formationId: formationId ? parseInt(formationId) : null,
-		titre: formation.titre,
+		titre: formation ? formation.titre : '',
 		directionId: parseInt(directionId),
 		fondsId: parseInt(fondsId),
 		lieuReel: lieuReel,
 		dateReelleDebut: dateReelleDebut,
 		dateReelleFin: dateReelleFin,
 		notes: notes,
-		participants: participants,
+		participants: Array.from(selectedParticipants.keys()),
 		depensesReelles: depensesReelles
 	};
-	
+
 	const payload = new FormData();
 	payload.append('data', JSON.stringify(formData));
-	
-	const submitBtn = event.target;
+
+	const submitBtn = document.getElementById('submitBtn');
 	const originalText = submitBtn.innerHTML;
 	submitBtn.disabled = true;
 	submitBtn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Création...';
-	
+
 	fetch('{{ path('app_formation_create_executed_post') }}', {
 		method: 'POST',
 		body: payload
@@ -505,7 +850,6 @@ function submitForm() {
 }
 
 function showToast(message, type = 'info') {
-	// Utiliser SweetAlert si disponible
 	if (typeof Swal !== 'undefined') {
 		Swal.fire({
 			toast: true,
@@ -521,4 +865,3 @@ function showToast(message, type = 'info') {
 }
 </script>
 {% endblock %}
-

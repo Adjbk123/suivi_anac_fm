@@ -17,15 +17,29 @@
 {% block buttons %}
 <div class="d-flex gap-2">
 	{% if can_create_mission() %}
-	<a href="{{ path('app_mission_modele_create') }}" class="btn btn-outline-secondary btn-sm">
-		<i class="fa fa-plus"></i> Nouvelle mission
-	</a>
-	<a href="{{ path('app_mission_create') }}" class="btn btn-secondary btn-sm">
-		<i class="fa fa-plane"></i> Nouvelle session
-	</a>
-	<a href="{{ path('app_mission_create_executed') }}" class="btn btn-success btn-sm">
-		<i class="fa fa-check-circle"></i> Mission exécutée (non prévue)
-	</a>
+	<div class="dropdown">
+		<button class="btn btn-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+			<i class="fa fa-plus"></i> Nouvelle Mission
+		</button>
+		<ul class="dropdown-menu">
+			<li>
+				<a class="dropdown-item" href="{{ path('app_mission_modele_create') }}">
+					<i class="fa fa-plus text-secondary"></i> Nouvelle mission (modèle)
+				</a>
+			</li>
+			<li>
+				<a class="dropdown-item" href="{{ path('app_mission_create') }}">
+					<i class="fa fa-plane text-secondary"></i> Nouvelle session
+				</a>
+			</li>
+			<li><hr class="dropdown-divider"></li>
+			<li>
+				<a class="dropdown-item" href="{{ path('app_mission_create_executed') }}">
+					<i class="fa fa-check-circle text-success"></i> Mission exécutée (non prévue)
+				</a>
+			</li>
+		</ul>
+	</div>
 	{% endif %}
 </div>
 {% endblock %}

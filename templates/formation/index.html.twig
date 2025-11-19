@@ -18,12 +18,23 @@
 {% block buttons %}
 <div class="d-flex gap-2">
 	{% if can_create_formation() %}
-	<a href="{{ path('app_formation_create') }}" class="btn btn-secondary btn-sm">
-		<i class="fa fa-plus"></i> Nouvelle Formation
-	</a>
-	<a href="{{ path('app_formation_create_executed') }}" class="btn btn-success btn-sm">
-		<i class="fa fa-check-circle"></i> Formation exécutée (non prévue)
-	</a>
+	<div class="dropdown">
+		<button class="btn btn-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+			<i class="fa fa-plus"></i> Nouvelle Formation
+		</button>
+		<ul class="dropdown-menu">
+			<li>
+				<a class="dropdown-item" href="{{ path('app_formation_create') }}">
+					<i class="fa fa-plus text-secondary"></i> Nouvelle Formation
+				</a>
+			</li>
+			<li>
+				<a class="dropdown-item" href="{{ path('app_formation_create_executed') }}">
+					<i class="fa fa-check-circle text-success"></i> Formation exécutée (non prévue)
+				</a>
+			</li>
+		</ul>
+	</div>
 	{% endif %}
 </div>
 {% endblock %}

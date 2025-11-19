@@ -190,31 +190,6 @@
 						</div>
 					</div>
 
-					<!-- Ajouter de nouveaux participants -->
-					<div class="mb-4">
-						<h6 class="text-success">Ajouter des participants non prévus</h6>
-						<div class="row">
-							<div class="col-md-8">
-								<select class="form-select" id="nouveauxParticipants">
-									<option value="">Sélectionner un participant à ajouter...</option>
-								</select>
-							</div>
-							<div class="col-md-4">
-								<button type="button" class="btn btn-success" onclick="showAddParticipantModal()">
-									<i class="fa fa-plus"></i> Ajouter avec dépenses
-								</button>
-								<button type="button" class="btn btn-outline-success mt-2" onclick="ajouterParticipant()" style="width: 100%;">
-									<i class="fa fa-plus"></i> Ajouter sans dépenses
-								</button>
-							</div>
-						</div>
-						<div class="mt-3">
-							<div id="nouveauxParticipantsList">
-								<!-- Liste des nouveaux participants ajoutés -->
-							</div>
-						</div>
-					</div>
-
 					<div class="d-flex justify-content-between mt-4">
 						<button type="button" class="btn btn-secondary" onclick="prevStep(1)">
 							<i class="fa fa-arrow-left"></i> Précédent
@@ -293,7 +268,6 @@
 								</div>
 								<div class="card-body">
 									<p><strong>Participants prévus :</strong> <span id="recapParticipantsPrevus"></span></p>
-									<p><strong>Nouveaux participants :</strong> <span id="recapNouveauxParticipants"></span></p>
 									<p><strong>Total participants :</strong> <span id="recapTotalParticipants"></span></p>
 									<p><strong>Participants présents :</strong> <span id="recapParticipantsPresents"></span></p>
 								</div>
@@ -364,43 +338,6 @@
 	</div>
 </div>
 
-<!-- Modal pour ajouter un participant avec dépenses -->
-<div class="modal fade" id="addParticipantModal" tabindex="-1" aria-labelledby="addParticipantModalLabel" aria-hidden="true">
-	<div class="modal-dialog modal-lg">
-		<div class="modal-content">
-			<div class="modal-header">
-				<h5 class="modal-title" id="addParticipantModalLabel">
-					<i class="fa fa-user-plus text-success"></i> Ajouter un participant avec dépenses
-				</h5>
-				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-			</div>
-			<div class="modal-body">
-				<form id="addParticipantForm">
-					<div class="mb-3">
-						<label for="participantSelect" class="form-label">Participant *</label>
-						<select class="form-select" id="participantSelect" required>
-							<option value="">Sélectionner un participant...</option>
-						</select>
-					</div>
-					<hr>
-					<h6 class="mb-3">Dépenses du participant</h6>
-					<div id="participantDepensesList">
-						<!-- Les dépenses seront ajoutées dynamiquement -->
-					</div>
-					<button type="button" class="btn btn-outline-primary btn-sm" onclick="addParticipantDepenseRow()">
-						<i class="fa fa-plus"></i> Ajouter une dépense
-					</button>
-				</form>
-			</div>
-			<div class="modal-footer">
-				<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-				<button type="button" class="btn btn-success" onclick="ajouterParticipantAvecDepenses()">
-					<i class="fa fa-check"></i> Ajouter le participant
-				</button>
-			</div>
-		</div>
-	</div>
-</div>
 
 {% endblock %}
 
@@ -557,7 +494,6 @@ function loadParticipants() {
         .then(data => {
             console.log('Données participants reçues:', data);
             participantsData = data;
-            participantsData.nouveaux = participantsData.nouveaux || [];
             participantLookup = {};
             
             const tbody = document.querySelector('#participantsTable tbody');
@@ -570,7 +506,7 @@ function loadParticipants() {
             }
             
             if (data.prevus.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Aucun participant prévu pour cette mission. Vous pouvez en ajouter dans la section ci-dessous.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Aucun participant prévu pour cette mission.</td></tr>';
             }
             
             data.prevus.forEach(participant => {
@@ -608,18 +544,6 @@ function loadParticipants() {
                     statut: participant.statut_libelle || 'Prévu'
                 };
             });
-            
-            const select = document.getElementById('nouveauxParticipants');
-            select.innerHTML = '<option value="">Sélectionner un participant à ajouter...</option>';
-            
-            if (data.disponibles && Array.isArray(data.disponibles)) {
-                data.disponibles.forEach(user => {
-                    const option = document.createElement('option');
-                    option.value = user.id;
-                    option.textContent = `${user.nom} ${user.prenom} (${user.matricule || 'N/A'})`;
-                    select.appendChild(option);
-                });
-            }
 
             participantsLoaded = true;
             if (depensesLoaded) {
@@ -1054,83 +978,6 @@ function updateParticipantStatut(userMissionId, statutId) {
     }
 }
 
-function ajouterParticipant() {
-    const select = document.getElementById('nouveauxParticipants');
-    const userId = select.value;
-    
-    if (!userId) {
-        showToast('Veuillez sélectionner un participant', 'error');
-        return;
-    }
-    
-    const user = participantsData.disponibles.find(u => u.id == userId);
-    if (!user) return;
-    
-    // Ajouter à la liste des nouveaux participants
-    if (!participantsData.nouveaux) {
-        participantsData.nouveaux = [];
-    }
-    
-    if (!participantsData.nouveaux.find(u => u.id == userId)) {
-        participantsData.nouveaux.push(user);
-        
-        const key = getAllocationKey(null, user.id);
-        participantLookup[key] = {
-            userMissionId: null,
-            userId: user.id,
-            nom: user.nom,
-            prenom: user.prenom,
-            statut: 'Ajouté'
-        };
-        
-        updateNouveauxParticipantsList();
-        renderParticipantExpensesUI();
-        
-        const option = select.querySelector(`option[value="${userId}"]`);
-        option.remove();
-        select.value = '';
-        
-        showToast('Participant ajouté avec succès', 'success');
-    } else {
-        showToast('Ce participant a déjà été ajouté', 'warning');
-    }
-}
-
-function updateNouveauxParticipantsList() {
-    const container = document.getElementById('nouveauxParticipantsList');
-    container.innerHTML = '';
-    
-    if (participantsData.nouveaux && participantsData.nouveaux.length > 0) {
-        participantsData.nouveaux.forEach(user => {
-            const badge = document.createElement('span');
-            badge.className = 'badge bg-success me-2 mb-2';
-            badge.innerHTML = `${user.nom} ${user.prenom} <i class="fa fa-times ms-1" onclick="removeParticipant(${user.id})" style="cursor: pointer;"></i>`;
-            container.appendChild(badge);
-        });
-    }
-}
-
-function removeParticipant(userId) {
-    const user = participantsData.nouveaux.find(u => u.id == userId);
-    if (user) {
-        participantsData.nouveaux = participantsData.nouveaux.filter(u => u.id != userId);
-
-        removeAllocationsForParticipant(null, userId);
-        const key = getAllocationKey(null, userId);
-        delete participantLookup[key];
-        
-        // Remettre dans la liste des disponibles
-        const select = document.getElementById('nouveauxParticipants');
-        const option = document.createElement('option');
-        option.value = user.id;
-        option.textContent = `${user.nom} ${user.prenom} (${user.matricule || 'N/A'})`;
-        select.appendChild(option);
-        
-        updateNouveauxParticipantsList();
-        renderParticipantExpensesUI();
-        showToast('Participant retiré', 'info');
-    }
-}
 
 function removeAllocationsForParticipant(userMissionId, userId) {
     const key = getAllocationKey(userMissionId, userId);
@@ -1168,8 +1015,7 @@ function updateRecap() {
     
     // Participants
     const participantsPrevus = participantsData.prevus ? participantsData.prevus.length : 0;
-    const nouveauxParticipants = participantsData.nouveaux ? participantsData.nouveaux.length : 0;
-    const totalParticipants = participantsPrevus + nouveauxParticipants;
+    const totalParticipants = participantsPrevus;
     
     // Compter les participants présents (statut "participe")
     let participantsPresents = 0;
@@ -1179,12 +1025,8 @@ function updateRecap() {
             return statut && statut.code === 'participe';
         }).length;
     }
-    if (participantsData.nouveaux) {
-        participantsPresents += participantsData.nouveaux.length; // Les nouveaux participants sont considérés comme présents
-    }
     
     document.getElementById('recapParticipantsPrevus').textContent = participantsPrevus;
-    document.getElementById('recapNouveauxParticipants').textContent = nouveauxParticipants;
     document.getElementById('recapTotalParticipants').textContent = totalParticipants;
     document.getElementById('recapParticipantsPresents').textContent = participantsPresents;
     
@@ -1253,7 +1095,6 @@ function validerRealisation() {
             userMissionId: p.id,
             statut_participation_id: p.statut_participation_id
         })),
-        nouveauxParticipants: participantsData.nouveaux ? participantsData.nouveaux.map(u => u.id) : [],
         depensesReelles: (Array.isArray(depensesData) ? depensesData : [])
             .filter(d => d.montantReel)
             .map(d => {
@@ -1313,194 +1154,6 @@ function validerRealisation() {
 let categoriesDepenses = [];
 let participantDepensesRows = 0;
 
-function showAddParticipantModal() {
-    // Charger les catégories de dépenses si pas encore fait
-    if (categoriesDepenses.length === 0) {
-        loadCategoriesDepenses().then(() => {
-            showAddParticipantModalInternal();
-        });
-    } else {
-        showAddParticipantModalInternal();
-    }
-}
-
-function showAddParticipantModalInternal() {
-    // Réinitialiser le formulaire
-    document.getElementById('addParticipantForm').reset();
-    document.getElementById('participantDepensesList').innerHTML = '';
-    participantDepensesRows = 0;
-    
-    // Remplir la liste des participants disponibles
-    const select = document.getElementById('participantSelect');
-    select.innerHTML = '<option value="">Sélectionner un participant...</option>';
-    
-    if (participantsData.disponibles && Array.isArray(participantsData.disponibles)) {
-        participantsData.disponibles.forEach(user => {
-            const option = document.createElement('option');
-            option.value = user.id;
-            option.textContent = `${user.nom} ${user.prenom} (${user.matricule || 'N/A'})`;
-            select.appendChild(option);
-        });
-    }
-    
-    // Afficher le modal
-    const modal = new bootstrap.Modal(document.getElementById('addParticipantModal'));
-    modal.show();
-}
-
-function addParticipantDepenseRow() {
-    const container = document.getElementById('participantDepensesList');
-    const rowId = 'depenseRow_' + participantDepensesRows++;
-    
-    const row = document.createElement('div');
-    row.className = 'row mb-3 border-bottom pb-3';
-    row.id = rowId;
-    row.innerHTML = `
-        <div class="col-md-5">
-            <label class="form-label">Catégorie de dépense *</label>
-            <select class="form-select depense-categorie" required>
-                <option value="">Sélectionner...</option>
-                ${categoriesDepenses.map(cat => `<option value="${cat.id}">${cat.libelle}</option>`).join('')}
-            </select>
-        </div>
-        <div class="col-md-4">
-            <label class="form-label">Montant (prévu = réel) *</label>
-            <div class="input-group">
-                <input type="number" class="form-control depense-montant" min="0" step="1000" required>
-                <span class="input-group-text">FCFA</span>
-            </div>
-        </div>
-        <div class="col-md-3 d-flex align-items-end">
-            <button type="button" class="btn btn-danger btn-sm" onclick="removeParticipantDepenseRow('${rowId}')">
-                <i class="fa fa-times"></i> Supprimer
-            </button>
-        </div>
-    `;
-    container.appendChild(row);
-}
-
-function removeParticipantDepenseRow(rowId) {
-    const row = document.getElementById(rowId);
-    if (row) {
-        row.remove();
-    }
-}
-
-function ajouterParticipantAvecDepenses() {
-    const participantId = document.getElementById('participantSelect').value;
-    
-    if (!participantId) {
-        showToast('Veuillez sélectionner un participant', 'error');
-        return;
-    }
-    
-    // Récupérer les dépenses saisies
-    const depensesRows = document.querySelectorAll('#participantDepensesList .row');
-    const depenses = [];
-    
-    for (const row of depensesRows) {
-        const categorieId = row.querySelector('.depense-categorie').value;
-        const montant = row.querySelector('.depense-montant').value;
-        
-        if (categorieId && montant) {
-            depenses.push({
-                categorieId: parseInt(categorieId),
-                montant: parseFloat(montant)
-            });
-        }
-    }
-    
-    // Ajouter le participant
-    const user = participantsData.disponibles.find(u => u.id == participantId);
-    if (!user) {
-        showToast('Participant introuvable', 'error');
-        return;
-    }
-    
-    // Ajouter à la liste des nouveaux participants
-    if (!participantsData.nouveaux) {
-        participantsData.nouveaux = [];
-    }
-    
-    if (participantsData.nouveaux.find(u => u.id == participantId)) {
-        showToast('Ce participant a déjà été ajouté', 'warning');
-        return;
-    }
-    
-    participantsData.nouveaux.push(user);
-    
-    // Ajouter les dépenses pour ce participant
-    if (depenses.length > 0) {
-        depenses.forEach(depense => {
-            // Trouver ou créer la dépense dans depensesData
-            let depenseData = depensesData.find(d => d.categorieId == depense.categorieId);
-            
-            if (!depenseData) {
-                // Créer une nouvelle dépense
-                const categorie = categoriesDepenses.find(c => c.id == depense.categorieId);
-                depenseData = {
-                    id: 'new_' + Date.now() + '_' + Math.random(),
-                    categorieId: depense.categorieId,
-                    categorie: categorie ? categorie.libelle : '',
-                    montantPrevu: depense.montant,
-                    montantReel: depense.montant,
-                    allocations: []
-                };
-                depensesData.push(depenseData);
-                depenseAllocations[depenseData.id] = {};
-            } else {
-                // Mettre à jour les montants
-                const currentPrevu = parseFloat(depenseData.montantPrevu || 0);
-                const currentReel = parseFloat(depenseData.montantReel || 0);
-                depenseData.montantPrevu = currentPrevu + depense.montant;
-                depenseData.montantReel = currentReel + depense.montant;
-            }
-            
-            // Ajouter l'allocation pour ce participant
-            const key = getAllocationKey(null, participantId);
-            if (!depenseAllocations[depenseData.id][key]) {
-                depenseAllocations[depenseData.id][key] = {
-                    userMissionId: null,
-                    userId: participantId,
-                    montantPrevu: depense.montant,
-                    montantReel: depense.montant
-                };
-            } else {
-                // Ajouter au montant existant
-                const existing = depenseAllocations[depenseData.id][key];
-                existing.montantPrevu = (parseFloat(existing.montantPrevu || 0) + depense.montant).toString();
-                existing.montantReel = (parseFloat(existing.montantReel || 0) + depense.montant).toString();
-            }
-        });
-    }
-    
-    // Mettre à jour l'affichage
-    updateNouveauxParticipantsList();
-    const key = getAllocationKey(null, user.id);
-    participantLookup[key] = {
-        userMissionId: null,
-        userId: user.id,
-        nom: user.nom,
-        prenom: user.prenom,
-        statut: 'Ajouté'
-    };
-    renderParticipantExpensesUI();
-    
-    // Retirer de la liste des disponibles
-    const select = document.getElementById('nouveauxParticipants');
-    const option = select.querySelector(`option[value="${participantId}"]`);
-    if (option) {
-        option.remove();
-    }
-    
-    // Fermer le modal
-    const modal = bootstrap.Modal.getInstance(document.getElementById('addParticipantModal'));
-    if (modal) {
-        modal.hide();
-    }
-    
-    showToast('Participant ajouté avec ses dépenses', 'success');
-}
 
 function showAddDepenseModal() {
     // Charger les catégories de dépenses si pas encore fait

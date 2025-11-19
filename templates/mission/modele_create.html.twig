@@ -105,7 +105,7 @@ function submitMissionModele(event) {
         submitBtn.innerHTML = '<i class="fa fa-spinner fa-spin me-1"></i>Enregistrement...';
     }
 
-    fetch(`{{ path('app_mission_modele_store') }}`, {
+    fetch("{{ path('app_mission_modele_store')|e('js') }}", {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -118,12 +118,12 @@ function submitMissionModele(event) {
     })
     .then(response => response.json().then(data => ({ ok: response.ok, data })))
     .then(({ ok, data }) => {
-        if (!ok) throw new Error(data.message || "Impossible d'enregistrer le modèle.");
+        if (!ok) throw new Error(data.message || 'Impossible d\'enregistrer le modèle.');
 
         showModeleToast(data.message || 'Modèle enregistré avec succès.');
         
         setTimeout(() => {
-            window.location.href = `{{ path('app_mission_modele_index') }}`;
+            window.location.href = "{{ path('app_mission_modele_index')|e('js') }}";
         }, 800);
     })
     .catch(error => {
