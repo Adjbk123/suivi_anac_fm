@@ -391,7 +391,7 @@ class ReportingController extends AbstractController
         $missionSessions = array_filter($missionSessions, function($session) use ($year, $filters) {
             if (!$session->getDatePrevueDebut()) {
                 return false;
-            }
+        }
             if ($session->getDatePrevueDebut()->format('Y') != $year) {
                 return false;
             }

@@ -36,16 +36,24 @@
 						<th>Titre</th>
 						<th>Description</th>
 						<th>Créée le</th>
+						<th>Utilisé</th>
 						<th class="text-end"><i class="fa fa-cogs"></i></th>
 					</tr>
 				</thead>
 				<tbody>
 					{% for modele in modeles %}
+					{% set nbSessions = modele.sessions|length %}
+					{% set isUsed = nbSessions > 0 %}
 					<tr>
 						<td>{{ modele.id }}</td>
 						<td>{{ modele.titre }}</td>
 						<td>{{ modele.description|default('-') }}</td>
 						<td>{{ modele.createdAt ? modele.createdAt|date('d/m/Y H:i') : '-' }}</td>
+						<td>
+							<span class="badge bg-{{ isUsed ? 'info' : 'secondary' }}">
+								{{ nbSessions }} {{ nbSessions > 1 ? 'sessions' : 'session' }}
+							</span>
+						</td>
 						<td class="text-end">
 							<div class="dropdown">
 								<button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -53,7 +61,7 @@
 								</button>
 								<ul class="dropdown-menu dropdown-menu-end">
 									<li>
-										<a class="dropdown-item" href="{{ path('app_formation_show', { id: modele.id }) }}">
+										<a class="dropdown-item" href="{{ path('app_formation_modele_show', { id: modele.id }) }}">
 											<i class="fa fa-eye text-info"></i> Voir
 										</a>
 									</li>
@@ -64,9 +72,15 @@
 										</a>
 									</li>
 									<li>
+										{% if isUsed %}
+										<button type="button" class="dropdown-item text-muted" disabled title="Ce modèle est utilisé et ne peut pas être supprimé">
+											<i class="fa fa-trash"></i> Supprimer
+										</button>
+										{% else %}
 										<button type="button" class="dropdown-item text-danger" onclick="deleteFormationModele({{ modele.id }})">
 											<i class="fa fa-trash"></i> Supprimer
 										</button>
+										{% endif %}
 									</li>
 									{% endif %}
 								</ul>
@@ -75,7 +89,7 @@
 					</tr>
 					{% else %}
 						<tr>
-							<td colspan="5" class="text-center text-muted">Aucun modèle enregistré pour le moment.</td>
+							<td colspan="6" class="text-center text-muted">Aucun modèle enregistré pour le moment.</td>
 						</tr>
 					{% endfor %}
 				</tbody>
@@ -115,7 +129,7 @@ document.addEventListener('DOMContentLoaded', function () {
 			}
 		},
 		pageLength: 10,
-		order: [[1, 'asc']]
+		order: [[0, 'asc']]
 	});
 });
 

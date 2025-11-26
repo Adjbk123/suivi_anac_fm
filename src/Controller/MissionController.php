@@ -259,6 +259,14 @@ class MissionController extends AbstractController
         ], Response::HTTP_CREATED);
     }
 
+    #[Route('/modele/{id}', name: 'app_mission_modele_show', methods: ['GET'])]
+    public function showModele(Mission $mission): Response
+    {
+        return $this->render('mission/modele_show.html.twig', [
+            'mission' => $mission,
+        ]);
+    }
+
     #[Route('/modele/{id}/edit', name: 'app_mission_modele_edit', methods: ['GET'])]
     #[IsGranted('ROLE_EDITEUR')]
     public function editModele(Mission $mission): Response
@@ -268,7 +276,7 @@ class MissionController extends AbstractController
         ]);
     }
 
-    #[Route('/modele/{id}', name: 'app_mission_modele_update', methods: ['PUT'])]
+    #[Route('/modele/{id}/update', name: 'app_mission_modele_update', methods: ['PUT'])]
     #[IsGranted('ROLE_EDITEUR')]
     public function updateModele(Request $request, Mission $mission, EntityManagerInterface $entityManager): JsonResponse
     {
@@ -292,7 +300,7 @@ class MissionController extends AbstractController
         ]);
     }
 
-    #[Route('/modele/{id}', name: 'app_mission_modele_delete', methods: ['DELETE'])]
+    #[Route('/modele/{id}/delete', name: 'app_mission_modele_delete', methods: ['DELETE'])]
     #[IsGranted('ROLE_EDITEUR')]
     public function deleteModele(Mission $mission, EntityManagerInterface $entityManager): JsonResponse
     {
@@ -1218,12 +1226,10 @@ class MissionController extends AbstractController
                 $missionSession->setDureeReelle($dureeReelle);
             }
 
-            // 2. Mettre à jour le statut de l'activité selon la nature
-            $natureCode = $data['natureMission'] ?? 'prevue_executee';
-            $statutActivite = $entityManager->getRepository(\App\Entity\StatutActivite::class)->findOneBy(['code' => $natureCode]);
+            // 2. Mettre à jour le statut de l'activité automatiquement à "prévue et exécutée"
+            $statutActivite = $entityManager->getRepository(\App\Entity\StatutActivite::class)->findOneBy(['code' => 'prevue_executee']);
             if (!$statutActivite) {
-                // Fallback vers le statut par défaut si le code n'existe pas
-                $statutActivite = $entityManager->getRepository(\App\Entity\StatutActivite::class)->findOneBy(['code' => 'prevue_executee']);
+                throw new \Exception('Le statut "prevue_executee" n\'existe pas dans la base de données');
             }
             $missionSession->setStatutActivite($statutActivite);
 

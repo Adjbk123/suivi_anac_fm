@@ -137,24 +137,10 @@
 								</div>
 							</div>
 							<div class="row">
-								<div class="col-md-6">
+								<div class="col-md-12">
 									<div class="mb-3">
 										<label for="lieuReel" class="form-label">Lieu réel *</label>
 										<input type="text" class="form-control" id="lieuReel" placeholder="Lieu où s'est réellement déroulée la formation" required>
-									</div>
-								</div>
-								<div class="col-md-6">
-									<div class="mb-3">
-										<label for="natureFormation" class="form-label">Nature de la formation *</label>
-										<select class="form-select" id="natureFormation" required>
-											<option value="">Sélectionner la nature...</option>
-											<option value="prevue_executee">Prévue et exécutée</option>
-											<option value="prevue_non_executee">Prévue mais non exécutée</option>
-											<option value="non_prevue_executee">Non prévue mais exécutée</option>
-										</select>
-										<small class="form-text text-muted">
-											Précisez si cette formation était prévue et si elle a été exécutée
-										</small>
 									</div>
 								</div>
 							</div>
@@ -258,7 +244,6 @@
 									<p><strong>Date début :</strong> <span id="recapDateDebut"></span></p>
 									<p><strong>Date fin :</strong> <span id="recapDateFin"></span></p>
 									<p><strong>Lieu :</strong> <span id="recapLieu"></span></p>
-									<p><strong>Nature :</strong> <span id="recapNature"></span></p>
 									<p><strong>Durée réelle :</strong> <span id="recapDureeReelle"></span></p>
 								</div>
 							</div>
@@ -471,9 +456,8 @@ function validateCurrentStep() {
         const dateDebut = document.getElementById('dateReelleDebut').value;
         const dateFin = document.getElementById('dateReelleFin').value;
         const lieu = document.getElementById('lieuReel').value;
-        const nature = document.getElementById('natureFormation').value;
         
-        if (!dateDebut || !dateFin || !lieu || !nature) {
+        if (!dateDebut || !dateFin || !lieu) {
             showToast('Veuillez remplir tous les champs obligatoires', 'error');
             return false;
         }
@@ -986,12 +970,10 @@ function updateRecap() {
     const dateDebut = document.getElementById('dateReelleDebut').value;
     const dateFin = document.getElementById('dateReelleFin').value;
     const lieu = document.getElementById('lieuReel').value;
-    const nature = document.getElementById('natureFormation').value;
     
     document.getElementById('recapDateDebut').textContent = dateDebut || 'Non renseigné';
     document.getElementById('recapDateFin').textContent = dateFin || 'Non renseigné';
     document.getElementById('recapLieu').textContent = lieu || 'Non renseigné';
-    document.getElementById('recapNature').textContent = getNatureLabel(nature) || 'Non renseigné';
     
     // Calculer la durée réelle
     if (dateDebut && dateFin) {
@@ -1069,7 +1051,6 @@ function validerRealisation() {
         dateReelleDebut: document.getElementById('dateReelleDebut').value,
         dateReelleFin: document.getElementById('dateReelleFin').value,
         lieuReel: document.getElementById('lieuReel').value,
-        natureFormation: document.getElementById('natureFormation').value,
         participants: (Array.isArray(participantsData.prevus) ? participantsData.prevus : []).map(p => ({
             userFormationId: p.id,
             statut_participation_id: p.statut_participation_id
@@ -1145,13 +1126,13 @@ function loadCategoriesDepenses() {
             categoriesDepenses = data;
             const select = document.getElementById('depenseCategorie');
             if (select) {
-                select.innerHTML = '<option value="">Sélectionner une catégorie...</option>';
-                data.forEach(categorie => {
-                    const option = document.createElement('option');
-                    option.value = categorie.id;
-                    option.textContent = categorie.libelle;
-                    select.appendChild(option);
-                });
+            select.innerHTML = '<option value="">Sélectionner une catégorie...</option>';
+            data.forEach(categorie => {
+                const option = document.createElement('option');
+                option.value = categorie.id;
+                option.textContent = categorie.libelle;
+                select.appendChild(option);
+            });
             }
             return data;
         })
@@ -1214,14 +1195,6 @@ function addDepense() {
     });
 }
 
-function getNatureLabel(natureCode) {
-    const natureLabels = {
-        'prevue_executee': 'Prévue et exécutée',
-        'prevue_non_executee': 'Prévue mais non exécutée',
-        'non_prevue_executee': 'Non prévue mais exécutée'
-    };
-    return natureLabels[natureCode] || natureCode;
-}
 
 
 </script>

@@ -1,28 +1,28 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Détails du modèle - {{ formation.titre }}{% endblock %}
+{% block title %}Détails du modèle - {{ mission.titre }}{% endblock %}
 
 {% block breadcrumb %}
 <ul class="breadcrumb">
-	<li class="breadcrumb-item"><a href="{{ path('app_formation_index') }}">FORMATIONS</a></li>
-	<li class="breadcrumb-item"><a href="{{ path('app_formation_modele_index') }}">Modèles</a></li>
+	<li class="breadcrumb-item"><a href="{{ path('app_mission_index') }}">MISSIONS</a></li>
+	<li class="breadcrumb-item"><a href="{{ path('app_mission_modele_index') }}">Modèles</a></li>
 	<li class="breadcrumb-item active">Détails</li>
 </ul>
 {% endblock %}
 
 {% block page_title %}
 <h1 class="page-header">
-	Détails du modèle <small>{{ formation.titre }}</small>
+	Détails du modèle <small>{{ mission.titre }}</small>
 </h1>
 {% endblock %}
 
 {% block buttons %}
 <div class="d-flex gap-2">
-	<a href="{{ path('app_formation_modele_index') }}" class="btn btn-outline-secondary btn-sm">
+	<a href="{{ path('app_mission_modele_index') }}" class="btn btn-outline-secondary btn-sm">
 		<i class="fa fa-arrow-left"></i> Retour à la liste
 	</a>
-	{% if can_create_formation() %}
-	<a href="{{ path('app_formation_modele_edit', { id: formation.id }) }}" class="btn btn-warning btn-sm">
+	{% if can_create_mission() %}
+	<a href="{{ path('app_mission_modele_edit', { id: mission.id }) }}" class="btn btn-warning btn-sm">
 		<i class="fa fa-edit"></i> Modifier
 	</a>
 	{% endif %}
@@ -39,19 +39,20 @@
 			<div class="card-body">
 				<dl class="row mb-0">
 					<dt class="col-sm-3">Titre :</dt>
-					<dd class="col-sm-9">{{ formation.titre }}</dd>
+					<dd class="col-sm-9">{{ mission.titre }}</dd>
 
 					<dt class="col-sm-3">Description :</dt>
-					<dd class="col-sm-9">{{ formation.description|default('-')|nl2br }}</dd>
+					<dd class="col-sm-9">{{ mission.description|default('-')|nl2br }}</dd>
 
 					<dt class="col-sm-3">Créé le :</dt>
-					<dd class="col-sm-9">{{ formation.createdAt ? formation.createdAt|date('d/m/Y à H:i') : '-' }}</dd>
+					<dd class="col-sm-9">{{ mission.createdAt ? mission.createdAt|date('d/m/Y à H:i') : '-' }}</dd>
 
 					<dt class="col-sm-3">Nombre de sessions :</dt>
-					<dd class="col-sm-9">{{ formation.sessions|length }}</dd>
+					<dd class="col-sm-9">{{ mission.sessions|length }}</dd>
 				</dl>
 			</div>
 		</div>
 	</div>
 </div>
 {% endblock %}
+

@@ -258,6 +258,14 @@ class FormationController extends AbstractController
         ], Response::HTTP_CREATED);
     }
 
+    #[Route('/modele/{id}', name: 'app_formation_modele_show', methods: ['GET'])]
+    public function showModele(Formation $formation): Response
+    {
+        return $this->render('formation/modele_show.html.twig', [
+            'formation' => $formation,
+        ]);
+    }
+
     #[Route('/modele/{id}/edit', name: 'app_formation_modele_edit', methods: ['GET'])]
     #[IsGranted('ROLE_EDITEUR')]
     public function editModele(Formation $formation): Response
@@ -267,7 +275,7 @@ class FormationController extends AbstractController
         ]);
     }
 
-    #[Route('/modele/{id}', name: 'app_formation_modele_update', methods: ['PUT'])]
+    #[Route('/modele/{id}/update', name: 'app_formation_modele_update', methods: ['PUT'])]
     #[IsGranted('ROLE_EDITEUR')]
     public function updateModele(Request $request, Formation $formation, EntityManagerInterface $entityManager): JsonResponse
     {
@@ -291,7 +299,7 @@ class FormationController extends AbstractController
         ]);
     }
 
-    #[Route('/modele/{id}', name: 'app_formation_modele_delete', methods: ['DELETE'])]
+    #[Route('/modele/{id}/delete', name: 'app_formation_modele_delete', methods: ['DELETE'])]
     #[IsGranted('ROLE_EDITEUR')]
     public function deleteModele(Formation $formation, EntityManagerInterface $entityManager): JsonResponse
     {
@@ -1307,12 +1315,10 @@ class FormationController extends AbstractController
                 $formationSession->setDureeReelle($dureeReelle);
             }
             
-            // 2. Mettre à jour le statut de l'activité selon la nature
-            $natureCode = $data['natureFormation'] ?? 'prevue_executee';
-            $statutActivite = $entityManager->getRepository(\App\Entity\StatutActivite::class)->findOneBy(['code' => $natureCode]);
+            // 2. Mettre à jour le statut de l'activité automatiquement à "prévue et exécutée"
+            $statutActivite = $entityManager->getRepository(\App\Entity\StatutActivite::class)->findOneBy(['code' => 'prevue_executee']);
             if (!$statutActivite) {
-                // Fallback vers le statut par défaut si le code n'existe pas
-                $statutActivite = $entityManager->getRepository(\App\Entity\StatutActivite::class)->findOneBy(['code' => 'prevue_executee']);
+                throw new \Exception('Le statut "prevue_executee" n\'existe pas dans la base de données');
             }
             $formationSession->setStatutActivite($statutActivite);
             

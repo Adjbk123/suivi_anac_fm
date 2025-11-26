@@ -30,7 +30,7 @@
 			<li>
 				<a class="dropdown-item" href="{{ path('app_mission_create') }}">
 					<i class="fa fa-plane text-secondary"></i> Nouvelle session
-				</a>
+	</a>
 			</li>
 			<li><hr class="dropdown-divider"></li>
 			<li>
@@ -129,6 +129,7 @@
 					<table id="missionsTable" class="table table-hover">
 						<thead class="table-secondary">
 							<tr>
+								<th>ID</th>
 								<th>Titre</th>
 								<th>Direction</th>
 								<th>Fonds</th>
@@ -136,7 +137,7 @@
 								<th>Durée</th>
 								<th>Budget prévu</th>
 								<th>Statut</th>
-								                        <th><i class="fa fa-cogs"></i></th>
+								<th><i class="fa fa-cogs"></i></th>
 							</tr>
 						</thead>
 						<tbody>
@@ -223,6 +224,7 @@ function initializeDataTable() {
             }
         },
         columns: [
+            { data: 'id' },
             { data: 'titre' },
             { data: 'direction' },
             { data: 'fonds' },
@@ -288,6 +290,7 @@ function initializeDataTable() {
             }
         },
         responsive: true,
+        order: [[0, 'asc']],
         dom: 'Bfrtip',
         buttons: [
             { extend: 'copy', text: '<i class="fa fa-copy"></i> Copier', className: 'btn btn-sm btn-outline-secondary' },
@@ -301,7 +304,7 @@ function initializeDataTable() {
     missionsTable.on('preXhr', function() {
         $('#missionsTable tbody').html(`
             <tr>
-                <td colspan="8" class="text-center">
+                <td colspan="9" class="text-center">
                     <div class="spinner-border text-primary" role="status">
                         <span class="visually-hidden">Chargement...</span>
                     </div>
