@@ -285,6 +285,25 @@
     height: 300px;
     margin: 20px 0;
 }
+
+.no-results-message {
+    text-align: center;
+    padding: 40px 20px;
+    color: #6c757d;
+    font-size: 1rem;
+}
+
+.no-results-message i {
+    font-size: 3rem;
+    color: #dee2e6;
+    margin-bottom: 15px;
+    display: block;
+}
+
+.no-results-message p {
+    margin: 0;
+    font-weight: 500;
+}
 </style>
 {% endblock %}
 
@@ -353,11 +372,22 @@
                     <div class="col-md-4">
                         <div class="filter-section">
                             <label>Période</label>
-                            <div class="row">
-                                <div class="col-6">
+                            <select class="form-select mb-2" name="periode_type" id="periodeType">
+                                <option value="">Toutes les périodes</option>
+                                <option value="mois">Ce mois</option>
+                                <option value="trimestre">Ce trimestre</option>
+                                <option value="semestre1">1er semestre</option>
+                                <option value="semestre2">2ème semestre</option>
+                                <option value="annee">Cette année</option>
+                                <option value="personnalisee">Période personnalisée</option>
+                            </select>
+                            <div class="row" id="dateRangeContainer" style="display: none;">
+                                <div class="col-6 mb-2">
+                                    <label class="form-label small">Date début</label>
                                     <input type="date" class="form-control" name="date_debut" id="dateDebut" placeholder="Date début">
                                 </div>
-                                <div class="col-6">
+                                <div class="col-6 mb-2">
+                                    <label class="form-label small">Date fin</label>
                                     <input type="date" class="form-control" name="date_fin" id="dateFin" placeholder="Date fin">
                                 </div>
                             </div>
@@ -565,6 +595,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const exportPdfBtn = document.getElementById('exportPdf');
 
     let currentData = null;
+    let evolutionChartInstance = null; // Stocker l'instance du graphique
 
     // Charger les données des filtres au démarrage
     loadFiltersData();
@@ -585,6 +616,10 @@ document.addEventListener('DOMContentLoaded', function() {
     resetFiltersBtn.addEventListener('click', function() {
         filtersForm.reset();
         filtersForm.querySelector('[name="annee"]').value = '{{ currentYear }}';
+        if (periodeTypeSelect) {
+            periodeTypeSelect.value = '';
+            dateRangeContainer.style.display = 'none';
+        }
         setDefaultDates(); // Remettre les dates par défaut
         resultsContainer.style.display = 'none';
     });
@@ -631,6 +666,89 @@ document.addEventListener('DOMContentLoaded', function() {
         // Définir les valeurs par défaut
         document.getElementById('dateDebut').value = dateDebut;
         document.getElementById('dateFin').value = dateFin;
+    }
+
+    // Fonction pour calculer les dates selon la période sélectionnée
+    function calculatePeriodDates(periodType) {
+        const now = new Date();
+        const year = parseInt(document.getElementById('anneeSelect').value) || now.getFullYear();
+        let dateDebut, dateFin;
+
+        switch(periodType) {
+            case 'mois':
+                // Ce mois
+                const month = now.getMonth();
+                dateDebut = new Date(year, month, 1).toISOString().split('T')[0];
+                dateFin = new Date(year, month + 1, 0).toISOString().split('T')[0];
+                break;
+            
+            case 'trimestre':
+                // Ce trimestre
+                const currentQuarter = Math.floor(now.getMonth() / 3);
+                const quarterStartMonth = currentQuarter * 3;
+                dateDebut = new Date(year, quarterStartMonth, 1).toISOString().split('T')[0];
+                dateFin = new Date(year, quarterStartMonth + 3, 0).toISOString().split('T')[0];
+                break;
+            
+            case 'semestre1':
+                // 1er semestre (janvier à juin)
+                dateDebut = new Date(year, 0, 1).toISOString().split('T')[0];
+                dateFin = new Date(year, 5, 30).toISOString().split('T')[0];
+                break;
+            
+            case 'semestre2':
+                // 2ème semestre (juillet à décembre)
+                dateDebut = new Date(year, 6, 1).toISOString().split('T')[0];
+                dateFin = new Date(year, 11, 31).toISOString().split('T')[0];
+                break;
+            
+            case 'annee':
+                // Cette année
+                dateDebut = new Date(year, 0, 1).toISOString().split('T')[0];
+                dateFin = new Date(year, 11, 31).toISOString().split('T')[0];
+                break;
+            
+            default:
+                return;
+        }
+
+        document.getElementById('dateDebut').value = dateDebut;
+        document.getElementById('dateFin').value = dateFin;
+    }
+
+    // Gestionnaire d'événement pour le filtre de période
+    const periodeTypeSelect = document.getElementById('periodeType');
+    const dateRangeContainer = document.getElementById('dateRangeContainer');
+    const anneeSelect = document.getElementById('anneeSelect');
+    
+    if (periodeTypeSelect) {
+        periodeTypeSelect.addEventListener('change', function() {
+            const selectedPeriod = this.value;
+            
+            if (selectedPeriod === 'personnalisee') {
+                // Afficher les champs de date pour la période personnalisée
+                dateRangeContainer.style.display = 'block';
+            } else if (selectedPeriod === '') {
+                // Toutes les périodes : masquer les champs et vider les dates
+                dateRangeContainer.style.display = 'none';
+                document.getElementById('dateDebut').value = '';
+                document.getElementById('dateFin').value = '';
+            } else {
+                // Option prédéfinie : calculer et remplir les dates, masquer les champs
+                calculatePeriodDates(selectedPeriod);
+                dateRangeContainer.style.display = 'none';
+            }
+        });
+    }
+
+    // Recalculer les dates quand l'année change si une période prédéfinie est sélectionnée
+    if (anneeSelect && periodeTypeSelect) {
+        anneeSelect.addEventListener('change', function() {
+            const selectedPeriod = periodeTypeSelect.value;
+            if (selectedPeriod && selectedPeriod !== '' && selectedPeriod !== 'personnalisee') {
+                calculatePeriodDates(selectedPeriod);
+            }
+        });
     }
 
     // Fonction pour charger les données des filtres
@@ -712,9 +830,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const formData = new FormData(filtersForm);
         
-        // Ajouter le mois actuel par défaut
-        const currentMonth = new Date().getMonth() + 1;
-        formData.append('mois', currentMonth);
+        // Ajouter le mois actuel par défaut seulement si aucune période n'est sélectionnée
+        const periodeType = periodeTypeSelect ? periodeTypeSelect.value : '';
+        if (!periodeType || periodeType === '') {
+            const currentMonth = new Date().getMonth() + 1;
+            formData.append('mois', currentMonth);
+        }
 
         // Charger les données section par section
         Promise.all([
@@ -823,9 +944,59 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function populateResumeGlobal(resume) {
         const container = document.getElementById('resumeStats');
-        const tauxExecution = resume.missions_prevues + resume.formations_prevues > 0 
-            ? ((resume.missions_realisees + resume.formations_realisees) / (resume.missions_prevues + resume.formations_prevues) * 100).toFixed(1)
-            : 0;
+        
+        // Vérifier s'il y a des données
+        const totalActivites = parseInt(resume.total_activites) || 0;
+        const totalRealisees = parseInt(resume.total_realisees) || 0;
+        const budgetPrevu = parseFloat(resume.budget_total_prevu) || 0;
+        const budgetReel = parseFloat(resume.budget_total_realise) || 0;
+        const statuts = resume.statuts || [];
+        
+        const hasData = totalActivites > 0 || (budgetPrevu > 0 || budgetReel > 0);
+        
+        if (!hasData) {
+            container.innerHTML = `
+                <div class="no-results-message">
+                    <i class="fa fa-info-circle"></i>
+                    <p>Aucun résultat disponible pour cette période</p>
+                    <small class="text-muted">Veuillez modifier vos critères de recherche</small>
+                </div>
+            `;
+            return;
+        }
+        
+        // Calcul du taux d'exécution : (activités réalisées / total des activités) * 100
+        let tauxExecution = 0;
+        if (totalActivites > 0) {
+            tauxExecution = (totalRealisees / totalActivites) * 100;
+            // Limiter à 100% maximum
+            if (tauxExecution > 100) {
+                tauxExecution = 100;
+            }
+        }
+        
+        tauxExecution = parseFloat(tauxExecution.toFixed(1));
+        
+        // Construire les lignes du tableau pour chaque statut
+        let statutsRows = '';
+        if (statuts.length > 0) {
+            statuts.forEach(statut => {
+                statutsRows += `
+                    <tr>
+                        <td>${statut.libelle}</td>
+                        <td>
+                            <div class="d-flex justify-content-between">
+                                <span>Formations: <strong>${statut.formations || 0}</strong></span>
+                                <span>Missions: <strong>${statut.missions || 0}</strong></span>
+                                <span class="text-primary"><strong>Total: ${statut.total || 0}</strong></span>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+        } else {
+            statutsRows = '<tr><td colspan="2" class="text-center text-muted">Aucun statut disponible</td></tr>';
+        }
 
         container.innerHTML = `
             <div class="table-responsive">
@@ -837,33 +1008,26 @@ document.addEventListener('DOMContentLoaded', function() {
                         </tr>
                     </thead>
                     <tbody>
-                        <tr>
-                            <td>Formations prévues</td>
-                            <td>${resume.formations_prevues}</td>
+                        ${statutsRows}
+                        <tr class="table-info">
+                            <td><strong>Total des activités</strong></td>
+                            <td><strong>${totalActivites}</strong></td>
                         </tr>
-                        <tr>
-                            <td>Formations réalisées</td>
-                            <td>${resume.formations_realisees}</td>
-                        </tr>
-                        <tr>
-                            <td>Missions prévues</td>
-                            <td>${resume.missions_prevues}</td>
-                        </tr>
-                        <tr>
-                            <td>Missions réalisées</td>
-                            <td>${resume.missions_realisees}</td>
+                        <tr class="table-success">
+                            <td><strong>Total des activités réalisées</strong></td>
+                            <td><strong>${totalRealisees}</strong></td>
                         </tr>
                         <tr>
                             <td>Budget total prévu</td>
-                            <td>${new Intl.NumberFormat('fr-FR').format(resume.budget_total_prevu)} FCFA</td>
+                            <td>${new Intl.NumberFormat('fr-FR').format(budgetPrevu)} FCFA</td>
                         </tr>
                         <tr>
                             <td>Budget total réalisé</td>
-                            <td>${new Intl.NumberFormat('fr-FR').format(resume.budget_total_realise)} FCFA</td>
+                            <td>${new Intl.NumberFormat('fr-FR').format(budgetReel)} FCFA</td>
                         </tr>
-                        <tr>
-                            <td>Taux d'exécution global</td>
-                            <td>${tauxExecution}%</td>
+                        <tr class="table-primary">
+                            <td><strong>Taux d'exécution global</strong></td>
+                            <td><strong>${tauxExecution}%</strong></td>
                         </tr>
                     </tbody>
                 </table>
@@ -877,7 +1041,8 @@ document.addEventListener('DOMContentLoaded', function() {
         
         console.log('Formations data:', formations);
         
-        if (formations.liste && formations.liste.length > 0) {
+        // Vérification stricte : s'assurer que formations existe et a une liste non vide
+        if (formations && formations.liste && Array.isArray(formations.liste) && formations.liste.length > 0) {
             formations.liste.forEach(formation => {
                 console.log('Formation:', formation);
                 
@@ -917,7 +1082,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 `;
             });
         } else {
-            html = '<tr><td colspan="5" class="text-center">Aucune formation trouvée</td></tr>';
+            html = '<tr><td colspan="5" class="text-center"><i class="fa fa-info-circle text-muted me-2"></i><span class="text-muted">Aucune formation trouvée pour les critères sélectionnés</span></td></tr>';
         }
         
         tbody.innerHTML = html;
@@ -929,7 +1094,8 @@ document.addEventListener('DOMContentLoaded', function() {
         
         console.log('Missions data:', missions);
         
-        if (missions.liste && missions.liste.length > 0) {
+        // Vérification stricte : s'assurer que missions existe et a une liste non vide
+        if (missions && missions.liste && Array.isArray(missions.liste) && missions.liste.length > 0) {
             missions.liste.forEach(mission => {
                 console.log('Mission:', mission);
                 
@@ -969,7 +1135,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 `;
             });
         } else {
-            html = '<tr><td colspan="5" class="text-center">Aucune mission trouvée</td></tr>';
+            html = '<tr><td colspan="5" class="text-center"><i class="fa fa-info-circle text-muted me-2"></i><span class="text-muted">Aucune mission trouvée pour les critères sélectionnés</span></td></tr>';
         }
         
         tbody.innerHTML = html;
@@ -979,11 +1145,17 @@ document.addEventListener('DOMContentLoaded', function() {
         const tbody = document.querySelector('#directionsTable tbody');
         let html = '';
 
+        // Vérification stricte : s'assurer que parDirection existe
+        if (!parDirection || (!parDirection.formations && !parDirection.missions)) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center"><i class="fa fa-info-circle text-muted me-2"></i><span class="text-muted">Aucune donnée disponible pour les critères sélectionnés</span></td></tr>';
+            return;
+        }
+
         // Combiner les données formations et missions par direction
         const directions = {};
         
         // Traiter les formations - convertir en nombres
-        if (parDirection.formations && Array.isArray(parDirection.formations)) {
+        if (parDirection.formations && Array.isArray(parDirection.formations) && parDirection.formations.length > 0) {
             parDirection.formations.forEach(item => {
                 const directionName = item.direction_name || 'Non définie';
                 if (!directions[directionName]) {
@@ -996,7 +1168,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         // Traiter les missions - convertir en nombres
-        if (parDirection.missions && Array.isArray(parDirection.missions)) {
+        if (parDirection.missions && Array.isArray(parDirection.missions) && parDirection.missions.length > 0) {
             parDirection.missions.forEach(item => {
                 const directionName = item.direction_name || 'Non définie';
                 if (!directions[directionName]) {
@@ -1019,13 +1191,14 @@ document.addEventListener('DOMContentLoaded', function() {
             const totalExecutees = formationsExec + missionsExec;
             
             // Calcul du taux d'exécution : (réalisées / prévues) * 100
-            // Limiter à 100% maximum sauf si vraiment plus d'activités exécutées que prévues
+            // Limiter à 100% maximum pour la cohérence
             let tauxExecution = 0;
             if (totalActivites > 0) {
                 tauxExecution = (totalExecutees / totalActivites * 100);
-                // Si le taux dépasse 100%, c'est possible (activités non prévues exécutées)
-                // mais on peut vouloir le limiter visuellement à 100% pour la cohérence
-                // Pour l'instant, on garde le calcul réel
+                // Limiter à 100% maximum
+                if (tauxExecution > 100) {
+                    tauxExecution = 100;
+                }
             }
 
             // Arrondir à 1 décimale
@@ -1054,25 +1227,53 @@ document.addEventListener('DOMContentLoaded', function() {
             `;
         });
 
-        tbody.innerHTML = html || '<tr><td colspan="5" class="text-center">Aucune donnée disponible</td></tr>';
+        tbody.innerHTML = html || '<tr><td colspan="5" class="text-center"><i class="fa fa-info-circle text-muted me-2"></i><span class="text-muted">Aucune donnée disponible pour les critères sélectionnés</span></td></tr>';
     }
 
     function populateEvolution(parPeriode) {
+        const chartContainer = document.querySelector('#evolutionSection .chart-container');
+        
+        // Détruire le graphique existant s'il existe
+        if (evolutionChartInstance) {
+            evolutionChartInstance.destroy();
+            evolutionChartInstance = null;
+        }
+        
+        // Vérifier s'il y a des données
+        const formationsData = Object.values(parPeriode.formations || {});
+        const missionsData = Object.values(parPeriode.missions || {});
+        const hasData = formationsData.some(v => v > 0) || missionsData.some(v => v > 0);
+        
+        if (!hasData) {
+            chartContainer.innerHTML = `
+                <div class="no-results-message">
+                    <i class="fa fa-line-chart"></i>
+                    <p>Aucune donnée disponible pour l'évolution temporelle</p>
+                    <small class="text-muted">Veuillez modifier vos critères de recherche</small>
+                </div>
+            `;
+            return;
+        }
+        
+        // Réinitialiser le canvas
+        chartContainer.innerHTML = '<canvas id="evolutionChart"></canvas>';
+        
         const ctx = document.getElementById('evolutionChart').getContext('2d');
         
-        new Chart(ctx, {
+        // Créer le nouveau graphique et stocker l'instance
+        evolutionChartInstance = new Chart(ctx, {
             type: 'line',
             data: {
                 labels: ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'],
                 datasets: [{
                     label: 'Formations',
-                    data: Object.values(parPeriode.formations),
+                    data: formationsData,
                     borderColor: 'rgb(75, 192, 192)',
                     backgroundColor: 'rgba(75, 192, 192, 0.2)',
                     tension: 0.1
                 }, {
                     label: 'Missions',
-                    data: Object.values(parPeriode.missions),
+                    data: missionsData,
                     borderColor: 'rgb(255, 99, 132)',
                     backgroundColor: 'rgba(255, 99, 132, 0.2)',
                     tension: 0.1
@@ -1096,17 +1297,45 @@ document.addEventListener('DOMContentLoaded', function() {
     function populateIndicateurs(indicateurs) {
         const container = document.getElementById('indicateursStats');
         
+        // Vérification stricte : s'assurer que indicateurs existe
+        if (!indicateurs) {
+            container.innerHTML = `
+                <div class="no-results-message" style="grid-column: 1 / -1;">
+                    <i class="fa fa-dashboard"></i>
+                    <p>Aucun indicateur disponible pour cette période</p>
+                    <small class="text-muted">Veuillez modifier vos critères de recherche</small>
+                </div>
+            `;
+            return;
+        }
+        
+        // Vérifier s'il y a des données (vérification plus stricte avec parseFloat)
+        const budgetPrevu = parseFloat(indicateurs.budget_prevu_total) || 0;
+        const budgetReel = parseFloat(indicateurs.budget_reel_total) || 0;
+        const hasData = budgetPrevu > 0 || budgetReel > 0;
+        
+        if (!hasData) {
+            container.innerHTML = `
+                <div class="no-results-message" style="grid-column: 1 / -1;">
+                    <i class="fa fa-dashboard"></i>
+                    <p>Aucun indicateur disponible pour cette période</p>
+                    <small class="text-muted">Veuillez modifier vos critères de recherche</small>
+                </div>
+            `;
+            return;
+        }
+        
         // Calcul de l'écart : budget_reel - budget_prevu
         // Si écart < 0 : on a dépensé moins que prévu (profit) = vert
         // Si écart > 0 : on a dépensé plus que prévu (dépassement) = rouge
-        const ecart = indicateurs.ecart_budget;
+        const ecart = indicateurs.ecart_budget || 0;
         const isProfit = ecart < 0; // Budget réel < Budget prévu = profit
         const ecartClass = isProfit ? 'positive' : 'negative';
         const ecartItemClass = isProfit ? 'stat-success' : 'stat-danger';
         const ecartIcon = isProfit ? '↑' : '↓';
         
         // Déterminer la classe pour le taux d'exécution
-        const tauxExecution = indicateurs.taux_execution_budget;
+        const tauxExecution = indicateurs.taux_execution_budget || 0;
         let tauxItemClass = 'stat-info';
         let tauxIcon = 'fa-percent';
         if (tauxExecution >= 90) {
@@ -1120,9 +1349,9 @@ document.addEventListener('DOMContentLoaded', function() {
             tauxIcon = 'fa-times-circle';
         }
 
-        // Formatage des montants
-        const budgetPrevu = new Intl.NumberFormat('fr-FR').format(indicateurs.budget_prevu_total);
-        const budgetReel = new Intl.NumberFormat('fr-FR').format(indicateurs.budget_reel_total);
+        // Formatage des montants (utiliser les variables déjà définies)
+        const budgetPrevuFormatted = new Intl.NumberFormat('fr-FR').format(budgetPrevu);
+        const budgetReelFormatted = new Intl.NumberFormat('fr-FR').format(budgetReel);
         const ecartAbs = new Intl.NumberFormat('fr-FR').format(Math.abs(ecart));
 
         container.innerHTML = `
@@ -1143,7 +1372,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         <i class="fa fa-calendar-check"></i>
                     </div>
                 </div>
-                <div class="stat-number">${budgetPrevu} FCFA</div>
+                <div class="stat-number">${budgetPrevuFormatted} FCFA</div>
             </div>
             
             <div class="stat-item stat-info">
@@ -1153,7 +1382,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         <i class="fa fa-money-bill-wave"></i>
                     </div>
                 </div>
-                <div class="stat-number">${budgetReel} FCFA</div>
+                <div class="stat-number">${budgetReelFormatted} FCFA</div>
             </div>
             
             <div class="stat-item ${ecartItemClass}">

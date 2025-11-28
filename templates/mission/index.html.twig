@@ -45,28 +45,6 @@
 {% endblock %}
 
 {% block body %}
-<!-- Widget de Performance des Missions -->
-<div class="row mb-3">
-    <div class="col-xl-12">
-        {% include 'widgets/performance_summary.html.twig' with {
-            'title': 'Performance Missions ' ~ currentYear,
-            'header_color': 'secondary',
-            'header_icon': 'fa-plane',
-            'physique_taux': performanceData.taux_physique,
-            'physique_color': performanceData.couleur_physique,
-            'physique_icon': performanceData.icon_physique,
-            'financier_taux': performanceData.taux_financier,
-            'financier_color': performanceData.couleur_financier,
-            'financier_icon': performanceData.icon_financier,
-            'realisees': performanceData.missions_realisees,
-            'prevues': performanceData.missions_prevues,
-            'budget_reel': performanceData.depenses_reelles,
-            'budget_prevu': performanceData.budget_prevu,
-            'en_cours': performanceData.missions_en_cours
-        } %}
-    </div>
-</div>
-
 <div class="row">
 	<div class="col-xl-12">
 		<!-- Section des filtres -->
@@ -92,12 +70,25 @@
 					</div>
 					<div class="col-md-3">
 						<label for="periodeFilter" class="form-label">Période</label>
-						<select class="form-select" id="periodeFilter">
+						<select class="form-select mb-2" id="periodeFilter" name="periode_type">
 							<option value="">Toutes les périodes</option>
 							<option value="mois">Ce mois</option>
 							<option value="trimestre">Ce trimestre</option>
+							<option value="semestre1">1er semestre</option>
+							<option value="semestre2">2ème semestre</option>
 							<option value="annee">Cette année</option>
+							<option value="personnalisee">Période personnalisée</option>
 						</select>
+						<div class="row" id="dateRangeContainer" style="display: none;">
+							<div class="col-6 mb-2">
+								<label class="form-label small">Date début</label>
+								<input type="date" class="form-control form-control-sm" name="date_debut" id="dateDebut">
+							</div>
+							<div class="col-6 mb-2">
+								<label class="form-label small">Date fin</label>
+								<input type="date" class="form-control form-control-sm" name="date_fin" id="dateFin">
+							</div>
+						</div>
 					</div>
 					<div class="col-md-3">
 						<label for="participantFilter" class="form-label">Participant</label>
@@ -122,6 +113,28 @@
 			</div>
 		</div>
 
+		<!-- Widget de Performance des Missions -->
+		<div class="row mb-3">
+			<div class="col-xl-12">
+				{% include 'widgets/performance_summary.html.twig' with {
+					'title': 'Performance Missions ' ~ currentYear,
+					'header_color': 'secondary',
+					'header_icon': 'fa-plane',
+					'physique_taux': performanceData.taux_physique,
+					'physique_color': performanceData.couleur_physique,
+					'physique_icon': performanceData.icon_physique,
+					'financier_taux': performanceData.taux_financier,
+					'financier_color': performanceData.couleur_financier,
+					'financier_icon': performanceData.icon_financier,
+					'realisees': performanceData.missions_realisees,
+					'prevues': performanceData.missions_prevues,
+					'budget_reel': performanceData.depenses_reelles,
+					'budget_prevu': performanceData.budget_prevu,
+					'en_cours': performanceData.missions_en_cours
+				} %}
+			</div>
+		</div>
+
 		<!-- Tableau des missions -->
 		<div class="card">
 			<div class="card-body">
@@ -137,7 +150,7 @@
 								<th>Durée</th>
 								<th>Budget prévu</th>
 								<th>Statut</th>
-								<th><i class="fa fa-cogs"></i></th>
+								                        <th><i class="fa fa-cogs"></i></th>
 							</tr>
 						</thead>
 						<tbody>
@@ -159,6 +172,8 @@ let filtersData = null;
 document.addEventListener('DOMContentLoaded', function() {
     loadFiltersData();
     initializeDataTable();
+    // Mettre à jour les performances au chargement initial
+    updatePerformance({});
 });
 
 function loadFiltersData() {
@@ -315,18 +330,32 @@ function initializeDataTable() {
 }
 
 function getFilters() {
-    return {
+    const filters = {
         statut: document.getElementById('statutFilter').value,
         direction: document.getElementById('directionFilter').value,
         periode: document.getElementById('periodeFilter').value,
         participant: document.getElementById('participantFilter').value
     };
+    
+    // Ajouter les dates si période personnalisée
+    const dateDebut = document.getElementById('dateDebut');
+    const dateFin = document.getElementById('dateFin');
+    if (dateDebut && dateDebut.value) {
+        filters.date_debut = dateDebut.value;
+    }
+    if (dateFin && dateFin.value) {
+        filters.date_fin = dateFin.value;
+    }
+    
+    return filters;
 }
 
 function applyFilters() {
+    const filters = getFilters();
     if (missionsTable) {
         missionsTable.ajax.reload();
     }
+    updatePerformance(filters);
 }
 
 function resetFilters() {
@@ -334,9 +363,188 @@ function resetFilters() {
     document.getElementById('directionFilter').value = '';
     document.getElementById('periodeFilter').value = '';
     document.getElementById('participantFilter').value = '';
+    
+    const dateRangeContainer = document.getElementById('dateRangeContainer');
+    const dateDebut = document.getElementById('dateDebut');
+    const dateFin = document.getElementById('dateFin');
+    if (dateRangeContainer) dateRangeContainer.style.display = 'none';
+    if (dateDebut) dateDebut.value = '';
+    if (dateFin) dateFin.value = '';
 
     if (missionsTable) {
         missionsTable.ajax.reload();
+    }
+    updatePerformance({});
+}
+
+// Fonction pour calculer les dates selon la période sélectionnée
+function calculatePeriodDates(periodType) {
+    const now = new Date();
+    const year = {{ currentYear }};
+    let dateDebut, dateFin;
+
+    switch(periodType) {
+        case 'mois':
+            const month = now.getMonth();
+            dateDebut = new Date(year, month, 1).toISOString().split('T')[0];
+            dateFin = new Date(year, month + 1, 0).toISOString().split('T')[0];
+            break;
+        
+        case 'trimestre':
+            const currentQuarter = Math.floor(now.getMonth() / 3);
+            const quarterStartMonth = currentQuarter * 3;
+            dateDebut = new Date(year, quarterStartMonth, 1).toISOString().split('T')[0];
+            dateFin = new Date(year, quarterStartMonth + 3, 0).toISOString().split('T')[0];
+            break;
+        
+        case 'semestre1':
+            dateDebut = new Date(year, 0, 1).toISOString().split('T')[0];
+            dateFin = new Date(year, 5, 30).toISOString().split('T')[0];
+            break;
+        
+        case 'semestre2':
+            dateDebut = new Date(year, 6, 1).toISOString().split('T')[0];
+            dateFin = new Date(year, 11, 31).toISOString().split('T')[0];
+            break;
+        
+        case 'annee':
+            dateDebut = new Date(year, 0, 1).toISOString().split('T')[0];
+            dateFin = new Date(year, 11, 31).toISOString().split('T')[0];
+            break;
+        
+        default:
+            return;
+    }
+
+    const dateDebutInput = document.getElementById('dateDebut');
+    const dateFinInput = document.getElementById('dateFin');
+    if (dateDebutInput) dateDebutInput.value = dateDebut;
+    if (dateFinInput) dateFinInput.value = dateFin;
+}
+
+// Gestionnaire d'événement pour le filtre de période
+document.addEventListener('DOMContentLoaded', function() {
+    const periodeFilter = document.getElementById('periodeFilter');
+    const dateRangeContainer = document.getElementById('dateRangeContainer');
+    
+    if (periodeFilter) {
+        periodeFilter.addEventListener('change', function() {
+            const selectedPeriod = this.value;
+            
+            if (selectedPeriod === 'personnalisee') {
+                if (dateRangeContainer) dateRangeContainer.style.display = 'block';
+            } else if (selectedPeriod === '') {
+                if (dateRangeContainer) dateRangeContainer.style.display = 'none';
+                const dateDebut = document.getElementById('dateDebut');
+                const dateFin = document.getElementById('dateFin');
+                if (dateDebut) dateDebut.value = '';
+                if (dateFin) dateFin.value = '';
+            } else {
+                calculatePeriodDates(selectedPeriod);
+                if (dateRangeContainer) dateRangeContainer.style.display = 'none';
+            }
+        });
+    }
+});
+
+// Fonction pour mettre à jour les performances selon les filtres
+function updatePerformance(filters) {
+    const formData = new FormData();
+    
+    // Toujours ajouter l'année
+    formData.append('annee', {{ currentYear }});
+    
+    // Récupérer directement depuis les champs pour être sûr
+    const statutFilter = document.getElementById('statutFilter');
+    const directionFilter = document.getElementById('directionFilter');
+    const dateDebut = document.getElementById('dateDebut');
+    const dateFin = document.getElementById('dateFin');
+    
+    if (statutFilter && statutFilter.value) {
+        formData.append('statut', statutFilter.value);
+    }
+    if (directionFilter && directionFilter.value) {
+        formData.append('direction', directionFilter.value);
+    }
+    if (dateDebut && dateDebut.value) {
+        formData.append('date_debut', dateDebut.value);
+    }
+    if (dateFin && dateFin.value) {
+        formData.append('date_fin', dateFin.value);
+    }
+    
+    // Ajouter les autres filtres depuis l'objet si fourni
+    if (filters) {
+        Object.keys(filters).forEach(key => {
+            if (filters[key] && filters[key] !== '' && key !== 'periode' && key !== 'date_debut' && key !== 'date_fin' && key !== 'statut' && key !== 'direction') {
+                formData.append(key, filters[key]);
+            }
+        });
+    }
+    
+    // Afficher les filtres envoyés pour débogage
+    console.log('Filtres envoyés pour les performances:', Object.fromEntries(formData));
+    
+    fetch("{{ path('app_mission_performance') }}", {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('Données de performance reçues:', data);
+        // Vérifier que les données sont valides
+        if (data && typeof data.taux_physique !== 'undefined') {
+            updatePerformanceWidget(data);
+        } else {
+            console.error('Données de performance invalides:', data);
+        }
+    })
+    .catch(error => {
+        console.error('Erreur lors de la mise à jour des performances:', error);
+    });
+}
+
+// Fonction pour mettre à jour le widget de performance
+function updatePerformanceWidget(data) {
+    // Mettre à jour le taux physique
+    const physiqueBadge = document.querySelector('.card-body .col-md-6:first-child .badge.fs-5');
+    if (physiqueBadge) {
+        const icon = data.icon_physique || (data.taux_physique >= 50 ? 'fa-check-circle' : 'fa-times-circle');
+        const color = data.couleur_physique || (data.taux_physique >= 50 ? 'success' : 'danger');
+        physiqueBadge.innerHTML = `<i class="fa ${icon} me-1 text-${color}"></i> ${data.taux_physique}%`;
+    }
+    
+    // Mettre à jour le taux financier
+    const financierBadge = document.querySelector('.card-body .col-md-6:last-child .badge.fs-5');
+    if (financierBadge) {
+        const icon = data.icon_financier || 'fa-check-circle';
+        const color = data.couleur_financier || 'success';
+        financierBadge.innerHTML = `<i class="fa ${icon} me-1 text-${color}"></i> ${data.taux_financier}%`;
+    }
+    
+    // Mettre à jour les détails physiques
+    // Chercher le badge qui contient "réalisées" dans la première colonne
+    const firstColumn = document.querySelector('.card-body .col-md-6:first-child');
+    if (firstColumn) {
+        const badges = firstColumn.querySelectorAll('.badge.bg-light.text-dark');
+        badges.forEach(badge => {
+            if (!badge.classList.contains('fs-5') && badge.textContent.includes('réalisées')) {
+                badge.textContent = `${data.missions_realisees}/${data.missions_prevues} réalisées`;
+            }
+        });
+    }
+    
+    // Mettre à jour les détails financiers
+    const budgetContainer = document.querySelector('.card-body .col-md-6:last-child .small.text-muted');
+    if (budgetContainer) {
+        const budgetReel = new Intl.NumberFormat('fr-FR').format(data.depenses_reelles || 0);
+        const budgetPrevu = new Intl.NumberFormat('fr-FR').format(data.budget_prevu || 0);
+        budgetContainer.innerHTML = `<div>${budgetReel} FCFA</div><div>sur ${budgetPrevu} FCFA</div>`;
     }
 }
 

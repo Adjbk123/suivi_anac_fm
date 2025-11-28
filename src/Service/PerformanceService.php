@@ -111,6 +111,223 @@ class PerformanceService
     }
 
     /**
+     * Calculer les performances des formations avec filtres
+     */
+    public function getFormationPerformanceWithFilters(array $filters): array
+    {
+        $year = $filters['annee'] ?? date('Y');
+        
+        // Récupérer toutes les sessions
+        $sessionFilters = [];
+        if (!empty($filters['direction'])) {
+            $sessionFilters['direction'] = $filters['direction'];
+        }
+        if (!empty($filters['statut'])) {
+            $sessionFilters['statut'] = $filters['statut'];
+        }
+        
+        // Si aucun filtre spécifique, récupérer toutes les sessions
+        if (empty($sessionFilters)) {
+            $formationSessions = $this->formationSessionRepository->findAll();
+        } else {
+            $formationSessions = $this->formationSessionRepository->findWithFilters($sessionFilters);
+        }
+        
+        // Filtrer selon les critères
+        $formationSessions = array_filter($formationSessions, function($session) use ($year, $filters) {
+            if (!$session->getDatePrevueDebut()) {
+                return false;
+            }
+            
+            $sessionDateDebut = $session->getDatePrevueDebut();
+            $sessionDateFin = $session->getDatePrevueFin() ?? $sessionDateDebut;
+            
+            // Filtrer par date_debut et date_fin si fournis
+            if (!empty($filters['date_debut']) && !empty($filters['date_fin'])) {
+                $dateDebut = new \DateTime($filters['date_debut']);
+                $dateDebut->setTime(0, 0, 0);
+                $dateFin = new \DateTime($filters['date_fin']);
+                $dateFin->setTime(23, 59, 59);
+                
+                // Vérifier si la formation chevauche la période filtrée
+                // Une formation est incluse si elle chevauche la période :
+                // (datePrevueDebut <= dateFin) ET (datePrevueFin >= dateDebut)
+                if ($sessionDateFin < $dateDebut || $sessionDateDebut > $dateFin) {
+                    return false;
+                }
+            } elseif (!empty($filters['date_debut'])) {
+                // Seulement date_debut : inclure si la formation commence après ou pendant
+                $dateDebut = new \DateTime($filters['date_debut']);
+                $dateDebut->setTime(0, 0, 0);
+                if ($sessionDateFin < $dateDebut) {
+                    return false;
+                }
+            } elseif (!empty($filters['date_fin'])) {
+                // Seulement date_fin : inclure si la formation commence avant ou pendant
+                $dateFin = new \DateTime($filters['date_fin']);
+                $dateFin->setTime(23, 59, 59);
+                if ($sessionDateDebut > $dateFin) {
+                    return false;
+                }
+            } else {
+                // Si pas de filtres de date, utiliser l'année
+                if ($sessionDateDebut->format('Y') != $year) {
+                    return false;
+                }
+            }
+            
+            return true;
+        });
+        
+        // Calculer les statistiques
+        $formationsPrevues = count($formationSessions);
+        $formationsRealisees = count(array_filter($formationSessions, function($fs) {
+            $statut = $fs->getStatutActivite();
+            return $statut && in_array($statut->getCode(), ['prevue_executee', 'non_prevue_executee']);
+        }));
+        
+        $budgetPrevu = 0;
+        $depensesReelles = 0;
+        foreach ($formationSessions as $session) {
+            $budgetPrevu += (float)($session->getBudgetPrevu() ?? 0);
+            $depensesReelles += (float)($session->getBudgetReel() ?? 0);
+        }
+        
+        // Calculer les taux
+        // Le taux physique = (activités réalisées / total des activités) * 100
+        $tauxPhysique = $formationsPrevues > 0 ? round(($formationsRealisees / $formationsPrevues) * 100, 1) : 0;
+        // Le taux financier = (dépenses réelles / budget prévu) * 100
+        $tauxFinancier = $budgetPrevu > 0 ? round(($depensesReelles / $budgetPrevu) * 100, 1) : 0;
+        
+        // Log pour débogage
+        error_log(sprintf(
+            'Performance Formations - Filtres: %s, Total: %d, Réalisées: %d, Taux: %.1f%%, Budget prévu: %.2f, Budget réel: %.2f',
+            json_encode($filters),
+            $formationsPrevues,
+            $formationsRealisees,
+            $tauxPhysique,
+            $budgetPrevu,
+            $depensesReelles
+        ));
+        
+        return [
+            'taux_physique' => $tauxPhysique,
+            'taux_financier' => $tauxFinancier,
+            'formations_prevues' => $formationsPrevues,
+            'formations_realisees' => $formationsRealisees,
+            'formations_en_cours' => $formationsPrevues - $formationsRealisees,
+            'budget_prevu' => $budgetPrevu,
+            'depenses_reelles' => $depensesReelles,
+            'ecart_budgetaire' => $depensesReelles - $budgetPrevu,
+            'couleur_physique' => $this->getPerformanceColor($tauxPhysique),
+            'couleur_financier' => $this->getBudgetColor($tauxFinancier),
+            'icon_physique' => $this->getPerformanceIcon($tauxPhysique),
+            'icon_financier' => $this->getBudgetIcon($tauxFinancier)
+        ];
+    }
+
+    /**
+     * Calculer les performances des missions avec filtres
+     */
+    public function getMissionPerformanceWithFilters(array $filters): array
+    {
+        $year = $filters['annee'] ?? date('Y');
+        
+        // Récupérer toutes les sessions
+        if (empty($filters['direction']) && empty($filters['statut'])) {
+            $missionSessions = $this->missionSessionRepository->findAll();
+        } else {
+            $missionSessions = $this->missionSessionRepository->findAllWithFilters(
+                null,
+                $filters['direction'] ?? null,
+                $filters['statut'] ?? null,
+                null
+            );
+        }
+        
+        // Filtrer selon les critères
+        $missionSessions = array_filter($missionSessions, function($session) use ($year, $filters) {
+            if (!$session->getDatePrevueDebut()) {
+                return false;
+            }
+            
+            $sessionDateDebut = $session->getDatePrevueDebut();
+            $sessionDateFin = $session->getDatePrevueFin() ?? $sessionDateDebut;
+            
+            // Filtrer par date_debut et date_fin si fournis
+            if (!empty($filters['date_debut']) && !empty($filters['date_fin'])) {
+                $dateDebut = new \DateTime($filters['date_debut']);
+                $dateDebut->setTime(0, 0, 0);
+                $dateFin = new \DateTime($filters['date_fin']);
+                $dateFin->setTime(23, 59, 59);
+                
+                // Vérifier si la mission chevauche la période filtrée
+                // Une mission est incluse si elle chevauche la période :
+                // (datePrevueDebut <= dateFin) ET (datePrevueFin >= dateDebut)
+                if ($sessionDateFin < $dateDebut || $sessionDateDebut > $dateFin) {
+                    return false;
+                }
+            } elseif (!empty($filters['date_debut'])) {
+                // Seulement date_debut : inclure si la mission commence après ou pendant
+                $dateDebut = new \DateTime($filters['date_debut']);
+                $dateDebut->setTime(0, 0, 0);
+                if ($sessionDateFin < $dateDebut) {
+                    return false;
+                }
+            } elseif (!empty($filters['date_fin'])) {
+                // Seulement date_fin : inclure si la mission commence avant ou pendant
+                $dateFin = new \DateTime($filters['date_fin']);
+                $dateFin->setTime(23, 59, 59);
+                if ($sessionDateDebut > $dateFin) {
+                    return false;
+                }
+            } else {
+                // Si pas de filtres de date, utiliser l'année
+                if ($sessionDateDebut->format('Y') != $year) {
+                    return false;
+                }
+            }
+            
+            return true;
+        });
+        
+        // Calculer les statistiques
+        $missionsPrevues = count($missionSessions);
+        $missionsRealisees = count(array_filter($missionSessions, function($ms) {
+            $statut = $ms->getStatutActivite();
+            return $statut && in_array($statut->getCode(), ['prevue_executee', 'non_prevue_executee']);
+        }));
+        
+        $budgetPrevu = 0;
+        $depensesReelles = 0;
+        foreach ($missionSessions as $session) {
+            $budgetPrevu += (float)($session->getBudgetPrevu() ?? 0);
+            $depensesReelles += (float)($session->getBudgetReel() ?? 0);
+        }
+        
+        // Calculer les taux
+        // Le taux physique = (activités réalisées / total des activités) * 100
+        $tauxPhysique = $missionsPrevues > 0 ? round(($missionsRealisees / $missionsPrevues) * 100, 1) : 0;
+        // Le taux financier = (dépenses réelles / budget prévu) * 100
+        $tauxFinancier = $budgetPrevu > 0 ? round(($depensesReelles / $budgetPrevu) * 100, 1) : 0;
+        
+        return [
+            'taux_physique' => $tauxPhysique,
+            'taux_financier' => $tauxFinancier,
+            'missions_prevues' => $missionsPrevues,
+            'missions_realisees' => $missionsRealisees,
+            'missions_en_cours' => $missionsPrevues - $missionsRealisees,
+            'budget_prevu' => $budgetPrevu,
+            'depenses_reelles' => $depensesReelles,
+            'ecart_budgetaire' => $depensesReelles - $budgetPrevu,
+            'couleur_physique' => $this->getPerformanceColor($tauxPhysique),
+            'couleur_financier' => $this->getBudgetColor($tauxFinancier),
+            'icon_physique' => $this->getPerformanceIcon($tauxPhysique),
+            'icon_financier' => $this->getBudgetIcon($tauxFinancier)
+        ];
+    }
+
+    /**
      * Calculer les performances par direction
      */
     public function getPerformanceByDirection(int $year = null): array

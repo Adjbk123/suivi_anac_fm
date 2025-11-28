@@ -41,6 +41,15 @@ class MissionController extends AbstractController
         ]);
     }
 
+    #[Route('/performance', name: 'app_mission_performance', methods: ['POST'])]
+    public function getPerformance(Request $request, PerformanceService $performanceService): JsonResponse
+    {
+        $filters = $request->request->all();
+        $performanceData = $performanceService->getMissionPerformanceWithFilters($filters);
+        
+        return $this->json($performanceData);
+    }
+
     #[Route('/export-excel', name: 'app_mission_export_excel', methods: ['GET'])]
     public function exportExcel(Request $request, MissionSessionRepository $missionSessionRepository, ExcelExportService $excelExportService): Response
     {
@@ -337,8 +346,50 @@ class MissionController extends AbstractController
         $directionId = $request->query->get('direction');
         $periode = $request->query->get('periode');
         $participant = $request->query->get('participant');
+        $dateDebut = $request->query->get('date_debut');
+        $dateFin = $request->query->get('date_fin');
 
         $missionSessions = $missionSessionRepository->findAllWithFilters($statutId, $directionId, $periode, $participant);
+        
+        // Filtrer par date_debut et date_fin si fournis
+        if ($dateDebut || $dateFin) {
+            $missionSessions = array_filter($missionSessions, function($session) use ($dateDebut, $dateFin) {
+                if (!$session->getDatePrevueDebut()) {
+                    return false;
+                }
+                
+                $sessionDateDebut = $session->getDatePrevueDebut();
+                $sessionDateFin = $session->getDatePrevueFin() ?? $sessionDateDebut;
+                
+                // Filtrer par date_debut et date_fin si fournis
+                if ($dateDebut && $dateFin) {
+                    $filterDateDebut = new \DateTime($dateDebut);
+                    $filterDateDebut->setTime(0, 0, 0);
+                    $filterDateFin = new \DateTime($dateFin);
+                    $filterDateFin->setTime(23, 59, 59);
+                    
+                    // Vérifier si la mission chevauche la période filtrée
+                    if ($sessionDateFin < $filterDateDebut || $sessionDateDebut > $filterDateFin) {
+                        return false;
+                    }
+                } elseif ($dateDebut) {
+                    $filterDateDebut = new \DateTime($dateDebut);
+                    $filterDateDebut->setTime(0, 0, 0);
+                    if ($sessionDateFin < $filterDateDebut) {
+                        return false;
+                    }
+                } elseif ($dateFin) {
+                    $filterDateFin = new \DateTime($dateFin);
+                    $filterDateFin->setTime(23, 59, 59);
+                    if ($sessionDateDebut > $filterDateFin) {
+                        return false;
+                    }
+                }
+                
+                return true;
+            });
+        }
+
         $data = [];
 
         foreach ($missionSessions as $session) {

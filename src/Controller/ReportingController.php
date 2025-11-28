@@ -259,13 +259,140 @@ class ReportingController extends AbstractController
     {
         $year = $filters['annee'] ?? date('Y');
         
+        // Récupérer toutes les sessions de formation et missions
+        $formationSessions = $formationSessionRepository->findAll();
+        $missionSessions = $missionSessionRepository->findAll();
+        
+        // Filtrer les sessions selon les critères
+        $formationSessions = array_filter($formationSessions, function($session) use ($year, $filters) {
+            if (!$session->getDatePrevueDebut()) {
+                return false;
+            }
+            
+            $sessionDate = $session->getDatePrevueDebut();
+            
+            // Filtrer par date_debut et date_fin si fournis
+            if (!empty($filters['date_debut'])) {
+                $dateDebut = new \DateTime($filters['date_debut']);
+                if ($sessionDate < $dateDebut) {
+                    return false;
+                }
+            }
+            if (!empty($filters['date_fin'])) {
+                $dateFin = new \DateTime($filters['date_fin']);
+                $dateFin->setTime(23, 59, 59);
+                if ($sessionDate > $dateFin) {
+                    return false;
+                }
+            }
+            
+            // Si pas de filtres de date, utiliser l'année
+            if (empty($filters['date_debut']) && empty($filters['date_fin'])) {
+                if ($sessionDate->format('Y') != $year) {
+                    return false;
+                }
+            }
+            
+            return true;
+        });
+        
+        $missionSessions = array_filter($missionSessions, function($session) use ($year, $filters) {
+            if (!$session->getDatePrevueDebut()) {
+                return false;
+            }
+            
+            $sessionDate = $session->getDatePrevueDebut();
+            
+            // Filtrer par date_debut et date_fin si fournis
+            if (!empty($filters['date_debut'])) {
+                $dateDebut = new \DateTime($filters['date_debut']);
+                if ($sessionDate < $dateDebut) {
+                    return false;
+                }
+            }
+            if (!empty($filters['date_fin'])) {
+                $dateFin = new \DateTime($filters['date_fin']);
+                $dateFin->setTime(23, 59, 59);
+                if ($sessionDate > $dateFin) {
+                    return false;
+                }
+            }
+            
+            // Si pas de filtres de date, utiliser l'année
+            if (empty($filters['date_debut']) && empty($filters['date_fin'])) {
+                if ($sessionDate->format('Y') != $year) {
+                    return false;
+                }
+            }
+            
+            return true;
+        });
+        
+        // Compter par statut
+        $statutsData = [];
+        foreach ($formationSessions as $session) {
+            $statut = $session->getStatutActivite();
+            if ($statut) {
+                $statutLibelle = $statut->getLibelle();
+                if (!isset($statutsData[$statutLibelle])) {
+                    $statutsData[$statutLibelle] = [
+                        'libelle' => $statutLibelle,
+                        'formations' => 0,
+                        'missions' => 0,
+                        'total' => 0
+                    ];
+                }
+                $statutsData[$statutLibelle]['formations']++;
+                $statutsData[$statutLibelle]['total']++;
+            }
+        }
+        
+        foreach ($missionSessions as $session) {
+            $statut = $session->getStatutActivite();
+            if ($statut) {
+                $statutLibelle = $statut->getLibelle();
+                if (!isset($statutsData[$statutLibelle])) {
+                    $statutsData[$statutLibelle] = [
+                        'libelle' => $statutLibelle,
+                        'formations' => 0,
+                        'missions' => 0,
+                        'total' => 0
+                    ];
+                }
+                $statutsData[$statutLibelle]['missions']++;
+                $statutsData[$statutLibelle]['total']++;
+            }
+        }
+        
+        // Calculer le total des activités et le total des activités réalisées
+        $totalActivites = 0;
+        $totalRealisees = 0;
+        foreach ($statutsData as $data) {
+            $totalActivites += $data['total'];
+            // Les activités réalisées sont celles avec les statuts "Prévue exécutée" et "Non prévue exécutée"
+            if (in_array($data['libelle'], ['Prévue exécutée', 'Non prévue exécutée'])) {
+                $totalRealisees += $data['total'];
+            }
+        }
+        
+        // Calculer les budgets pour la période filtrée
+        $budgetPrevu = 0;
+        $budgetReel = 0;
+        foreach ($formationSessions as $session) {
+            $budgetPrevu += (float)$session->getBudgetPrevu();
+            $budgetReel += (float)$session->getBudgetReel();
+        }
+        foreach ($missionSessions as $session) {
+            $budgetPrevu += (float)$session->getBudgetPrevu();
+            $budgetReel += (float)$session->getBudgetReel();
+        }
+        
         return [
-            'missions_prevues' => $missionSessionRepository->countPlannedByYear($year),
-            'missions_realisees' => $missionSessionRepository->countExecutedByYear($year),
-            'formations_prevues' => $formationSessionRepository->countPlannedByYear($year),
-            'formations_realisees' => $formationSessionRepository->countExecutedByYear($year),
-            'budget_total_prevu' => $formationSessionRepository->getTotalBudgetByYear($year) + $missionSessionRepository->getTotalBudgetByYear($year),
-            'budget_total_realise' => $formationSessionRepository->getTotalRealExpensesByYear($year) + $missionSessionRepository->getTotalRealExpensesByYear($year),
+            'statuts' => array_values($statutsData),
+            'total_activites' => $totalActivites,
+            'total_realisees' => $totalRealisees,
+            'budget_total_prevu' => $budgetPrevu,
+            'budget_total_realise' => $budgetReel,
         ];
     }
 
@@ -297,17 +424,39 @@ class ReportingController extends AbstractController
         // Récupérer les sessions de formation avec les filtres
         $formationSessions = $formationSessionRepository->findWithFilters($sessionFilters);
         
-        // Filtrer par année et mois si nécessaire
+        // Filtrer par date, année et mois si nécessaire
         $formationSessions = array_filter($formationSessions, function($session) use ($year, $filters) {
             if (!$session->getDatePrevueDebut()) {
                 return false;
             }
-            if ($session->getDatePrevueDebut()->format('Y') != $year) {
-                return false;
+            
+            $sessionDate = $session->getDatePrevueDebut();
+            
+            // Filtrer par date_debut et date_fin si fournis
+            if (!empty($filters['date_debut'])) {
+                $dateDebut = new \DateTime($filters['date_debut']);
+                if ($sessionDate < $dateDebut) {
+                    return false;
+                }
             }
-            if (!empty($filters['mois']) && $session->getDatePrevueDebut()->format('n') != $filters['mois']) {
-                return false;
+            if (!empty($filters['date_fin'])) {
+                $dateFin = new \DateTime($filters['date_fin']);
+                $dateFin->setTime(23, 59, 59); // Inclure toute la journée
+                if ($sessionDate > $dateFin) {
+                    return false;
+                }
             }
+            
+            // Si pas de filtres de date, utiliser l'année et le mois
+            if (empty($filters['date_debut']) && empty($filters['date_fin'])) {
+                if ($sessionDate->format('Y') != $year) {
+                    return false;
+                }
+                if (!empty($filters['mois']) && $sessionDate->format('n') != $filters['mois']) {
+                    return false;
+                }
+            }
+            
             if (!empty($filters['type_fonds_id']) && $session->getFonds() && $session->getFonds()->getId() != $filters['type_fonds_id']) {
                 return false;
             }
@@ -387,17 +536,39 @@ class ReportingController extends AbstractController
         // Récupérer les sessions de mission avec les filtres
         $missionSessions = $missionSessionRepository->findWithFilters($sessionFilters);
         
-        // Filtrer par année et mois si nécessaire
+        // Filtrer par date, année et mois si nécessaire
         $missionSessions = array_filter($missionSessions, function($session) use ($year, $filters) {
             if (!$session->getDatePrevueDebut()) {
                 return false;
-        }
-            if ($session->getDatePrevueDebut()->format('Y') != $year) {
-                return false;
             }
-            if (!empty($filters['mois']) && $session->getDatePrevueDebut()->format('n') != $filters['mois']) {
-                return false;
+            
+            $sessionDate = $session->getDatePrevueDebut();
+            
+            // Filtrer par date_debut et date_fin si fournis
+            if (!empty($filters['date_debut'])) {
+                $dateDebut = new \DateTime($filters['date_debut']);
+                if ($sessionDate < $dateDebut) {
+                    return false;
+                }
             }
+            if (!empty($filters['date_fin'])) {
+                $dateFin = new \DateTime($filters['date_fin']);
+                $dateFin->setTime(23, 59, 59); // Inclure toute la journée
+                if ($sessionDate > $dateFin) {
+                    return false;
+                }
+            }
+            
+            // Si pas de filtres de date, utiliser l'année et le mois
+            if (empty($filters['date_debut']) && empty($filters['date_fin'])) {
+                if ($sessionDate->format('Y') != $year) {
+                    return false;
+                }
+                if (!empty($filters['mois']) && $sessionDate->format('n') != $filters['mois']) {
+                    return false;
+                }
+            }
+            
             if (!empty($filters['type_fonds_id']) && $session->getFonds() && $session->getFonds()->getId() != $filters['type_fonds_id']) {
                 return false;
             }
