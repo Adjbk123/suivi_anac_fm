@@ -593,6 +593,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const resultsContainer = document.getElementById('resultsContainer');
     const resetFiltersBtn = document.getElementById('resetFilters');
     const exportPdfBtn = document.getElementById('exportPdf');
+    const periodeTypeSelect = document.getElementById('periodeType');
+    const dateRangeContainer = document.getElementById('dateRangeContainer');
+    const anneeSelect = document.getElementById('anneeSelect');
 
     let currentData = null;
     let evolutionChartInstance = null; // Stocker l'instance du graphique
@@ -600,10 +603,10 @@ document.addEventListener('DOMContentLoaded', function() {
     // Charger les données des filtres au démarrage
     loadFiltersData();
     
-    // Définir les dates par défaut (début et fin du mois actuel)
-    setDefaultDates();
+    // Ne pas définir de dates par défaut - laisser les champs vides pour "Toutes les périodes"
+    // setDefaultDates(); // Commenté pour permettre l'affichage de toutes les données
     
-    // Charger les données par défaut (mois actuel)
+    // Charger les données par défaut (toutes les données de l'année, sans filtre de dates)
     loadData();
 
     // Gestion du formulaire de filtres
@@ -717,10 +720,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Gestionnaire d'événement pour le filtre de période
-    const periodeTypeSelect = document.getElementById('periodeType');
-    const dateRangeContainer = document.getElementById('dateRangeContainer');
-    const anneeSelect = document.getElementById('anneeSelect');
-    
     if (periodeTypeSelect) {
         periodeTypeSelect.addEventListener('change', function() {
             const selectedPeriod = this.value;
@@ -828,13 +827,20 @@ document.addEventListener('DOMContentLoaded', function() {
         loadingIndicator.style.display = 'block';
         resultsContainer.style.display = 'none';
 
+        // Nettoyer les dates si "Toutes les périodes" est sélectionné
+        clearDatesIfAllPeriods();
+        
         const formData = new FormData(filtersForm);
         
-        // Ajouter le mois actuel par défaut seulement si aucune période n'est sélectionnée
+        // Ne pas ajouter de filtre de mois par défaut
+        // Les données seront filtrées uniquement par les filtres sélectionnés par l'utilisateur
+        
+        // Supprimer les dates du FormData si "Toutes les périodes" est sélectionné
         const periodeType = periodeTypeSelect ? periodeTypeSelect.value : '';
-        if (!periodeType || periodeType === '') {
-            const currentMonth = new Date().getMonth() + 1;
-            formData.append('mois', currentMonth);
+        if (periodeType === '' || periodeType === null) {
+            formData.delete('date_debut');
+            formData.delete('date_fin');
+            formData.delete('mois'); // S'assurer qu'aucun mois n'est envoyé
         }
 
         // Charger les données section par section
@@ -850,10 +856,23 @@ document.addEventListener('DOMContentLoaded', function() {
             loadingIndicator.style.display = 'none';
             resultsContainer.style.display = 'block';
         }).catch(error => {
-            console.error('Erreur:', error);
+            console.error('Erreur lors du chargement des données:', error);
             loadingIndicator.style.display = 'none';
-            showToast('Erreur lors du chargement des données', 'error');
+            resultsContainer.style.display = 'block'; // Afficher le conteneur même en cas d'erreur
+            showToast('Erreur lors du chargement des données. Veuillez réessayer.', 'error');
         });
+    }
+
+    // Fonction pour nettoyer les dates si "Toutes les périodes" est sélectionné
+    function clearDatesIfAllPeriods() {
+        const periodeType = periodeTypeSelect ? periodeTypeSelect.value : '';
+        if (periodeType === '' || periodeType === null) {
+            // Vider les champs de date si "Toutes les périodes" est sélectionné
+            const dateDebut = document.getElementById('dateDebut');
+            const dateFin = document.getElementById('dateFin');
+            if (dateDebut) dateDebut.value = '';
+            if (dateFin) dateFin.value = '';
+        }
     }
 
     // Fonction pour charger le résumé
@@ -864,7 +883,11 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(response => response.json())
         .then(data => {
+            console.log('Résumé global reçu:', data);
             populateResumeGlobal(data);
+        })
+        .catch(error => {
+            console.error('Erreur lors du chargement du résumé:', error);
         });
     }
 
@@ -874,9 +897,18 @@ document.addEventListener('DOMContentLoaded', function() {
             method: 'POST',
             body: formData
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Erreur HTTP: ' + response.status);
+            }
+            return response.json();
+        })
         .then(data => {
+            console.log('Formations reçues:', data);
             populateFormations(data);
+        })
+        .catch(error => {
+            console.error('Erreur lors du chargement des formations:', error);
         });
     }
 
@@ -886,9 +918,18 @@ document.addEventListener('DOMContentLoaded', function() {
             method: 'POST',
             body: formData
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Erreur HTTP: ' + response.status);
+            }
+            return response.json();
+        })
         .then(data => {
+            console.log('Missions reçues:', data);
             populateMissions(data);
+        })
+        .catch(error => {
+            console.error('Erreur lors du chargement des missions:', error);
         });
     }
 

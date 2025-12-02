@@ -443,8 +443,8 @@ class ReportingController extends AbstractController
                 $dateFin = new \DateTime($filters['date_fin']);
                 $dateFin->setTime(23, 59, 59); // Inclure toute la journée
                 if ($sessionDate > $dateFin) {
-                    return false;
-                }
+                return false;
+            }
             }
             
             // Si pas de filtres de date, utiliser l'année et le mois
@@ -453,7 +453,7 @@ class ReportingController extends AbstractController
                     return false;
                 }
                 if (!empty($filters['mois']) && $sessionDate->format('n') != $filters['mois']) {
-                    return false;
+                return false;
                 }
             }
             
@@ -540,8 +540,8 @@ class ReportingController extends AbstractController
         $missionSessions = array_filter($missionSessions, function($session) use ($year, $filters) {
             if (!$session->getDatePrevueDebut()) {
                 return false;
-            }
-            
+        }
+        
             $sessionDate = $session->getDatePrevueDebut();
             
             // Filtrer par date_debut et date_fin si fournis
