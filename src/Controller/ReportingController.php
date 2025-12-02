@@ -328,71 +328,81 @@ class ReportingController extends AbstractController
             return true;
         });
         
-        // Compter par statut
-        $statutsData = [];
+        // Compter par statut - FORMATIONS
+        $statutsFormations = [];
+        $totalFormations = 0;
+        $formationsRealisees = 0;
+        $budgetPrevuFormations = 0;
+        $budgetReelFormations = 0;
+        
         foreach ($formationSessions as $session) {
+            $totalFormations++;
+            $budgetPrevuFormations += (float)$session->getBudgetPrevu();
+            $budgetReelFormations += (float)$session->getBudgetReel();
+            
             $statut = $session->getStatutActivite();
             if ($statut) {
                 $statutLibelle = $statut->getLibelle();
-                if (!isset($statutsData[$statutLibelle])) {
-                    $statutsData[$statutLibelle] = [
+                if (!isset($statutsFormations[$statutLibelle])) {
+                    $statutsFormations[$statutLibelle] = [
                         'libelle' => $statutLibelle,
-                        'formations' => 0,
-                        'missions' => 0,
-                        'total' => 0
+                        'count' => 0
                     ];
                 }
-                $statutsData[$statutLibelle]['formations']++;
-                $statutsData[$statutLibelle]['total']++;
+                $statutsFormations[$statutLibelle]['count']++;
+                
+                // Compter les réalisées
+                if (in_array($statutLibelle, ['Prévue exécutée', 'Non prévue exécutée'])) {
+                    $formationsRealisees++;
+                }
             }
         }
         
+        // Compter par statut - MISSIONS
+        $statutsMissions = [];
+        $totalMissions = 0;
+        $missionsRealisees = 0;
+        $budgetPrevuMissions = 0;
+        $budgetReelMissions = 0;
+        
         foreach ($missionSessions as $session) {
+            $totalMissions++;
+            $budgetPrevuMissions += (float)$session->getBudgetPrevu();
+            $budgetReelMissions += (float)$session->getBudgetReel();
+            
             $statut = $session->getStatutActivite();
             if ($statut) {
                 $statutLibelle = $statut->getLibelle();
-                if (!isset($statutsData[$statutLibelle])) {
-                    $statutsData[$statutLibelle] = [
+                if (!isset($statutsMissions[$statutLibelle])) {
+                    $statutsMissions[$statutLibelle] = [
                         'libelle' => $statutLibelle,
-                        'formations' => 0,
-                        'missions' => 0,
-                        'total' => 0
+                        'count' => 0
                     ];
                 }
-                $statutsData[$statutLibelle]['missions']++;
-                $statutsData[$statutLibelle]['total']++;
+                $statutsMissions[$statutLibelle]['count']++;
+                
+                // Compter les réalisées
+                if (in_array($statutLibelle, ['Prévue exécutée', 'Non prévue exécutée'])) {
+                    $missionsRealisees++;
+                }
             }
-        }
-        
-        // Calculer le total des activités et le total des activités réalisées
-        $totalActivites = 0;
-        $totalRealisees = 0;
-        foreach ($statutsData as $data) {
-            $totalActivites += $data['total'];
-            // Les activités réalisées sont celles avec les statuts "Prévue exécutée" et "Non prévue exécutée"
-            if (in_array($data['libelle'], ['Prévue exécutée', 'Non prévue exécutée'])) {
-                $totalRealisees += $data['total'];
-            }
-        }
-        
-        // Calculer les budgets pour la période filtrée
-        $budgetPrevu = 0;
-        $budgetReel = 0;
-        foreach ($formationSessions as $session) {
-            $budgetPrevu += (float)$session->getBudgetPrevu();
-            $budgetReel += (float)$session->getBudgetReel();
-        }
-        foreach ($missionSessions as $session) {
-            $budgetPrevu += (float)$session->getBudgetPrevu();
-            $budgetReel += (float)$session->getBudgetReel();
         }
         
         return [
-            'statuts' => array_values($statutsData),
-            'total_activites' => $totalActivites,
-            'total_realisees' => $totalRealisees,
-            'budget_total_prevu' => $budgetPrevu,
-            'budget_total_realise' => $budgetReel,
+            'formations' => [
+                'statuts' => array_values($statutsFormations),
+                'total' => $totalFormations,
+                'realisees' => $formationsRealisees,
+                'budget_prevu' => $budgetPrevuFormations,
+                'budget_reel' => $budgetReelFormations,
+            ],
+            'missions' => [
+                'statuts' => array_values($statutsMissions),
+                'total' => $totalMissions,
+                'realisees' => $missionsRealisees,
+                'budget_prevu' => $budgetPrevuMissions,
+                'budget_reel' => $budgetReelMissions,
+            ],
         ];
     }
 
@@ -665,14 +675,25 @@ class ReportingController extends AbstractController
         $budgetPrevuMissions = $missionSessionRepository->getTotalBudgetByYear($year);
         $budgetReelMissions = $missionSessionRepository->getTotalRealExpensesByYear($year);
         
-        $budgetPrevuTotal = $budgetPrevuFormations + $budgetPrevuMissions;
-        $budgetReelTotal = $budgetReelFormations + $budgetReelMissions;
+        // Calculer le taux d'exécution formations
+        $tauxExecutionFormations = $budgetPrevuFormations > 0 ? ($budgetReelFormations / $budgetPrevuFormations * 100) : 0;
+        
+        // Calculer le taux d'exécution missions
+        $tauxExecutionMissions = $budgetPrevuMissions > 0 ? ($budgetReelMissions / $budgetPrevuMissions * 100) : 0;
         
         return [
-            'taux_execution_budget' => $budgetPrevuTotal > 0 ? ($budgetReelTotal / $budgetPrevuTotal * 100) : 0,
-            'budget_prevu_total' => $budgetPrevuTotal,
-            'budget_reel_total' => $budgetReelTotal,
-            'ecart_budget' => $budgetReelTotal - $budgetPrevuTotal,
+            'formations' => [
+                'taux_execution_budget' => $tauxExecutionFormations,
+                'budget_prevu' => $budgetPrevuFormations,
+                'budget_reel' => $budgetReelFormations,
+                'ecart_budget' => $budgetReelFormations - $budgetPrevuFormations,
+            ],
+            'missions' => [
+                'taux_execution_budget' => $tauxExecutionMissions,
+                'budget_prevu' => $budgetPrevuMissions,
+                'budget_reel' => $budgetReelMissions,
+                'ecart_budget' => $budgetReelMissions - $budgetPrevuMissions,
+            ],
         ];
     }
 }

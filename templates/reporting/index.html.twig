@@ -195,6 +195,21 @@
     width: 100%;
 }
 
+/* Égaliser les hauteurs des colonnes dans les sections séparées */
+.section-content .row {
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.section-content .row > [class*='col-'] {
+    display: flex;
+    flex-direction: column;
+}
+
+.section-content .row > [class*='col-'] > div:last-child {
+    flex: 1;
+}
+
 #directionsTable {
     table-layout: fixed;
 }
@@ -361,7 +376,7 @@
                 <!-- Deuxième ligne des champs -->
                 <div class="row">
                     <!-- Lieu -->
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <div class="filter-section">
                             <label>Lieu</label>
                             <input type="text" class="form-control" name="lieu" placeholder="Ville, pays...">
@@ -369,7 +384,7 @@
                     </div>
 
                     <!-- Période -->
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <div class="filter-section">
                             <label>Période</label>
                             <select class="form-select mb-2" name="periode_type" id="periodeType">
@@ -395,11 +410,23 @@
                     </div>
 
                     <!-- Année -->
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <div class="filter-section">
                             <label>Année</label>
                             <select class="form-select" name="annee" id="anneeSelect">
                                 <option value="{{ currentYear }}" selected>{{ currentYear }}</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Type d'activité -->
+                    <div class="col-md-3">
+                        <div class="filter-section">
+                            <label>Type d'activité</label>
+                            <select class="form-select" name="type_activite" id="typeActiviteSelect">
+                                <option value="all">Tous</option>
+                                <option value="formation">Formations</option>
+                                <option value="mission">Missions</option>
                             </select>
                         </div>
                     </div>
@@ -410,16 +437,6 @@
             <div class="col-md-3">
                 <div class="filter-section d-flex align-items-end h-100" style="border: 1px solid #dee2e6; border-radius: 6px; padding: 15px; background: #f8f9fa;">
                     <div class="w-100">
-                        <!-- Type d'activité en haut -->
-                        <div class="mb-3">
-                            <label style="font-size: 0.8rem; margin-bottom: 0.25rem;">Type d'activité</label>
-                            <select class="form-select form-select-sm" name="type_activite" style="font-size: 0.8rem; padding: 0.25rem 0.5rem;">
-                                <option value="all">Tous</option>
-                                <option value="formation">Formations</option>
-                                <option value="mission">Missions</option>
-                            </select>
-                        </div>
-                        
                         <button type="submit" class="btn btn-primary btn-sm w-100 mb-2">
                             <i class="fa fa-search"></i> Appliquer les filtres
                         </button>
@@ -450,8 +467,22 @@
                     <h5 class="mb-0"><i class="fa fa-chart-pie"></i> Résumé Global</h5>
                 </div>
                 <div class="section-content">
-                    <div class="stats-grid" id="resumeStats">
-                        <!-- Stats will be populated by JS -->
+                    <div class="row">
+                        <!-- Colonne Formations -->
+                        <div class="col-md-6">
+                            <h6 class="text-center mb-3"><i class="fa fa-graduation-cap text-primary"></i> Formations</h6>
+                            <div id="resumeStatsFormations">
+                                <!-- Stats formations will be populated by JS -->
+                            </div>
+                        </div>
+                        
+                        <!-- Colonne Missions -->
+                        <div class="col-md-6">
+                            <h6 class="text-center mb-3"><i class="fa fa-plane text-danger"></i> Missions</h6>
+                            <div id="resumeStatsMissions">
+                                <!-- Stats missions will be populated by JS -->
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -525,21 +556,46 @@
                     <h5 class="mb-0"><i class="fa fa-building"></i> Analyse par Direction</h5>
                 </div>
                 <div class="section-content">
-                    <div class="table-responsive">
-                        <table class="table table-striped" id="directionsTable">
-                            <thead>
-                                <tr>
-                                    <th>Direction</th>
-                                    <th>Formations</th>
-                                    <th>Missions</th>
-                                    <th>Taux d'exécution</th>
-                                    <th>Budget total</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <!-- Data will be populated by JS -->
-                            </tbody>
-                        </table>
+                    <div class="row">
+                        <!-- Formations par Direction -->
+                        <div class="col-md-6">
+                            <h6 class="text-center mb-3"><i class="fa fa-graduation-cap text-primary"></i> Formations par Direction</h6>
+                            <div class="table-responsive">
+                                <table class="table table-striped table-sm" id="directionsTableFormations">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Direction</th>
+                                            <th class="text-center">Total</th>
+                                            <th class="text-center">Exécutées</th>
+                                            <th class="text-center">Taux</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <!-- Data will be populated by JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <!-- Missions par Direction -->
+                        <div class="col-md-6">
+                            <h6 class="text-center mb-3"><i class="fa fa-plane text-danger"></i> Missions par Direction</h6>
+                            <div class="table-responsive">
+                                <table class="table table-striped table-sm" id="directionsTableMissions">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Direction</th>
+                                            <th class="text-center">Total</th>
+                                            <th class="text-center">Exécutées</th>
+                                            <th class="text-center">Taux</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <!-- Data will be populated by JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -550,8 +606,22 @@
                     <h5 class="mb-0"><i class="fa fa-line-chart"></i> Évolution Temporelle</h5>
                 </div>
                 <div class="section-content">
-                    <div class="chart-container">
-                        <canvas id="evolutionChart"></canvas>
+                    <div class="row">
+                        <!-- Graphique Formations -->
+                        <div class="col-md-6">
+                            <h6 class="text-center mb-3"><i class="fa fa-graduation-cap text-primary"></i> Évolution Formations</h6>
+                            <div class="chart-container" id="evolutionChartContainerFormations">
+                                <canvas id="evolutionChartFormations"></canvas>
+                            </div>
+                        </div>
+                        
+                        <!-- Graphique Missions -->
+                        <div class="col-md-6">
+                            <h6 class="text-center mb-3"><i class="fa fa-plane text-danger"></i> Évolution Missions</h6>
+                            <div class="chart-container" id="evolutionChartContainerMissions">
+                                <canvas id="evolutionChartMissions"></canvas>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -562,8 +632,22 @@
                     <h5 class="mb-0"><i class="fa fa-dashboard"></i> Indicateurs Clés</h5>
                 </div>
                 <div class="section-content">
-                    <div class="stats-grid" id="indicateursStats">
-                        <!-- Stats will be populated by JS -->
+                    <div class="row">
+                        <!-- Indicateurs Formations -->
+                        <div class="col-md-6">
+                            <h6 class="text-center mb-3"><i class="fa fa-graduation-cap text-primary"></i> Indicateurs Formations</h6>
+                            <div class="stats-grid" id="indicateursStatsFormations">
+                                <!-- Stats formations will be populated by JS -->
+                            </div>
+                        </div>
+                        
+                        <!-- Indicateurs Missions -->
+                        <div class="col-md-6">
+                            <h6 class="text-center mb-3"><i class="fa fa-plane text-danger"></i> Indicateurs Missions</h6>
+                            <div class="stats-grid" id="indicateursStatsMissions">
+                                <!-- Stats missions will be populated by JS -->
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -598,7 +682,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const anneeSelect = document.getElementById('anneeSelect');
 
     let currentData = null;
-    let evolutionChartInstance = null; // Stocker l'instance du graphique
+    let evolutionChartInstanceFormations = null; // Stocker l'instance du graphique formations
+    let evolutionChartInstanceMissions = null; // Stocker l'instance du graphique missions
 
     // Charger les données des filtres au démarrage
     loadFiltersData();
@@ -984,96 +1069,166 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
     function populateResumeGlobal(resume) {
-        const container = document.getElementById('resumeStats');
+        const containerFormations = document.getElementById('resumeStatsFormations');
+        const containerMissions = document.getElementById('resumeStatsMissions');
         
-        // Vérifier s'il y a des données
-        const totalActivites = parseInt(resume.total_activites) || 0;
-        const totalRealisees = parseInt(resume.total_realisees) || 0;
-        const budgetPrevu = parseFloat(resume.budget_total_prevu) || 0;
-        const budgetReel = parseFloat(resume.budget_total_realise) || 0;
-        const statuts = resume.statuts || [];
+        // Données formations
+        const formations = resume.formations || {};
+        const totalFormations = parseInt(formations.total) || 0;
+        const formationsRealisees = parseInt(formations.realisees) || 0;
+        const budgetPrevuFormations = parseFloat(formations.budget_prevu) || 0;
+        const budgetReelFormations = parseFloat(formations.budget_reel) || 0;
+        const statutsFormations = formations.statuts || [];
         
-        const hasData = totalActivites > 0 || (budgetPrevu > 0 || budgetReel > 0);
+        // Données missions
+        const missions = resume.missions || {};
+        const totalMissions = parseInt(missions.total) || 0;
+        const missionsRealisees = parseInt(missions.realisees) || 0;
+        const budgetPrevuMissions = parseFloat(missions.budget_prevu) || 0;
+        const budgetReelMissions = parseFloat(missions.budget_reel) || 0;
+        const statutsMissions = missions.statuts || [];
         
-        if (!hasData) {
-            container.innerHTML = `
+        // Vérifier s'il y a des données formations
+        const hasDataFormations = totalFormations > 0 || (budgetPrevuFormations > 0 || budgetReelFormations > 0);
+        
+        if (!hasDataFormations) {
+            containerFormations.innerHTML = `
                 <div class="no-results-message">
                     <i class="fa fa-info-circle"></i>
-                    <p>Aucun résultat disponible pour cette période</p>
-                    <small class="text-muted">Veuillez modifier vos critères de recherche</small>
+                    <p>Aucune formation disponible</p>
                 </div>
             `;
-            return;
-        }
-        
-        // Calcul du taux d'exécution : (activités réalisées / total des activités) * 100
-        let tauxExecution = 0;
-        if (totalActivites > 0) {
-            tauxExecution = (totalRealisees / totalActivites) * 100;
-            // Limiter à 100% maximum
-            if (tauxExecution > 100) {
-                tauxExecution = 100;
-            }
-        }
-        
-        tauxExecution = parseFloat(tauxExecution.toFixed(1));
-        
-        // Construire les lignes du tableau pour chaque statut
-        let statutsRows = '';
-        if (statuts.length > 0) {
-            statuts.forEach(statut => {
-                statutsRows += `
-                    <tr>
-                        <td>${statut.libelle}</td>
-                        <td>
-                            <div class="d-flex justify-content-between">
-                                <span>Formations: <strong>${statut.formations || 0}</strong></span>
-                                <span>Missions: <strong>${statut.missions || 0}</strong></span>
-                                <span class="text-primary"><strong>Total: ${statut.total || 0}</strong></span>
-                            </div>
-                        </td>
-                    </tr>
-                `;
-            });
         } else {
-            statutsRows = '<tr><td colspan="2" class="text-center text-muted">Aucun statut disponible</td></tr>';
-        }
+            // Calcul du taux d'exécution formations
+            let tauxExecutionFormations = 0;
+            if (totalFormations > 0) {
+                tauxExecutionFormations = (formationsRealisees / totalFormations) * 100;
+                if (tauxExecutionFormations > 100) tauxExecutionFormations = 100;
+            }
+            tauxExecutionFormations = parseFloat(tauxExecutionFormations.toFixed(1));
+            
+            // Construire les lignes du tableau pour chaque statut (formations)
+            let statutsRowsFormations = '';
+            if (statutsFormations.length > 0) {
+                statutsFormations.forEach(statut => {
+                    statutsRowsFormations += `
+                        <tr>
+                            <td>${statut.libelle}</td>
+                            <td class="text-end"><strong>${statut.count || 0}</strong></td>
+                        </tr>
+                    `;
+                });
+            } else {
+                statutsRowsFormations = '<tr><td colspan="2" class="text-center text-muted">Aucun statut disponible</td></tr>';
+            }
 
-        container.innerHTML = `
-            <div class="table-responsive">
-                <table class="table table-bordered table-striped w-100">
-                    <thead>
+            containerFormations.innerHTML = `
+                <div class="table-responsive">
+                    <table class="table table-bordered table-sm">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Indicateur</th>
+                                <th class="text-end">Valeur</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${statutsRowsFormations}
+                            <tr class="table-info">
+                                <td><strong>Total</strong></td>
+                                <td class="text-end"><strong>${totalFormations}</strong></td>
+                            </tr>
+                            <tr class="table-success">
+                                <td><strong>Réalisées</strong></td>
+                                <td class="text-end"><strong>${formationsRealisees}</strong></td>
+                            </tr>
+                            <tr>
+                                <td>Budget prévu</td>
+                                <td class="text-end">${new Intl.NumberFormat('fr-FR').format(budgetPrevuFormations)} FCFA</td>
+                            </tr>
+                            <tr>
+                                <td>Budget réalisé</td>
+                                <td class="text-end">${new Intl.NumberFormat('fr-FR').format(budgetReelFormations)} FCFA</td>
+                            </tr>
+                            <tr class="table-primary">
+                                <td><strong>Taux d'exécution</strong></td>
+                                <td class="text-end"><strong>${tauxExecutionFormations}%</strong></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+        
+        // Vérifier s'il y a des données missions
+        const hasDataMissions = totalMissions > 0 || (budgetPrevuMissions > 0 || budgetReelMissions > 0);
+        
+        if (!hasDataMissions) {
+            containerMissions.innerHTML = `
+                <div class="no-results-message">
+                    <i class="fa fa-info-circle"></i>
+                    <p>Aucune mission disponible</p>
+                </div>
+            `;
+        } else {
+            // Calcul du taux d'exécution missions
+            let tauxExecutionMissions = 0;
+            if (totalMissions > 0) {
+                tauxExecutionMissions = (missionsRealisees / totalMissions) * 100;
+                if (tauxExecutionMissions > 100) tauxExecutionMissions = 100;
+            }
+            tauxExecutionMissions = parseFloat(tauxExecutionMissions.toFixed(1));
+            
+            // Construire les lignes du tableau pour chaque statut (missions)
+            let statutsRowsMissions = '';
+            if (statutsMissions.length > 0) {
+                statutsMissions.forEach(statut => {
+                    statutsRowsMissions += `
                         <tr>
-                            <th>Indicateur</th>
-                            <th>Valeur</th>
+                            <td>${statut.libelle}</td>
+                            <td class="text-end"><strong>${statut.count || 0}</strong></td>
                         </tr>
-                    </thead>
-                    <tbody>
-                        ${statutsRows}
-                        <tr class="table-info">
-                            <td><strong>Total des activités</strong></td>
-                            <td><strong>${totalActivites}</strong></td>
-                        </tr>
-                        <tr class="table-success">
-                            <td><strong>Total des activités réalisées</strong></td>
-                            <td><strong>${totalRealisees}</strong></td>
-                        </tr>
-                        <tr>
-                            <td>Budget total prévu</td>
-                            <td>${new Intl.NumberFormat('fr-FR').format(budgetPrevu)} FCFA</td>
-                        </tr>
-                        <tr>
-                            <td>Budget total réalisé</td>
-                            <td>${new Intl.NumberFormat('fr-FR').format(budgetReel)} FCFA</td>
-                        </tr>
-                        <tr class="table-primary">
-                            <td><strong>Taux d'exécution global</strong></td>
-                            <td><strong>${tauxExecution}%</strong></td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        `;
+                    `;
+                });
+            } else {
+                statutsRowsMissions = '<tr><td colspan="2" class="text-center text-muted">Aucun statut disponible</td></tr>';
+            }
+
+            containerMissions.innerHTML = `
+                <div class="table-responsive">
+                    <table class="table table-bordered table-sm">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Indicateur</th>
+                                <th class="text-end">Valeur</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${statutsRowsMissions}
+                            <tr class="table-info">
+                                <td><strong>Total</strong></td>
+                                <td class="text-end"><strong>${totalMissions}</strong></td>
+                            </tr>
+                            <tr class="table-success">
+                                <td><strong>Réalisées</strong></td>
+                                <td class="text-end"><strong>${missionsRealisees}</strong></td>
+                            </tr>
+                            <tr>
+                                <td>Budget prévu</td>
+                                <td class="text-end">${new Intl.NumberFormat('fr-FR').format(budgetPrevuMissions)} FCFA</td>
+                            </tr>
+                            <tr>
+                                <td>Budget réalisé</td>
+                                <td class="text-end">${new Intl.NumberFormat('fr-FR').format(budgetReelMissions)} FCFA</td>
+                            </tr>
+                            <tr class="table-primary">
+                                <td><strong>Taux d'exécution</strong></td>
+                                <td class="text-end"><strong>${tauxExecutionMissions}%</strong></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
     }
 
     function populateFormations(formations) {
@@ -1183,265 +1338,387 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function populateDirections(parDirection) {
-        const tbody = document.querySelector('#directionsTable tbody');
-        let html = '';
+        const tbodyFormations = document.querySelector('#directionsTableFormations tbody');
+        const tbodyMissions = document.querySelector('#directionsTableMissions tbody');
 
         // Vérification stricte : s'assurer que parDirection existe
         if (!parDirection || (!parDirection.formations && !parDirection.missions)) {
-            tbody.innerHTML = '<tr><td colspan="5" class="text-center"><i class="fa fa-info-circle text-muted me-2"></i><span class="text-muted">Aucune donnée disponible pour les critères sélectionnés</span></td></tr>';
+            tbodyFormations.innerHTML = '<tr><td colspan="4" class="text-center"><i class="fa fa-info-circle text-muted me-2"></i><span class="text-muted">Aucune donnée disponible</span></td></tr>';
+            tbodyMissions.innerHTML = '<tr><td colspan="4" class="text-center"><i class="fa fa-info-circle text-muted me-2"></i><span class="text-muted">Aucune donnée disponible</span></td></tr>';
             return;
         }
 
-        // Combiner les données formations et missions par direction
-        const directions = {};
-        
-        // Traiter les formations - convertir en nombres
+        // Traiter les FORMATIONS par direction
+        let htmlFormations = '';
         if (parDirection.formations && Array.isArray(parDirection.formations) && parDirection.formations.length > 0) {
             parDirection.formations.forEach(item => {
                 const directionName = item.direction_name || 'Non définie';
-                if (!directions[directionName]) {
-                    directions[directionName] = { formations: 0, missions: 0, formations_exec: 0, missions_exec: 0 };
+                const total = parseInt(item.total) || 0;
+                const executed = parseInt(item.executed) || 0;
+                
+                // Calcul du taux d'exécution
+                let tauxExecution = 0;
+                if (total > 0) {
+                    tauxExecution = (executed / total * 100);
+                    if (tauxExecution > 100) tauxExecution = 100;
                 }
-                // Convertir en nombres pour éviter les problèmes de type
-                directions[directionName].formations = parseInt(item.total) || 0;
-                directions[directionName].formations_exec = parseInt(item.executed) || 0;
+                tauxExecution = parseFloat(tauxExecution.toFixed(1));
+                
+                // Déterminer la couleur du badge
+                let badgeColor = 'secondary';
+                if (tauxExecution >= 70) {
+                    badgeColor = 'success';
+                } else if (tauxExecution >= 50) {
+                    badgeColor = 'warning';
+                } else if (tauxExecution > 0) {
+                    badgeColor = 'danger';
+                }
+                
+                htmlFormations += `
+                    <tr>
+                        <td>${directionName}</td>
+                        <td class="text-center">${total}</td>
+                        <td class="text-center">${executed}</td>
+                        <td class="text-center"><span class="badge bg-${badgeColor}">${tauxExecution}%</span></td>
+                    </tr>
+                `;
             });
+        } else {
+            htmlFormations = '<tr><td colspan="4" class="text-center text-muted">Aucune formation disponible</td></tr>';
         }
-
-        // Traiter les missions - convertir en nombres
+        
+        // Traiter les MISSIONS par direction
+        let htmlMissions = '';
         if (parDirection.missions && Array.isArray(parDirection.missions) && parDirection.missions.length > 0) {
             parDirection.missions.forEach(item => {
                 const directionName = item.direction_name || 'Non définie';
-                if (!directions[directionName]) {
-                    directions[directionName] = { formations: 0, missions: 0, formations_exec: 0, missions_exec: 0 };
+                const total = parseInt(item.total) || 0;
+                const executed = parseInt(item.executed) || 0;
+                
+                // Calcul du taux d'exécution
+                let tauxExecution = 0;
+                if (total > 0) {
+                    tauxExecution = (executed / total * 100);
+                    if (tauxExecution > 100) tauxExecution = 100;
                 }
-                // Convertir en nombres pour éviter les problèmes de type
-                directions[directionName].missions = parseInt(item.total) || 0;
-                directions[directionName].missions_exec = parseInt(item.executed) || 0;
+                tauxExecution = parseFloat(tauxExecution.toFixed(1));
+                
+                // Déterminer la couleur du badge
+                let badgeColor = 'secondary';
+                if (tauxExecution >= 70) {
+                    badgeColor = 'success';
+                } else if (tauxExecution >= 50) {
+                    badgeColor = 'warning';
+                } else if (tauxExecution > 0) {
+                    badgeColor = 'danger';
+                }
+                
+                htmlMissions += `
+                    <tr>
+                        <td>${directionName}</td>
+                        <td class="text-center">${total}</td>
+                        <td class="text-center">${executed}</td>
+                        <td class="text-center"><span class="badge bg-${badgeColor}">${tauxExecution}%</span></td>
+                    </tr>
+                `;
             });
+        } else {
+            htmlMissions = '<tr><td colspan="4" class="text-center text-muted">Aucune mission disponible</td></tr>';
         }
 
-        Object.entries(directions).forEach(([directionName, data]) => {
-            // Convertir toutes les valeurs en nombres
-            const totalFormations = parseInt(data.formations) || 0;
-            const totalMissions = parseInt(data.missions) || 0;
-            const formationsExec = parseInt(data.formations_exec) || 0;
-            const missionsExec = parseInt(data.missions_exec) || 0;
-            
-            const totalActivites = totalFormations + totalMissions;
-            const totalExecutees = formationsExec + missionsExec;
-            
-            // Calcul du taux d'exécution : (réalisées / prévues) * 100
-            // Limiter à 100% maximum pour la cohérence
-            let tauxExecution = 0;
-            if (totalActivites > 0) {
-                tauxExecution = (totalExecutees / totalActivites * 100);
-                // Limiter à 100% maximum
-                if (tauxExecution > 100) {
-                    tauxExecution = 100;
-                }
-            }
-
-            // Arrondir à 1 décimale
-            tauxExecution = parseFloat(tauxExecution.toFixed(1));
-
-            // Déterminer la couleur du badge
-            let badgeColor = 'secondary';
-            if (tauxExecution >= 100) {
-                badgeColor = 'success';
-            } else if (tauxExecution >= 70) {
-                badgeColor = 'success';
-            } else if (tauxExecution >= 50) {
-                badgeColor = 'warning';
-            } else {
-                badgeColor = 'danger';
-            }
-
-            html += `
-                <tr>
-                    <td>${directionName}</td>
-                    <td>${totalFormations} (${formationsExec} réalisées)</td>
-                    <td>${totalMissions} (${missionsExec} réalisées)</td>
-                    <td><span class="badge bg-${badgeColor}">${tauxExecution}%</span></td>
-                    <td>-</td>
-                </tr>
-            `;
-        });
-
-        tbody.innerHTML = html || '<tr><td colspan="5" class="text-center"><i class="fa fa-info-circle text-muted me-2"></i><span class="text-muted">Aucune donnée disponible pour les critères sélectionnés</span></td></tr>';
+        tbodyFormations.innerHTML = htmlFormations;
+        tbodyMissions.innerHTML = htmlMissions;
     }
 
     function populateEvolution(parPeriode) {
-        const chartContainer = document.querySelector('#evolutionSection .chart-container');
+        const chartContainerFormations = document.getElementById('evolutionChartContainerFormations');
+        const chartContainerMissions = document.getElementById('evolutionChartContainerMissions');
         
-        // Détruire le graphique existant s'il existe
-        if (evolutionChartInstance) {
-            evolutionChartInstance.destroy();
-            evolutionChartInstance = null;
+        // Détruire les graphiques existants s'ils existent
+        if (evolutionChartInstanceFormations) {
+            evolutionChartInstanceFormations.destroy();
+            evolutionChartInstanceFormations = null;
+        }
+        if (evolutionChartInstanceMissions) {
+            evolutionChartInstanceMissions.destroy();
+            evolutionChartInstanceMissions = null;
         }
         
-        // Vérifier s'il y a des données
+        // Vérifier s'il y a des données formations
         const formationsData = Object.values(parPeriode.formations || {});
-        const missionsData = Object.values(parPeriode.missions || {});
-        const hasData = formationsData.some(v => v > 0) || missionsData.some(v => v > 0);
+        const hasDataFormations = formationsData.some(v => v > 0);
         
-        if (!hasData) {
-            chartContainer.innerHTML = `
+        if (!hasDataFormations) {
+            chartContainerFormations.innerHTML = `
                 <div class="no-results-message">
                     <i class="fa fa-line-chart"></i>
-                    <p>Aucune donnée disponible pour l'évolution temporelle</p>
-                    <small class="text-muted">Veuillez modifier vos critères de recherche</small>
+                    <p>Aucune donnée disponible</p>
                 </div>
             `;
-            return;
-        }
-        
-        // Réinitialiser le canvas
-        chartContainer.innerHTML = '<canvas id="evolutionChart"></canvas>';
-        
-        const ctx = document.getElementById('evolutionChart').getContext('2d');
-        
-        // Créer le nouveau graphique et stocker l'instance
-        evolutionChartInstance = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'],
-                datasets: [{
-                    label: 'Formations',
-                    data: formationsData,
-                    borderColor: 'rgb(75, 192, 192)',
-                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                    tension: 0.1
-                }, {
-                    label: 'Missions',
-                    data: missionsData,
-                    borderColor: 'rgb(255, 99, 132)',
-                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
-                    tension: 0.1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            stepSize: 1
+        } else {
+            // Réinitialiser le canvas formations
+            chartContainerFormations.innerHTML = '<canvas id="evolutionChartFormations"></canvas>';
+            
+            const ctxFormations = document.getElementById('evolutionChartFormations').getContext('2d');
+            
+            // Créer le graphique formations
+            evolutionChartInstanceFormations = new Chart(ctxFormations, {
+                type: 'line',
+                data: {
+                    labels: ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'],
+                    datasets: [{
+                        label: 'Formations',
+                        data: formationsData,
+                        borderColor: 'rgb(0, 123, 255)',
+                        backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                        tension: 0.3,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
                         }
                     }
                 }
-            }
-        });
+            });
+        }
+        
+        // Vérifier s'il y a des données missions
+        const missionsData = Object.values(parPeriode.missions || {});
+        const hasDataMissions = missionsData.some(v => v > 0);
+        
+        if (!hasDataMissions) {
+            chartContainerMissions.innerHTML = `
+                <div class="no-results-message">
+                    <i class="fa fa-line-chart"></i>
+                    <p>Aucune donnée disponible</p>
+                </div>
+            `;
+        } else {
+            // Réinitialiser le canvas missions
+            chartContainerMissions.innerHTML = '<canvas id="evolutionChartMissions"></canvas>';
+            
+            const ctxMissions = document.getElementById('evolutionChartMissions').getContext('2d');
+            
+            // Créer le graphique missions
+            evolutionChartInstanceMissions = new Chart(ctxMissions, {
+                type: 'line',
+                data: {
+                    labels: ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'],
+                    datasets: [{
+                        label: 'Missions',
+                        data: missionsData,
+                        borderColor: 'rgb(220, 53, 69)',
+                        backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                        tension: 0.3,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    }
+                }
+            });
+        }
     }
 
     function populateIndicateurs(indicateurs) {
-        const container = document.getElementById('indicateursStats');
+        const containerFormations = document.getElementById('indicateursStatsFormations');
+        const containerMissions = document.getElementById('indicateursStatsMissions');
         
         // Vérification stricte : s'assurer que indicateurs existe
-        if (!indicateurs) {
-            container.innerHTML = `
-                <div class="no-results-message" style="grid-column: 1 / -1;">
-                    <i class="fa fa-dashboard"></i>
-                    <p>Aucun indicateur disponible pour cette période</p>
-                    <small class="text-muted">Veuillez modifier vos critères de recherche</small>
-                </div>
-            `;
+        if (!indicateurs || (!indicateurs.formations && !indicateurs.missions)) {
+            containerFormations.innerHTML = `<div class="no-results-message"><i class="fa fa-dashboard"></i><p>Aucun indicateur disponible</p></div>`;
+            containerMissions.innerHTML = `<div class="no-results-message"><i class="fa fa-dashboard"></i><p>Aucun indicateur disponible</p></div>`;
             return;
         }
         
-        // Vérifier s'il y a des données (vérification plus stricte avec parseFloat)
-        const budgetPrevu = parseFloat(indicateurs.budget_prevu_total) || 0;
-        const budgetReel = parseFloat(indicateurs.budget_reel_total) || 0;
-        const hasData = budgetPrevu > 0 || budgetReel > 0;
+        // Traiter les FORMATIONS
+        const formations = indicateurs.formations || {};
+        const budgetPrevuF = parseFloat(formations.budget_prevu) || 0;
+        const budgetReelF = parseFloat(formations.budget_reel) || 0;
+        const hasDataF = budgetPrevuF > 0 || budgetReelF > 0;
         
-        if (!hasData) {
-            container.innerHTML = `
-                <div class="no-results-message" style="grid-column: 1 / -1;">
-                    <i class="fa fa-dashboard"></i>
-                    <p>Aucun indicateur disponible pour cette période</p>
-                    <small class="text-muted">Veuillez modifier vos critères de recherche</small>
-                </div>
-            `;
-            return;
-        }
-        
-        // Calcul de l'écart : budget_reel - budget_prevu
-        // Si écart < 0 : on a dépensé moins que prévu (profit) = vert
-        // Si écart > 0 : on a dépensé plus que prévu (dépassement) = rouge
-        const ecart = indicateurs.ecart_budget || 0;
-        const isProfit = ecart < 0; // Budget réel < Budget prévu = profit
-        const ecartClass = isProfit ? 'positive' : 'negative';
-        const ecartItemClass = isProfit ? 'stat-success' : 'stat-danger';
-        const ecartIcon = isProfit ? '↑' : '↓';
-        
-        // Déterminer la classe pour le taux d'exécution
-        const tauxExecution = indicateurs.taux_execution_budget || 0;
-        let tauxItemClass = 'stat-info';
-        let tauxIcon = 'fa-percent';
-        if (tauxExecution >= 90) {
-            tauxItemClass = 'stat-success';
-            tauxIcon = 'fa-check-circle';
-        } else if (tauxExecution >= 70) {
-            tauxItemClass = 'stat-warning';
-            tauxIcon = 'fa-exclamation-circle';
+        if (!hasDataF) {
+            containerFormations.innerHTML = `<div class="no-results-message"><i class="fa fa-dashboard"></i><p>Aucune donnée disponible</p></div>`;
         } else {
-            tauxItemClass = 'stat-danger';
-            tauxIcon = 'fa-times-circle';
+            const ecartF = formations.ecart_budget || 0;
+            const isProfitF = ecartF < 0;
+            const ecartClassF = isProfitF ? 'positive' : 'negative';
+            const ecartItemClassF = isProfitF ? 'stat-success' : 'stat-danger';
+            
+            const tauxExecutionF = formations.taux_execution_budget || 0;
+            let tauxItemClassF = 'stat-info';
+            let tauxIconF = 'fa-percent';
+            if (tauxExecutionF >= 90) {
+                tauxItemClassF = 'stat-success';
+                tauxIconF = 'fa-check-circle';
+            } else if (tauxExecutionF >= 70) {
+                tauxItemClassF = 'stat-warning';
+                tauxIconF = 'fa-exclamation-circle';
+            } else {
+                tauxItemClassF = 'stat-danger';
+                tauxIconF = 'fa-times-circle';
+            }
+            
+            const budgetPrevuFormattedF = new Intl.NumberFormat('fr-FR').format(budgetPrevuF);
+            const budgetReelFormattedF = new Intl.NumberFormat('fr-FR').format(budgetReelF);
+            const ecartAbsF = new Intl.NumberFormat('fr-FR').format(Math.abs(ecartF));
+            
+            containerFormations.innerHTML = `
+                <div class="stat-item ${tauxItemClassF}">
+                    <div class="stat-item-header">
+                        <p class="stat-item-title">Taux d'exécution</p>
+                        <div class="stat-item-icon">
+                            <i class="fa ${tauxIconF}"></i>
+                        </div>
+                    </div>
+                    <div class="stat-number">${tauxExecutionF.toFixed(1)}%</div>
+                </div>
+                
+                <div class="stat-item stat-primary">
+                    <div class="stat-item-header">
+                        <p class="stat-item-title">Budget prévu</p>
+                        <div class="stat-item-icon">
+                            <i class="fa fa-calendar-check"></i>
+                        </div>
+                    </div>
+                    <div class="stat-number">${budgetPrevuFormattedF} FCFA</div>
+                </div>
+                
+                <div class="stat-item stat-info">
+                    <div class="stat-item-header">
+                        <p class="stat-item-title">Budget réel</p>
+                        <div class="stat-item-icon">
+                            <i class="fa fa-money-bill-wave"></i>
+                        </div>
+                    </div>
+                    <div class="stat-number">${budgetReelFormattedF} FCFA</div>
+                </div>
+                
+                <div class="stat-item ${ecartItemClassF}">
+                    <div class="stat-item-header">
+                        <p class="stat-item-title">Écart budgétaire</p>
+                        <div class="stat-item-icon">
+                            <i class="fa ${isProfitF ? 'fa-arrow-up' : 'fa-arrow-down'}"></i>
+                        </div>
+                    </div>
+                    <div class="stat-number">${ecartAbsF} FCFA</div>
+                    <div class="stat-item-footer">
+                        <div class="stat-item-change ${ecartClassF}">
+                            <i class="fa ${isProfitF ? 'fa-arrow-up' : 'fa-arrow-down'}"></i>
+                            <span>${isProfitF ? 'Économie' : 'Dépassement'}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
         }
-
-        // Formatage des montants (utiliser les variables déjà définies)
-        const budgetPrevuFormatted = new Intl.NumberFormat('fr-FR').format(budgetPrevu);
-        const budgetReelFormatted = new Intl.NumberFormat('fr-FR').format(budgetReel);
-        const ecartAbs = new Intl.NumberFormat('fr-FR').format(Math.abs(ecart));
-
-        container.innerHTML = `
-            <div class="stat-item ${tauxItemClass}">
-                <div class="stat-item-header">
-                    <p class="stat-item-title">Taux d'exécution budget</p>
-                    <div class="stat-item-icon">
-                        <i class="fa ${tauxIcon}"></i>
-                    </div>
-                </div>
-                <div class="stat-number">${tauxExecution.toFixed(1)}%</div>
-            </div>
+        
+        // Traiter les MISSIONS
+        const missions = indicateurs.missions || {};
+        const budgetPrevuM = parseFloat(missions.budget_prevu) || 0;
+        const budgetReelM = parseFloat(missions.budget_reel) || 0;
+        const hasDataM = budgetPrevuM > 0 || budgetReelM > 0;
+        
+        if (!hasDataM) {
+            containerMissions.innerHTML = `<div class="no-results-message"><i class="fa fa-dashboard"></i><p>Aucune donnée disponible</p></div>`;
+        } else {
+            const ecartM = missions.ecart_budget || 0;
+            const isProfitM = ecartM < 0;
+            const ecartClassM = isProfitM ? 'positive' : 'negative';
+            const ecartItemClassM = isProfitM ? 'stat-success' : 'stat-danger';
             
-            <div class="stat-item stat-primary">
-                <div class="stat-item-header">
-                    <p class="stat-item-title">Budget prévu total</p>
-                    <div class="stat-item-icon">
-                        <i class="fa fa-calendar-check"></i>
-                    </div>
-                </div>
-                <div class="stat-number">${budgetPrevuFormatted} FCFA</div>
-            </div>
+            const tauxExecutionM = missions.taux_execution_budget || 0;
+            let tauxItemClassM = 'stat-info';
+            let tauxIconM = 'fa-percent';
+            if (tauxExecutionM >= 90) {
+                tauxItemClassM = 'stat-success';
+                tauxIconM = 'fa-check-circle';
+            } else if (tauxExecutionM >= 70) {
+                tauxItemClassM = 'stat-warning';
+                tauxIconM = 'fa-exclamation-circle';
+            } else {
+                tauxItemClassM = 'stat-danger';
+                tauxIconM = 'fa-times-circle';
+            }
             
-            <div class="stat-item stat-info">
-                <div class="stat-item-header">
-                    <p class="stat-item-title">Budget réel total</p>
-                    <div class="stat-item-icon">
-                        <i class="fa fa-money-bill-wave"></i>
-                    </div>
-                </div>
-                <div class="stat-number">${budgetReelFormatted} FCFA</div>
-            </div>
+            const budgetPrevuFormattedM = new Intl.NumberFormat('fr-FR').format(budgetPrevuM);
+            const budgetReelFormattedM = new Intl.NumberFormat('fr-FR').format(budgetReelM);
+            const ecartAbsM = new Intl.NumberFormat('fr-FR').format(Math.abs(ecartM));
             
-            <div class="stat-item ${ecartItemClass}">
-                <div class="stat-item-header">
-                    <p class="stat-item-title">Écart budgétaire</p>
-                    <div class="stat-item-icon">
-                        <i class="fa ${isProfit ? 'fa-arrow-up' : 'fa-arrow-down'}"></i>
+            containerMissions.innerHTML = `
+                <div class="stat-item ${tauxItemClassM}">
+                    <div class="stat-item-header">
+                        <p class="stat-item-title">Taux d'exécution</p>
+                        <div class="stat-item-icon">
+                            <i class="fa ${tauxIconM}"></i>
+                        </div>
+                    </div>
+                    <div class="stat-number">${tauxExecutionM.toFixed(1)}%</div>
+                </div>
+                
+                <div class="stat-item stat-primary">
+                    <div class="stat-item-header">
+                        <p class="stat-item-title">Budget prévu</p>
+                        <div class="stat-item-icon">
+                            <i class="fa fa-calendar-check"></i>
+                        </div>
+                    </div>
+                    <div class="stat-number">${budgetPrevuFormattedM} FCFA</div>
+                </div>
+                
+                <div class="stat-item stat-info">
+                    <div class="stat-item-header">
+                        <p class="stat-item-title">Budget réel</p>
+                        <div class="stat-item-icon">
+                            <i class="fa fa-money-bill-wave"></i>
+                        </div>
+                    </div>
+                    <div class="stat-number">${budgetReelFormattedM} FCFA</div>
+                </div>
+                
+                <div class="stat-item ${ecartItemClassM}">
+                    <div class="stat-item-header">
+                        <p class="stat-item-title">Écart budgétaire</p>
+                        <div class="stat-item-icon">
+                            <i class="fa ${isProfitM ? 'fa-arrow-up' : 'fa-arrow-down'}"></i>
+                        </div>
+                    </div>
+                    <div class="stat-number">${ecartAbsM} FCFA</div>
+                    <div class="stat-item-footer">
+                        <div class="stat-item-change ${ecartClassM}">
+                            <i class="fa ${isProfitM ? 'fa-arrow-up' : 'fa-arrow-down'}"></i>
+                            <span>${isProfitM ? 'Économie' : 'Dépassement'}</span>
+                        </div>
                     </div>
                 </div>
-                <div class="stat-number">${ecartAbs} FCFA</div>
-                <div class="stat-item-footer">
-                    <div class="stat-item-change ${ecartClass}">
-                        <i class="fa ${isProfit ? 'fa-arrow-up' : 'fa-arrow-down'}"></i>
-                        <span>${isProfit ? 'Économie' : 'Dépassement'}</span>
-                    </div>
-                </div>
-            </div>
-        `;
+            `;
+        }
     }
 
     function showToast(message, type = 'info') {
